@@ -1,12 +1,18 @@
-﻿name: Build By Dgeras (Windows)
+name: Build e Release FluxTweakers (Windows)
 
+# Toda vez que você mudar a versão no package.json e der push, ele builda,
+# assina e publica automaticamente uma nova Release no GitHub — e o app
+# já instalado detecta essa release sozinho e se atualiza.
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  build:
+  release:
     runs-on: windows-latest
     steps:
       - name: Baixar o codigo
@@ -23,13 +29,15 @@ jobs:
       - name: Instalar dependencias do projeto
         run: npm install
 
-      - name: Compilar o app (.exe / .msi)
-        run: npm run build
-
-      - name: Publicar os instaladores gerados
-        uses: actions/upload-artifact@v4
+      - name: Compilar, assinar e publicar Release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          name: by-dgeras-windows
-          path: |
-            src-tauri/target/release/bundle/nsis/*.exe
-            src-tauri/target/release/bundle/msi/*.msi
+          tagName: app-v__VERSION__
+          releaseName: "FluxTweakers v__VERSION__"
+          releaseBody: "Nova versão do FluxTweakers, gerada automaticamente."
+          releaseDraft: false
+          prerelease: false

@@ -40,6 +40,8 @@ fn uuid_like() -> String {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![run_bat_script])
         .run(tauri::generate_context!())
         .expect("erro ao rodar o app By Dgeras");

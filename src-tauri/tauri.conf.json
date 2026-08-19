@@ -7,6 +7,7 @@
     "frontendDist": "../src"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "FluxTweakers — Painel de Otimização",
@@ -37,5 +38,15 @@
         "type": "downloadBootstrapper"
       }
     }
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://github.com/dgeras308-ai/FluxTweakers/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNFNUExMTU0QTc3MTg2QzgKUldUSWhuR25WQkZhUHVrWEdxL2pUS2s4V2RubkFWbzBhVmR2Yi83Rlk3ek5ZNy9Ma2d1K2M2ZlAK"
+    }
   }
 }
+
