@@ -14,12 +14,23 @@ window.dgerasRunScript = async function (scriptText) {
 // plano (sem perguntar nada) e reinicia automaticamente quando terminar.
 async function checkForAppUpdate() {
   if (!window.__TAURI__) return; // só roda dentro do app nativo, não no navegador
+
+  if (!window.__TAURI__.updater || !window.__TAURI__.process) {
+    showUpdateBanner('⚠️ Plugin de atualização não carregado (verifique build)');
+    setTimeout(() => hideUpdateBanner(), 6000);
+    return;
+  }
+
   try {
     const { check } = window.__TAURI__.updater;
     const { relaunch } = window.__TAURI__.process;
 
     const update = await check();
-    if (!update) return;
+    if (!update) {
+      showUpdateBanner('✓ Você já está na versão mais recente');
+      setTimeout(() => hideUpdateBanner(), 3000);
+      return;
+    }
 
     showUpdateBanner(`Baixando atualização ${update.version}...`);
 
@@ -42,8 +53,14 @@ async function checkForAppUpdate() {
 
     setTimeout(() => relaunch(), 1200);
   } catch (err) {
-    console.log('Checagem de atualização falhou (sem internet ou sem releases ainda):', err);
+    showUpdateBanner('⚠️ Erro ao checar atualização: ' + (err?.message || err));
+    setTimeout(() => hideUpdateBanner(), 8000);
   }
+}
+
+function hideUpdateBanner() {
+  const el = document.getElementById('dgerasUpdateBanner');
+  if (el) el.remove();
 }
 
 // Barra fina e discreta no topo da tela, sem interromper o uso do app —
