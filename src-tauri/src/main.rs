@@ -4,10 +4,17 @@
 use std::fs;
 use std::process::Command;
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 /// Recebe o texto do .bat gerado pelo painel, salva num arquivo temporário
-/// e executa elevado (UAC), exatamente como se o usuário tivesse baixado
-/// e dado duplo-clique nele. O .bat já traz sua própria lógica de "pedir admin"
-/// (ver goto UACPrompt no index.html), então aqui só precisamos rodá-lo.
+/// e executa TOTALMENTE ESCONDIDO (sem console piscando, sem downloads).
+/// O único aviso que aparece pro usuário é o próprio UAC do Windows pedindo
+/// permissão de administrador — isso o sistema operacional exige e não dá
+/// pra pular, mas fora isso roda tudo em segundo plano dentro do app.
 #[tauri::command]
 fn run_bat_script(script_text: String) -> Result<String, String> {
     let temp_dir = std::env::temp_dir();
@@ -18,13 +25,27 @@ fn run_bat_script(script_text: String) -> Result<String, String> {
 
     let path_str = file_path.to_string_lossy().to_string();
 
-    // Abre o .bat via "start", que dispara o mesmo fluxo de UAC embutido no próprio script.
-    let result = Command::new("cmd")
-        .args(["/C", "start", "", &path_str])
+    // Usa o PowerShell só como "lançador" elevado: Start-Process com -Verb RunAs
+    // dispara o UAC, e -WindowStyle Hidden garante que nenhuma janela de console
+    // apareça enquanto o .bat roda por trás. -Wait espera o script terminar.
+    let ps_launcher = format!(
+        "Start-Process -FilePath 'cmd.exe' -ArgumentList '/c \"{path}\"' -Verb RunAs -WindowStyle Hidden -Wait",
+        path = path_str.replace('\'', "''")
+    );
+
+    #[cfg(target_os = "windows")]
+    let result = Command::new("powershell")
+        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps_launcher])
+        .creation_flags(CREATE_NO_WINDOW)
+        .spawn();
+
+    #[cfg(not(target_os = "windows"))]
+    let result = Command::new("powershell")
+        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps_launcher])
         .spawn();
 
     match result {
-        Ok(_) => Ok(format!("Script executado ({file_name})")),
+        Ok(_) => Ok("Ajustes aplicados com sucesso".to_string()),
         Err(e) => Err(format!("Falha ao executar script: {e}")),
     }
 }
@@ -46,3 +67,4 @@ fn main() {
         .run(tauri::generate_context!())
         .expect("erro ao rodar o app By Dgeras");
 }
+

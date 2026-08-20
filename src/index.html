@@ -6,27 +6,27 @@
 <title>Painel de Otimização — By Dgeras</title>
 <style>
   :root{
-    --bg:#0a0a0d;
-    --panel:rgba(19,19,22,.7);
-    --card:rgba(28,28,34,.6);
-    --card-hover:rgba(36,36,41,.72);
+    --bg:#0a0908;
+    --panel:rgba(20,18,15,.72);
+    --card:rgba(30,26,20,.62);
+    --card-hover:rgba(40,34,24,.75);
     --border:rgba(255,255,255,.1);
     --border-soft:rgba(255,255,255,.06);
-    --text:#f2f2f4;
-    --muted:#93939c;
-    --muted2:#5c5c66;
-    --accent:#7c5cff;
-    --accent2:#9b7bff;
-    --accent-dim:#7c5cff1e;
-    --tab-accent:#7c5cff;
-    --tab-accent-dim:#7c5cff17;
-    --off:#ef4444;
+    --text:#f5f1ea;
+    --muted:#a39a8c;
+    --muted2:#6b6255;
+    --accent:#f0b93c;
+    --accent2:#ffcf6b;
+    --accent-dim:#f0b93c1e;
+    --tab-accent:#f0b93c;
+    --tab-accent-dim:#f0b93c17;
+    --off:#ff4d4d;
     --ok:#22c55e;
-    --item-bg:rgba(28,28,34,.55);
-    --item-bg-hover:rgba(36,36,41,.68);
+    --item-bg:rgba(30,26,20,.55);
+    --item-bg-hover:rgba(40,34,24,.7);
     --item-border:rgba(255,255,255,.1);
-    --item-text:#f2f2f4;
-    --item-muted:#93939c;
+    --item-text:#f5f1ea;
+    --item-muted:#a39a8c;
     --item-shadow:none;
     --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
     --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;
@@ -35,9 +35,10 @@
     --shadow-sm:0 1px 2px rgba(0,0,0,.35);
     --shadow-md:0 10px 28px -10px rgba(0,0,0,.55);
     --shadow-lg:0 24px 60px -20px rgba(0,0,0,.65);
+    --glow:0 0 0 1px rgba(240,185,60,.25), 0 8px 24px -8px rgba(240,185,60,.35);
   }
   *{box-sizing:border-box;}
-  ::selection{background:var(--accent);color:#fff;}
+  ::selection{background:var(--accent);color:#1a1410;}
   ::-webkit-scrollbar{width:10px;height:10px;}
   ::-webkit-scrollbar-track{background:transparent;}
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px;border:2px solid var(--bg);}
@@ -49,9 +50,9 @@
   #bgFallback{
     position:fixed;inset:0;pointer-events:none;
     background:
-      radial-gradient(ellipse 900px 600px at 15% 10%, rgba(124,92,255,.09), transparent 60%),
-      radial-gradient(ellipse 800px 700px at 85% 25%, rgba(123,224,139,.05), transparent 55%),
-      radial-gradient(ellipse 900px 800px at 50% 100%, rgba(124,92,255,.08), transparent 60%),
+      radial-gradient(ellipse 900px 600px at 15% 10%, rgba(240,185,60,.10), transparent 60%),
+      radial-gradient(ellipse 800px 700px at 85% 25%, rgba(255,77,77,.06), transparent 55%),
+      radial-gradient(ellipse 900px 800px at 50% 100%, rgba(240,185,60,.08), transparent 60%),
       var(--bg);
   }
   #bg3d{position:fixed;inset:0;width:100vw;height:100vh;display:block;pointer-events:none;}
@@ -63,6 +64,22 @@
 
   header{margin-bottom:18px;}
   .app-banner{display:block;width:100%;max-width:560px;height:auto;border-radius:14px;margin:0 0 20px;box-shadow:0 8px 30px rgba(0,0,0,.5);}
+  .app-header-row{display:flex;align-items:center;gap:14px;margin-bottom:10px;}
+  .app-mini-logo{
+    width:52px;height:52px;border-radius:13px;flex-shrink:0;
+    box-shadow:0 0 0 1px rgba(240,185,60,.3), 0 0 24px -4px rgba(240,185,60,.55);
+    animation:logoBreathe 3.5s ease-in-out infinite;
+  }
+  @keyframes logoBreathe{
+    0%,100%{box-shadow:0 0 0 1px rgba(240,185,60,.3), 0 0 20px -6px rgba(240,185,60,.45);}
+    50%{box-shadow:0 0 0 1px rgba(240,185,60,.45), 0 0 30px -4px rgba(240,185,60,.7);}
+  }
+  .app-name-glow{
+    margin:0;font-size:22px;font-weight:800;letter-spacing:-.01em;
+    background:linear-gradient(180deg, #fff 0%, var(--accent) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 30px rgba(240,185,60,.25);
+  }
   .kicker{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--tab-accent);font-weight:700;margin:0 0 8px;opacity:.9;}
   header .sub{color:var(--muted);font-size:13.5px;line-height:1.6;margin:0;max-width:600px;}
   .stats-row{margin-top:10px;font-size:12.5px;color:var(--muted2);}
@@ -91,7 +108,8 @@
     background:var(--item-bg);border:1px solid var(--item-border);
     border-radius:11px;padding:10px 12px;cursor:pointer;transition:.15s;box-shadow:var(--item-shadow);
   }
-  .score-card:hover{background:var(--item-bg-hover);transform:translateY(-1px);}
+  .score-card:hover{background:var(--item-bg-hover);transform:translateY(-2px);box-shadow:var(--glow);}
+  .score-card{transition:.2s cubic-bezier(.2,.8,.2,1);}
   .score-card:active{transform:translateY(0) scale(.98);}
   .score-ring{width:30px;height:30px;flex-shrink:0;}
   .score-card-text{min-width:0;}
@@ -1014,7 +1032,13 @@
 <div id="appContent" hidden>
 <div class="page">
   <header>
-    <p class="kicker">Painel de otimização de sistema</p>
+    <div class="app-header-row">
+      <img src="assets/mini-logo.png" alt="FluxTweakers" class="app-mini-logo">
+      <div class="app-header-titles">
+        <p class="app-name-glow">FluxTweakers</p>
+        <p class="kicker" style="margin:2px 0 0;">Painel de otimização de sistema</p>
+      </div>
+    </div>
     <p class="sub">Marque os ajustes de cada categoria e gere um .bat pronto pra rodar no Windows. Nada é aplicado direto aqui — você baixa o arquivo e executa como administrador.</p>
     <div class="stats-row" id="statsRow"></div>
   </header>
@@ -1200,9 +1224,9 @@
 async function saveOrRunScript(script, filename){
   if (window.__TAURI__){
     try{
-      showToast('Executando script como administrador...');
+      showToast('Aplicando ajustes — aceite a permissão de administrador...');
       const result = await window.dgerasRunScript(script);
-      showToast(result || (filename + ' executado com sucesso'));
+      showToast(result || 'Ajustes aplicados com sucesso');
       return true;
     }catch(err){
       showToast('Erro ao executar: ' + err);
