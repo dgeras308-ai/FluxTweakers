@@ -9,9 +9,9 @@ window.dgerasRunScript = async function (scriptText) {
   return await invoke('run_bat_script', { scriptText });
 };
 
-// ===== Checagem automática de atualização =====
-// Roda toda vez que o app abre. Se tiver versão nova publicada no GitHub Releases,
-// baixa e pergunta ao usuário se quer reiniciar pra aplicar.
+// ===== Checagem automática de atualização (estilo Discord) =====
+// Roda toda vez que o app abre. Se tiver versão nova, baixa sozinho em segundo
+// plano (sem perguntar nada) e reinicia automaticamente quando terminar.
 async function checkForAppUpdate() {
   if (!window.__TAURI__) return; // só roda dentro do app nativo, não no navegador
   try {
@@ -19,21 +19,52 @@ async function checkForAppUpdate() {
     const { relaunch } = window.__TAURI__.process;
 
     const update = await check();
-    if (update) {
-      const querAtualizar = confirm(
-        `Nova versão disponível: ${update.version}\n\nDeseja baixar e instalar agora? O app vai reiniciar sozinho ao terminar.`
-      );
-      if (querAtualizar) {
-        await update.downloadAndInstall();
-        await relaunch();
+    if (!update) return;
+
+    showUpdateBanner(`Baixando atualização ${update.version}...`);
+
+    let baixado = 0;
+    let total = 0;
+
+    await update.downloadAndInstall((event) => {
+      if (event.event === 'Started') {
+        total = event.data.contentLength || 0;
+      } else if (event.event === 'Progress') {
+        baixado += event.data.chunkLength || 0;
+        if (total > 0) {
+          const pct = Math.min(100, Math.round((baixado / total) * 100));
+          showUpdateBanner(`Baixando atualização ${update.version}... ${pct}%`);
+        }
+      } else if (event.event === 'Finished') {
+        showUpdateBanner('Atualização pronta! Reiniciando...');
       }
-    }
+    });
+
+    setTimeout(() => relaunch(), 1200);
   } catch (err) {
     console.log('Checagem de atualização falhou (sem internet ou sem releases ainda):', err);
   }
 }
 
+// Barra fina e discreta no topo da tela, sem interromper o uso do app —
+// igual ao aviso de atualização do Discord.
+function showUpdateBanner(text) {
+  let el = document.getElementById('dgerasUpdateBanner');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'dgerasUpdateBanner';
+    el.style.cssText = `
+      position:fixed;top:0;left:0;right:0;z-index:99999;
+      background:linear-gradient(90deg, var(--accent,#f0b93c), var(--accent2,#ffcf6b));
+      color:#1a1410;font:600 12.5px/1 var(--sans,sans-serif);
+      padding:8px 16px;text-align:center;
+      box-shadow:0 2px 12px rgba(0,0,0,.35);
+    `;
+    document.body.appendChild(el);
+  }
+  el.textContent = text;
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   checkForAppUpdate();
 });
-
