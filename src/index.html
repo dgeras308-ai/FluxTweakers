@@ -1015,7 +1015,7 @@
 <div class="page">
   <header>
     <p class="kicker">Painel de otimização de sistema</p>
-    <p class="sub">Marque os ajustes de cada categoria e gere um .bat pronto pra rodar no Windows. Nada é aplicado direto aqui — você baixa o arquivo e executa como administrador.</p>
+    <p class="sub">Marque os ajustes de cada categoria e clique em aplicar. O app executa tudo direto, pedindo apenas a permissão de administrador do Windows.</p>
     <div class="stats-row" id="statsRow"></div>
   </header>
 
@@ -1152,7 +1152,7 @@
         </label>
         <div>
           <label for="restorePoint">Ponto de restauração</label>
-          <p>Recomendado. O .bat pede admin sozinho — reinicie depois.</p>
+          <p>Recomendado. O app pede admin sozinho — reinicie depois.</p>
         </div>
       </div>
     </aside>
@@ -1164,7 +1164,7 @@
   <div class="terminal">
     <div class="terminal-head">
       <div class="terminal-dots"><span></span><span></span><span></span></div>
-      <span class="terminal-title">otimizacao-dgeras.bat</span>
+      <span class="terminal-title">Prévia dos comandos</span>
       <button id="copyBtn">Copiar</button>
     </div>
     <pre id="preview"></pre>
@@ -1188,7 +1188,7 @@
 <div class="bar">
   <span id="count">0 tweaks selecionados</span>
   <button id="monitorBtn" class="bar-btn-secondary">Baixar Monitor em Tempo Real</button>
-  <button id="genBtn">Gerar e baixar .bat</button>
+  <button id="genBtn">Aplicar otimizações</button>
 </div>
 </div>
 
@@ -2668,7 +2668,7 @@ sc config wisvc start= disabled` },
       cmd:`reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\GameDVR" /v AppCaptureEnabled /t REG_DWORD /d 0 /f
 reg add "HKCU\\SOFTWARE\\Microsoft\\GameBar" /v ShowStartupPanel /t REG_DWORD /d 0 /f
 reg add "HKCU\\SOFTWARE\\Microsoft\\GameBar" /v UseNexusForGameBarEnabled /t REG_DWORD /d 0 /f` },
-    { id:"sys_gamemode", group:"Notificações e Recursos", title:"Ajustar Game Mode conforme a versão do Windows", desc:"O .bat detecta sozinho na hora de rodar: ativa o Game Mode no Windows 11 e desativa no Windows 10.",
+    { id:"sys_gamemode", group:"Notificações e Recursos", title:"Ajustar Game Mode conforme a versão do Windows", desc:"O app detecta sozinho na hora de aplicar: ativa o Game Mode no Windows 11 e desativa no Windows 10.",
       cmd:`for /f "tokens=3" %%b in ('reg query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion" /v CurrentBuild ^| findstr CurrentBuild') do set WINBUILD=%%b
 if %WINBUILD% GEQ 22000 (
   echo Windows 11 detectado - ativando Game Mode
@@ -2845,13 +2845,13 @@ const VENDOR_SPECIALS = { gpu:1, cpu:1, storage:1 };
 
 const VENDOR_INFO = {
   gpu: {
-    nvidia: `No Painel de Controle NVIDIA → Gerenciar Configurações 3D: defina <b>Filtragem de textura – Qualidade</b> para <b>Desempenho</b> e <b>Modo de baixa latência</b> para <b>Ultra</b>. Isso é feito no painel da NVIDIA e não pode ser automatizado via .bat.`,
+    nvidia: `No Painel de Controle NVIDIA → Gerenciar Configurações 3D: defina <b>Filtragem de textura – Qualidade</b> para <b>Desempenho</b> e <b>Modo de baixa latência</b> para <b>Ultra</b>. Isso é feito no painel da NVIDIA e não pode ser automatizado pelo app.`,
     amd: `Use o utilitário <b>ParkControl</b> (Bitsum): selecione o plano de energia atual, defina <b>CPU Parking = OFF</b> e <b>Frequency Scaling = OFF</b>, e ative a opção de reaplicar as configurações na inicialização.`,
     intel: `Mantenha os drivers via <b>Intel Graphics Command Center</b> atualizados. Os ajustes de registro específicos já estão listados abaixo.`,
   },
   cpu: {
-    amd: `Vale conferir direto na BIOS: ative o <b>PBO (Precision Boost Overdrive)</b> e ajuste o <b>Curve Optimizer</b> pra ganhar clock extra com segurança. Isso é feito na BIOS e não pode ser automatizado via .bat.`,
-    intel: `Vale conferir direto na BIOS: ative o <b>XMP</b> pra RAM rodar na velocidade anunciada e confirme que o <b>Turbo Boost</b> está habilitado. Isso é feito na BIOS e não pode ser automatizado via .bat.`,
+    amd: `Vale conferir direto na BIOS: ative o <b>PBO (Precision Boost Overdrive)</b> e ajuste o <b>Curve Optimizer</b> pra ganhar clock extra com segurança. Isso é feito na BIOS e não pode ser automatizado pelo app.`,
+    intel: `Vale conferir direto na BIOS: ative o <b>XMP</b> pra RAM rodar na velocidade anunciada e confirme que o <b>Turbo Boost</b> está habilitado. Isso é feito na BIOS e não pode ser automatizado pelo app.`,
   },
   storage: {
     ssd: `Confirme na BIOS que o controlador está em modo <b>AHCI</b> ou <b>NVMe</b> (nunca IDE), e evite desfragmentar um SSD — isso só desgasta a memória à toa, sem ganho de performance.`,
