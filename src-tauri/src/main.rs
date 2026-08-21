@@ -195,16 +195,74 @@ const RAM_CLEAN_TASK_NAME: &str = "FluxTweakersRamClean";
 
 fn ram_clean_ps1_content() -> &'static str {
     r#"
-$ntdll = Add-Type -Name NtDll -Namespace FluxTweakers -PassThru -MemberDefinition @"
-[DllImport("ntdll.dll")]
-public static extern int NtSetSystemInformation(int InfoClass, IntPtr Info, int Length);
+$sig = @"
+using System;
+using System.Runtime.InteropServices;
+public class FluxRam {
+    [DllImport("ntdll.dll")]
+    public static extern int NtSetSystemInformation(int InfoClass, IntPtr Info, int Length);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    public static extern bool OpenProcessToken(IntPtr ProcessHandle, uint DesiredAccess, out IntPtr TokenHandle);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    public static extern bool LookupPrivilegeValue(string lpSystemName, string lpName, out long lpLuid);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct LUID_AND_ATTRIBUTES { public long Luid; public uint Attributes; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct TOKEN_PRIVILEGES { public uint PrivilegeCount; public LUID_AND_ATTRIBUTES Privileges; }
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    public static extern bool AdjustTokenPrivileges(IntPtr TokenHandle, bool DisableAllPrivileges,
+        ref TOKEN_PRIVILEGES NewState, uint BufferLength, IntPtr PreviousState, IntPtr ReturnLength);
+
+    [DllImport("kernel32.dll")]
+    public static extern IntPtr GetCurrentProcess();
+}
 "@
+Add-Type -TypeDefinition $sig -ErrorAction SilentlyContinue
+
+$before = (Get-Counter '\Memory\Available MBytes').CounterSamples[0].CookedValue
+
+# Habilita o privilégio SeProfileSingleProcessPrivilege no processo atual —
+# sem isso o Windows recusa a limpeza sem avisar nada.
+$TOKEN_ADJUST_PRIVILEGES = 0x20
+$TOKEN_QUERY = 0x8
+$hToken = [IntPtr]::Zero
+[FluxRam]::OpenProcessToken([FluxRam]::GetCurrentProcess(), ($TOKEN_ADJUST_PRIVILEGES -bor $TOKEN_QUERY), [ref]$hToken) | Out-Null
+
+$luid = 0
+[FluxRam]::LookupPrivilegeValue($null, "SeProfileSingleProcessPrivilege", [ref]$luid) | Out-Null
+
+$priv = New-Object FluxRam+TOKEN_PRIVILEGES
+$priv.PrivilegeCount = 1
+$priv.Privileges = New-Object FluxRam+LUID_AND_ATTRIBUTES
+$priv.Privileges.Luid = $luid
+$priv.Privileges.Attributes = 0x2  # SE_PRIVILEGE_ENABLED
+
+[FluxRam]::AdjustTokenPrivileges($hToken, $false, [ref]$priv, 0, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+
+# Agora sim, purga a Standby List (mesma chamada que RAMMap/ISLC usam)
 $SystemMemoryListInformation = 80
 $MemoryPurgeStandbyList = 4
 $ptr = [System.Runtime.InteropServices.Marshal]::AllocHGlobal(4)
 [System.Runtime.InteropServices.Marshal]::WriteInt32($ptr, $MemoryPurgeStandbyList)
-$ntdll::NtSetSystemInformation($SystemMemoryListInformation, $ptr, 4) | Out-Null
+$status = [FluxRam]::NtSetSystemInformation($SystemMemoryListInformation, $ptr, 4)
 [System.Runtime.InteropServices.Marshal]::FreeHGlobal($ptr)
+
+Start-Sleep -Milliseconds 400
+$after = (Get-Counter '\Memory\Available MBytes').CounterSamples[0].CookedValue
+$freed = [math]::Round($after - $before, 0)
+
+$resultDir = "$env:TEMP\FluxTweakers"
+New-Item -ItemType Directory -Force -Path $resultDir | Out-Null
+if ($status -eq 0) {
+    "OK|$freed" | Out-File -FilePath "$resultDir\ram_clean_result.txt" -Encoding utf8
+} else {
+    "ERRO|status=$status" | Out-File -FilePath "$resultDir\ram_clean_result.txt" -Encoding utf8
+}
 "#
 }
 
@@ -255,28 +313,55 @@ fn setup_ram_cleaner() -> Result<String, String> {
 }
 
 /// Dispara a limpeza (roda a tarefa agendada já configurada). Não pede UAC
-/// de novo — a tarefa já "nasceu" elevada.
+/// de novo — a tarefa já "nasceu" elevada. Espera um pouco e lê o resultado
+/// real gravado pelo script (sucesso + quanto de RAM foi liberado, ou erro).
 #[tauri::command]
-fn run_ram_clean() -> Result<String, String> {
+async fn run_ram_clean() -> Result<String, String> {
+    let result_path = std::env::temp_dir().join("FluxTweakers").join("ram_clean_result.txt");
+    let _ = fs::remove_file(&result_path); // limpa resultado antigo antes de rodar de novo
+
     #[cfg(target_os = "windows")]
-    let result = Command::new("schtasks")
+    let spawn_result = Command::new("schtasks")
         .args(["/Run", "/TN", RAM_CLEAN_TASK_NAME])
         .creation_flags(CREATE_NO_WINDOW)
         .output();
 
     #[cfg(not(target_os = "windows"))]
-    let result = Command::new("schtasks")
+    let spawn_result = Command::new("schtasks")
         .args(["/Run", "/TN", RAM_CLEAN_TASK_NAME])
         .output();
 
-    match result {
-        Ok(o) if o.status.success() => Ok("RAM limpa com sucesso".to_string()),
-        Ok(o) => Err(format!(
-            "Tarefa não encontrada ou falhou: {}",
-            String::from_utf8_lossy(&o.stderr)
-        )),
-        Err(e) => Err(format!("Falha ao rodar limpeza: {e}")),
+    match spawn_result {
+        Ok(o) if !o.status.success() => {
+            return Err(format!(
+                "Tarefa não encontrada — ative o interruptor de novo para reconfigurar. ({})",
+                String::from_utf8_lossy(&o.stderr).trim()
+            ));
+        }
+        Err(e) => return Err(format!("Falha ao rodar limpeza: {e}")),
+        _ => {}
     }
+
+    // Espera até 6 segundos pelo resultado (o script leva menos de 1s normalmente,
+    // mas dá uma folga pra máquinas mais lentas ou o Agendador demorar a iniciar).
+    for _ in 0..30 {
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        if let Ok(content) = fs::read_to_string(&result_path) {
+            let content = content.trim();
+            if let Some(freed) = content.strip_prefix("OK|") {
+                let freed_mb: i64 = freed.parse().unwrap_or(0);
+                return Ok(if freed_mb > 0 {
+                    format!("RAM limpa — cerca de {freed_mb} MB liberados")
+                } else {
+                    "RAM limpa (cache já estava baixo, pouco a liberar)".to_string()
+                });
+            } else if let Some(err) = content.strip_prefix("ERRO|") {
+                return Err(format!("O Windows recusou a limpeza ({err})"));
+            }
+        }
+    }
+
+    Err("A limpeza não respondeu a tempo — tente de novo".to_string())
 }
 
 fn main() {
