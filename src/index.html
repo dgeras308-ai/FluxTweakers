@@ -381,6 +381,46 @@
     color:var(--muted2);font-weight:700;margin:14px 4px 6px;
   }
   .tab-group-label:first-of-type{margin-top:4px;}
+
+  /* ===== Sidebar compacta (só ícones, com tooltip no hover) ===== */
+  aside.sidebar.sidebar-compact{width:68px;padding:16px 10px 14px;}
+  .sidebar-compact .sidebar-brand{padding-bottom:12px;margin-bottom:8px;}
+  .sidebar-compact .sidebar-brand-name,
+  .sidebar-compact .sidebar-brand-tag{display:none;}
+  .sidebar-compact .sidebar-brand-badge{width:36px;height:36px;margin-bottom:0;}
+  .sidebar-compact .sidebar-brand-badge svg{width:16px;height:16px;}
+
+  .sidebar-compact .tab-group-label{
+    height:1px;padding:0;margin:12px 6px;overflow:hidden;
+    color:transparent;font-size:0;background:var(--border-soft);
+  }
+  .sidebar-compact .tab-group-label:first-of-type{margin-top:2px;}
+
+  .sidebar-compact aside#tabs button{
+    justify-content:center;padding:11px 0;position:relative;gap:0;
+  }
+  .sidebar-compact aside#tabs button .label,
+  .sidebar-compact aside#tabs button .count{
+    position:absolute;left:100%;top:50%;transform:translateY(-50%) translateX(6px);
+    margin-left:10px;white-space:nowrap;pointer-events:none;
+    background:var(--panel);border:1px solid var(--border);border-radius:7px;
+    padding:6px 10px;font-size:11.5px;letter-spacing:.02em;
+    opacity:0;transition:opacity .12s,transform .12s;box-shadow:var(--shadow-md);z-index:40;
+  }
+  .sidebar-compact aside#tabs button .count{display:none;} /* tooltip já mostra o nome; contador some no modo compacto */
+  .sidebar-compact aside#tabs button:hover .label{
+    opacity:1;transform:translateY(-50%) translateX(10px);
+  }
+  .sidebar-compact aside#tabs button.active::before{
+    left:0;top:14%;bottom:14%;
+  }
+  .sidebar-compact .sidebar-label{display:none;}
+  .sidebar-compact .theme-picker{justify-content:center;}
+  .sidebar-compact .account-badge{justify-content:center;padding:8px 4px;}
+  .sidebar-compact .account-badge .info{display:none;}
+  .sidebar-compact .sidebar-block.safety{justify-content:center;}
+  .sidebar-compact .sidebar-block.safety > div:not(.switch){display:none;}
+  .sidebar-compact .sidebar-block.safety{display:flex;justify-content:center;}
   .sidebar-block{margin-bottom:2px;}
 
   main#panels{
@@ -1148,7 +1188,7 @@
   </div>
 
   <div class="shell">
-    <aside class="sidebar">
+    <aside class="sidebar sidebar-compact">
       <div class="sidebar-brand">
         <div class="sidebar-brand-badge">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
@@ -1180,7 +1220,7 @@
         <p class="sidebar-label">Tema</p>
         <div class="theme-picker" id="themePicker"></div>
       </div>
-      <div class="sidebar-block safety">
+      <div class="sidebar-block safety" title="Ponto de restauração: recomendado. O app pede admin sozinho — reinicie depois.">
         <label class="switch">
           <input type="checkbox" id="restorePoint" checked>
           <span class="track"></span>
