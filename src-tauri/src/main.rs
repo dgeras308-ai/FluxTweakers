@@ -31,23 +31,28 @@ struct SystemStats {
     ram_used_gb: f64,
     ram_total_gb: f64,
     ram_percent: f64,
-    gpu_percent: f64,
+    gpu_percent: Option<f64>,
     disks: Vec<DiskInfo>,
 }
 
 /// Lê o uso real de CPU e RAM via sysinfo (biblioteca nativa, sem depender
-/// de comandos externos), e disco via a lista de unidades do sistema.
+/// de comandos externos — bem rápido, roda em memória). A checagem de GPU
+/// é opcional (include_gpu) porque ela precisa abrir um processo do
+/// PowerShell nos bastidores e é bem mais lenta — por isso só é chamada
+/// de vez em quando pelo frontend, nunca a cada atualização.
 #[tauri::command]
-fn get_system_stats(state: State<SysState>) -> SystemStats {
-    let mut sys = state.0.lock().unwrap();
-    sys.refresh_cpu_usage();
-    sys.refresh_memory();
+async fn get_system_stats(state: State<'_, SysState>, include_gpu: bool) -> Result<SystemStats, String> {
+    let (cpu_percent, ram_used_gb, ram_total_gb, ram_percent) = {
+        let mut sys = state.0.lock().unwrap();
+        sys.refresh_cpu_usage();
+        sys.refresh_memory();
 
-    let cpu_percent = sys.global_cpu_usage() as f64;
-
-    let ram_total_gb = sys.total_memory() as f64 / 1_073_741_824.0;
-    let ram_used_gb = sys.used_memory() as f64 / 1_073_741_824.0;
-    let ram_percent = if ram_total_gb > 0.0 { (ram_used_gb / ram_total_gb) * 100.0 } else { 0.0 };
+        let cpu = sys.global_cpu_usage() as f64;
+        let total = sys.total_memory() as f64 / 1_073_741_824.0;
+        let used = sys.used_memory() as f64 / 1_073_741_824.0;
+        let percent = if total > 0.0 { (used / total) * 100.0 } else { 0.0 };
+        (cpu, used, total, percent)
+    };
 
     let disks_list = Disks::new_with_refreshed_list();
     let disks: Vec<DiskInfo> = disks_list
@@ -69,17 +74,31 @@ fn get_system_stats(state: State<SysState>) -> SystemStats {
 
     // GPU: sysinfo não lê uso de GPU. Usamos o contador nativo de performance
     // do Windows (GPU Engine), que funciona pra qualquer fabricante (NVIDIA/AMD/Intel)
-    // sem precisar instalar nada extra.
-    let gpu_percent = read_gpu_usage_windows();
+    // sem precisar instalar nada extra — mas roda numa thread separada (spawn_blocking)
+    // pra nunca travar a interface, e só quando o frontend realmente pede.
+    let gpu_percent = if include_gpu {
+        tauri::async_runtime::spawn_blocking(read_gpu_usage_windows)
+            .await
+            .unwrap_or(0.0)
+    } else {
+        return Ok(SystemStats {
+            cpu_percent: (cpu_percent * 10.0).round() / 10.0,
+            ram_used_gb: (ram_used_gb * 10.0).round() / 10.0,
+            ram_total_gb: (ram_total_gb * 10.0).round() / 10.0,
+            ram_percent: (ram_percent * 10.0).round() / 10.0,
+            gpu_percent: None,
+            disks,
+        });
+    };
 
-    SystemStats {
+    Ok(SystemStats {
         cpu_percent: (cpu_percent * 10.0).round() / 10.0,
         ram_used_gb: (ram_used_gb * 10.0).round() / 10.0,
         ram_total_gb: (ram_total_gb * 10.0).round() / 10.0,
         ram_percent: (ram_percent * 10.0).round() / 10.0,
-        gpu_percent,
+        gpu_percent: Some(gpu_percent),
         disks,
-    }
+    })
 }
 
 #[cfg(target_os = "windows")]

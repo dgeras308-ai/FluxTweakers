@@ -3265,14 +3265,18 @@ function liveRingSVG(pct, colorVar){
   </svg>`;
 }
 
-async function updateLiveMonitor(){
+async function updateLiveMonitor(includeGpu){
   if (!window.__TAURI__) return; // monitoramento real só existe dentro do app nativo
+  if (document.getElementById('appContent').hidden) return; // só roda depois do login
   try{
     const { invoke } = window.__TAURI__.core;
-    const stats = await invoke('get_system_stats');
+    const stats = await invoke('get_system_stats', { includeGpu: !!includeGpu });
 
     const ringsEl = document.getElementById('liveMonitorRings');
     if (ringsEl){
+      const gpuDisplay = (stats.gpu_percent === null)
+        ? (window.__lastGpuPct ?? 0)
+        : (window.__lastGpuPct = stats.gpu_percent);
       ringsEl.innerHTML = `
         <div class="live-monitor-item">
           ${liveRingSVG(stats.cpu_percent, 'var(--accent)')}
@@ -3283,8 +3287,8 @@ async function updateLiveMonitor(){
           <div class="live-monitor-label"><b>RAM</b><span>${stats.ram_used_gb} / ${stats.ram_total_gb} GB</span></div>
         </div>
         <div class="live-monitor-item">
-          ${liveRingSVG(stats.gpu_percent, 'var(--accent)')}
-          <div class="live-monitor-label"><b>GPU</b><span>${stats.gpu_percent}%</span></div>
+          ${liveRingSVG(gpuDisplay, 'var(--accent)')}
+          <div class="live-monitor-label"><b>GPU</b><span>${gpuDisplay}%</span></div>
         </div>
       `;
     }
@@ -3305,8 +3309,14 @@ async function updateLiveMonitor(){
   }
 }
 
-updateLiveMonitor();
-setInterval(updateLiveMonitor, 2000);
+// CPU/RAM/disco são leitura rápida (em memória, sem abrir processo) — atualiza a cada 2s.
+// GPU depende de um contador do Windows mais pesado — atualiza só a cada 8s, pra não travar o app.
+let __liveMonitorTick = 0;
+setInterval(() => {
+  __liveMonitorTick++;
+  const includeGpu = (__liveMonitorTick % 4 === 0); // a cada 4 ticks (~8s)
+  updateLiveMonitor(includeGpu);
+}, 2000);
 
 // ---------- anel de porcentagem (0-100%) ----------
 function ringSVG(pct, sizeClass){
