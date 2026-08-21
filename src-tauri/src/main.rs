@@ -176,12 +176,115 @@ fn uuid_like() -> String {
     format!("{nanos:x}")
 }
 
+// ===== Limpeza de RAM (mesma técnica do ISLC / RAMMap) =====
+//
+// O Windows guarda na "Standby List" partes de memória que já foram usadas
+// mas não estão mais ativas — ele mantém isso em cache achando que você pode
+// precisar de novo, só que às vezes isso deixa a RAM "presa" sem uso real.
+// A limpeza chama a mesma função interna do Windows (NtSetSystemInformation)
+// que o Gerenciador de Tarefas e ferramentas como RAMMap usam.
+//
+// Isso PRECISA de admin. Pra não pedir senha toda hora (o objetivo é rodar
+// sozinho a cada 3 minutos), a gente cria uma Tarefa Agendada do Windows UMA
+// VEZ (pede UAC só nessa primeira vez), configurada como "privilégios mais
+// altos". Depois disso, o app só manda essa tarefa "rodar agora"
+// (schtasks /run), o que não pede senha de novo — o Windows já confia na
+// tarefa desde que ela foi criada com privilégio elevado.
+
+const RAM_CLEAN_TASK_NAME: &str = "FluxTweakersRamClean";
+
+fn ram_clean_ps1_content() -> &'static str {
+    r#"
+$ntdll = Add-Type -Name NtDll -Namespace FluxTweakers -PassThru -MemberDefinition @"
+[DllImport("ntdll.dll")]
+public static extern int NtSetSystemInformation(int InfoClass, IntPtr Info, int Length);
+"@
+$SystemMemoryListInformation = 80
+$MemoryPurgeStandbyList = 4
+$ptr = [System.Runtime.InteropServices.Marshal]::AllocHGlobal(4)
+[System.Runtime.InteropServices.Marshal]::WriteInt32($ptr, $MemoryPurgeStandbyList)
+$ntdll::NtSetSystemInformation($SystemMemoryListInformation, $ptr, 4) | Out-Null
+[System.Runtime.InteropServices.Marshal]::FreeHGlobal($ptr)
+"#
+}
+
+/// Prepara tudo pra limpeza automática funcionar: grava o script de limpeza
+/// num local fixo e registra a Tarefa Agendada elevada. Só precisa rodar
+/// uma vez (pede UAC essa única vez); chamadas seguintes são silenciosas.
+#[tauri::command]
+fn setup_ram_cleaner() -> Result<String, String> {
+    let dir = std::env::temp_dir().join("FluxTweakers");
+    fs::create_dir_all(&dir).map_err(|e| format!("Falha ao criar pasta: {e}"))?;
+    let ps1_path = dir.join("ram_clean.ps1");
+    fs::write(&ps1_path, ram_clean_ps1_content())
+        .map_err(|e| format!("Falha ao gravar script de limpeza: {e}"))?;
+
+    let ps1_str = ps1_path.to_string_lossy().to_string();
+
+    // Cria (ou substitui) a tarefa agendada, rodando como o usuário atual
+    // com privilégios mais altos. O /SC ONCE /ST 00:00 é só um gatilho
+    // "dummy" — na prática a gente sempre dispara manualmente via /run.
+    let create_cmd = format!(
+        "schtasks /Create /TN \"{name}\" /TR \"powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \\\"{script}\\\"\" /SC ONCE /ST 00:00 /RL HIGHEST /F",
+        name = RAM_CLEAN_TASK_NAME,
+        script = ps1_str
+    );
+
+    let ps_launcher = format!(
+        "Start-Process -FilePath 'cmd.exe' -ArgumentList '/c {cmd}' -Verb RunAs -WindowStyle Hidden -Wait",
+        cmd = create_cmd.replace('\'', "''")
+    );
+
+    #[cfg(target_os = "windows")]
+    let result = Command::new("powershell")
+        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps_launcher])
+        .creation_flags(CREATE_NO_WINDOW)
+        .spawn()
+        .and_then(|mut c| c.wait());
+
+    #[cfg(not(target_os = "windows"))]
+    let result: std::io::Result<std::process::ExitStatus> = Command::new("powershell")
+        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps_launcher])
+        .spawn()
+        .and_then(|mut c| c.wait());
+
+    match result {
+        Ok(_) => Ok("Limpeza automática de RAM configurada".to_string()),
+        Err(e) => Err(format!("Falha ao configurar: {e}")),
+    }
+}
+
+/// Dispara a limpeza (roda a tarefa agendada já configurada). Não pede UAC
+/// de novo — a tarefa já "nasceu" elevada.
+#[tauri::command]
+fn run_ram_clean() -> Result<String, String> {
+    #[cfg(target_os = "windows")]
+    let result = Command::new("schtasks")
+        .args(["/Run", "/TN", RAM_CLEAN_TASK_NAME])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
+
+    #[cfg(not(target_os = "windows"))]
+    let result = Command::new("schtasks")
+        .args(["/Run", "/TN", RAM_CLEAN_TASK_NAME])
+        .output();
+
+    match result {
+        Ok(o) if o.status.success() => Ok("RAM limpa com sucesso".to_string()),
+        Ok(o) => Err(format!(
+            "Tarefa não encontrada ou falhou: {}",
+            String::from_utf8_lossy(&o.stderr)
+        )),
+        Err(e) => Err(format!("Falha ao rodar limpeza: {e}")),
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(SysState(Mutex::new(System::new_all())))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean])
         .run(tauri::generate_context!())
         .expect("erro ao rodar o app By Dgeras");
 }

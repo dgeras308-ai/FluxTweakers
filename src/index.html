@@ -376,6 +376,16 @@
   aside#tabs button.active .count{color:var(--tab-accent);border-color:var(--tab-accent-dim);background:var(--panel);}
 
   .sidebar-divider{height:1px;background:var(--border-soft);margin:14px 0;}
+
+  .ram-cleaner-box{
+    background:var(--item-bg);border:1px solid var(--item-border);border-radius:12px;
+    padding:16px;margin-top:14px;
+  }
+  .ram-cleaner-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;}
+  .ram-cleaner-head h3{margin:0 0 4px;font-size:14px;color:var(--item-text);}
+  .ram-cleaner-head p{margin:0;font-size:11.8px;color:var(--item-muted);line-height:1.5;max-width:440px;}
+  .ram-cleaner-actions{display:flex;align-items:center;gap:12px;margin-top:14px;}
+  .ram-cleaner-status{font-size:11.5px;color:var(--muted);}
   .tab-group-label{
     font-size:10px;letter-spacing:.12em;text-transform:uppercase;
     color:var(--muted2);font-weight:700;margin:14px 4px 6px;
@@ -3328,6 +3338,82 @@ function renderStats(){
 renderStats();
 renderRestoreWidget();
 
+// ---------- Limpeza automática de RAM (estilo ISLC) ----------
+let ramCleanerInterval = null;
+
+function setRamCleanerStatus(text){
+  const el = document.getElementById('ramCleanerStatus');
+  if (el) el.textContent = text;
+}
+
+async function enableRamCleaner(){
+  if (!window.__TAURI__) { showToast('A limpeza de RAM só funciona no app instalado'); return false; }
+  const { invoke } = window.__TAURI__.core;
+  try{
+    setRamCleanerStatus('Configurando (aceite a permissão de administrador)...');
+    const msg = await invoke('setup_ram_cleaner');
+    setRamCleanerStatus(msg);
+    return true;
+  }catch(err){
+    setRamCleanerStatus('Erro ao configurar: ' + err);
+    return false;
+  }
+}
+
+async function triggerRamClean(silent){
+  if (!window.__TAURI__) return;
+  const { invoke } = window.__TAURI__.core;
+  try{
+    if(!silent) setRamCleanerStatus('Limpando...');
+    const msg = await invoke('run_ram_clean');
+    setRamCleanerStatus(msg + ' — ' + new Date().toLocaleTimeString('pt-BR'));
+  }catch(err){
+    setRamCleanerStatus('Erro: ' + err);
+  }
+}
+
+function startRamCleanerInterval(){
+  if (ramCleanerInterval) clearInterval(ramCleanerInterval);
+  ramCleanerInterval = setInterval(() => triggerRamClean(true), 3 * 60 * 1000);
+}
+
+function stopRamCleanerInterval(){
+  if (ramCleanerInterval) clearInterval(ramCleanerInterval);
+  ramCleanerInterval = null;
+}
+
+// Religa sozinho se o usuário já tinha ativado numa sessão anterior
+if (localStorage.getItem('dgerasRamCleanerOn') === '1'){
+  startRamCleanerInterval();
+}
+
+document.addEventListener('change', (e)=>{
+  if (e.target && e.target.id === 'ramCleanerToggle'){
+    if (e.target.checked){
+      enableRamCleaner().then(ok=>{
+        if (ok){
+          localStorage.setItem('dgerasRamCleanerOn', '1');
+          startRamCleanerInterval();
+        } else {
+          e.target.checked = false;
+        }
+      });
+    } else {
+      localStorage.setItem('dgerasRamCleanerOn', '0');
+      stopRamCleanerInterval();
+      setRamCleanerStatus('Desativado');
+    }
+  }
+});
+
+document.addEventListener('click', (e)=>{
+  if (e.target && e.target.id === 'ramCleanNowBtn'){
+    triggerRamClean(false);
+  }
+});
+
+
+
 // ---------- Monitor em tempo real (CPU/RAM/GPU/Disco reais) ----------
 function liveRingSVG(pct, colorVar){
   const p = Math.max(0, Math.min(100, Math.round(pct)));
@@ -3490,7 +3576,24 @@ function renderPanel(catId){
       <input type="number" id="ramGB" value="${ramGB}" min="2" step="2">
       <span>GB</span>
     </div>
-    <div class="ram-summary" id="ramSummary"></div>`;
+    <div class="ram-summary" id="ramSummary"></div>
+    <div class="ram-cleaner-box">
+      <div class="ram-cleaner-head">
+        <div>
+          <h3>Limpeza automática de RAM</h3>
+          <p>Libera memória "presa" em cache do Windows (Standby List) — mesma técnica do ISLC/RAMMap. Roda sozinho a cada 3 minutos quando ativado.</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="ramCleanerToggle">
+          <span class="track"></span>
+          <span class="thumb"></span>
+        </label>
+      </div>
+      <div class="ram-cleaner-actions">
+        <button id="ramCleanNowBtn" class="preset-btn">Limpar agora</button>
+        <span class="ram-cleaner-status" id="ramCleanerStatus"></span>
+      </div>
+    </div>`;
   }
 
   if(cat.special === 'games'){
@@ -3694,6 +3797,8 @@ function updateRamSummary(){
 }
 
 catIds.forEach(renderPanel);
+const __ramCleanerToggleEl = document.getElementById('ramCleanerToggle');
+if (__ramCleanerToggleEl) __ramCleanerToggleEl.checked = localStorage.getItem('dgerasRamCleanerOn') === '1';
 setTabAccent(catIds[0]);
 initThemePicker();
 
