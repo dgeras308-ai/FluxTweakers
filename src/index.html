@@ -515,7 +515,8 @@
   .acc-body{max-height:0;overflow:hidden;transition:max-height .38s cubic-bezier(.2,.8,.2,1);}
   .acc-section.open .acc-body{max-height:4000px;}
   .acc-inner{
-    display:flex;flex-direction:column;gap:9px;padding:10px 2px 4px;
+    display:grid;grid-template-columns:repeat(auto-fill, minmax(300px, 1fr));gap:12px;
+    padding:10px 2px 4px;
     transform-origin:top center;perspective:1000px;
     animation:accUnfold .45s cubic-bezier(.2,.8,.2,1.05) both;
   }
@@ -524,15 +525,16 @@
     100%{ opacity:1; transform:rotateX(0) translateY(0); }
   }
 
-  /* cada ajuste é um card branco, flutuando sobre o fundo escuro — igual à referência */
+  /* cada ajuste é um card, organizado em grade — igual à referência */
   .setting-row{
     position:relative;
-    display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+    display:flex;flex-direction:column;gap:10px;
     background:var(--item-bg);border:1px solid var(--item-border);border-radius:12px;
     padding:14px 16px;
     transition:background .18s, transform .35s cubic-bezier(.2,.9,.3,1.3), box-shadow .35s ease, border-color .25s ease;
     box-shadow:var(--item-shadow);
   }
+  .setting-row-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
   .setting-row::before{
     content:"";position:absolute;inset:0;pointer-events:none;border-radius:12px;
     background:linear-gradient(115deg, transparent 30%, var(--tab-accent-dim) 48%, transparent 66%);
@@ -3555,17 +3557,19 @@ function gameTileIcon(title, group){
         rowIcon = gameTileIcon(item.title, item.group);
       }
       html += `<div class="setting-row cardIn" id="row_${item.id}" style="animation-delay:${delay}s">
-        <div class="setting-icon">${rowIcon}</div>
+        <div class="setting-row-top">
+          <div class="setting-icon">${rowIcon}</div>
+          <label class="switch">
+            <input type="checkbox" id="chk_${item.id}" data-group-id="${catId}-${gi}">
+            <span class="track"></span>
+            <span class="thumb"></span>
+          </label>
+        </div>
         <div class="setting-text">
           <label class="setting-title" for="chk_${item.id}">${item.title}</label>
           <p class="setting-desc">${item.desc}</p>
           ${item.variants ? `<select id="var_${item.id}">${item.variants.map(v=>`<option value="${v.value}">${v.label}</option>`).join('')}</select>` : ''}
         </div>
-        <label class="switch">
-          <input type="checkbox" id="chk_${item.id}" data-group-id="${catId}-${gi}">
-          <span class="track"></span>
-          <span class="thumb"></span>
-        </label>
       </div>`;
     });
     html += `</div></div></div>`;
