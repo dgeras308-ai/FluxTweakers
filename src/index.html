@@ -376,6 +376,11 @@
   aside#tabs button.active .count{color:var(--tab-accent);border-color:var(--tab-accent-dim);background:var(--panel);}
 
   .sidebar-divider{height:1px;background:var(--border-soft);margin:14px 0;}
+  .tab-group-label{
+    font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--muted2);font-weight:700;margin:14px 4px 6px;
+  }
+  .tab-group-label:first-of-type{margin-top:4px;}
   .sidebar-block{margin-bottom:2px;}
 
   main#panels{
@@ -3094,20 +3099,46 @@ function catItemCount(catId){
   return cat.items.length;
 }
 
-catIds.forEach((catId, i)=>{
-  const btn = document.createElement('button');
-  btn.innerHTML = `${ICONS[catId]}<span class="label">${DATA[catId].label}</span><span class="count">${catItemCount(catId)}</span>`;
-  btn.dataset.cat = catId;
-  btn.style.setProperty('--btn-color', CAT_COLORS[catId]);
-  btn.style.setProperty('--btn-bg', CAT_COLORS[catId] + '22');
-  if(i===0) btn.classList.add('active');
-  btn.onclick = ()=>switchTab(catId);
-  tabsEl.appendChild(btn);
+const TAB_GROUPS = [
+  { label: "Hardware", cats: ["cpu","gpu","ram","storage"] },
+  { label: "Sistema", cats: ["power","network","system","startup"] },
+  { label: "Periféricos", cats: ["mouse","monitor"] },
+  { label: "Jogos", cats: ["games"] },
+];
 
-  const panel = document.createElement('div');
-  panel.className = 'panel'+(i===0?' active':'');
-  panel.id = 'panel-'+catId;
-  panelsEl.appendChild(panel);
+// Garante que qualquer categoria nova que a gente adicionar no futuro e
+// esquecer de colocar em TAB_GROUPS ainda apareça (cai num grupo "Outros").
+const groupedCatIds = TAB_GROUPS.flatMap(g => g.cats);
+const ungroupedCatIds = catIds.filter(id => !groupedCatIds.includes(id));
+if (ungroupedCatIds.length){
+  TAB_GROUPS.push({ label: "Outros", cats: ungroupedCatIds });
+}
+
+TAB_GROUPS.forEach(group => {
+  const validCats = group.cats.filter(id => DATA[id]);
+  if (!validCats.length) return;
+
+  const sectionLabel = document.createElement('div');
+  sectionLabel.className = 'tab-group-label';
+  sectionLabel.textContent = group.label;
+  tabsEl.appendChild(sectionLabel);
+
+  validCats.forEach(catId => {
+    const i = catIds.indexOf(catId);
+    const btn = document.createElement('button');
+    btn.innerHTML = `${ICONS[catId]}<span class="label">${DATA[catId].label}</span><span class="count">${catItemCount(catId)}</span>`;
+    btn.dataset.cat = catId;
+    btn.style.setProperty('--btn-color', CAT_COLORS[catId]);
+    btn.style.setProperty('--btn-bg', CAT_COLORS[catId] + '22');
+    if(i===0) btn.classList.add('active');
+    btn.onclick = ()=>switchTab(catId);
+    tabsEl.appendChild(btn);
+
+    const panel = document.createElement('div');
+    panel.className = 'panel'+(i===0?' active':'');
+    panel.id = 'panel-'+catId;
+    panelsEl.appendChild(panel);
+  });
 });
 
 /* ---------- aba exclusiva do dono: Keys ---------- */
