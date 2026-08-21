@@ -3,12 +3,110 @@
 
 use std::fs;
 use std::process::Command;
+use std::sync::Mutex;
+use serde::Serialize;
+use sysinfo::{Disks, System};
+use tauri::State;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+struct SysState(Mutex<System>);
+
+#[derive(Serialize)]
+struct DiskInfo {
+    name: String,
+    used_gb: f64,
+    total_gb: f64,
+    percent: f64,
+    is_ssd: bool,
+}
+
+#[derive(Serialize)]
+struct SystemStats {
+    cpu_percent: f64,
+    ram_used_gb: f64,
+    ram_total_gb: f64,
+    ram_percent: f64,
+    gpu_percent: f64,
+    disks: Vec<DiskInfo>,
+}
+
+/// Lê o uso real de CPU e RAM via sysinfo (biblioteca nativa, sem depender
+/// de comandos externos), e disco via a lista de unidades do sistema.
+#[tauri::command]
+fn get_system_stats(state: State<SysState>) -> SystemStats {
+    let mut sys = state.0.lock().unwrap();
+    sys.refresh_cpu_usage();
+    sys.refresh_memory();
+
+    let cpu_percent = sys.global_cpu_usage() as f64;
+
+    let ram_total_gb = sys.total_memory() as f64 / 1_073_741_824.0;
+    let ram_used_gb = sys.used_memory() as f64 / 1_073_741_824.0;
+    let ram_percent = if ram_total_gb > 0.0 { (ram_used_gb / ram_total_gb) * 100.0 } else { 0.0 };
+
+    let disks_list = Disks::new_with_refreshed_list();
+    let disks: Vec<DiskInfo> = disks_list
+        .iter()
+        .map(|d| {
+            let total = d.total_space() as f64 / 1_073_741_824.0;
+            let avail = d.available_space() as f64 / 1_073_741_824.0;
+            let used = (total - avail).max(0.0);
+            let percent = if total > 0.0 { (used / total) * 100.0 } else { 0.0 };
+            DiskInfo {
+                name: d.mount_point().to_string_lossy().to_string(),
+                used_gb: (used * 10.0).round() / 10.0,
+                total_gb: (total * 10.0).round() / 10.0,
+                percent: (percent * 10.0).round() / 10.0,
+                is_ssd: d.is_removable() == false && matches!(d.kind(), sysinfo::DiskKind::SSD),
+            }
+        })
+        .collect();
+
+    // GPU: sysinfo não lê uso de GPU. Usamos o contador nativo de performance
+    // do Windows (GPU Engine), que funciona pra qualquer fabricante (NVIDIA/AMD/Intel)
+    // sem precisar instalar nada extra.
+    let gpu_percent = read_gpu_usage_windows();
+
+    SystemStats {
+        cpu_percent: (cpu_percent * 10.0).round() / 10.0,
+        ram_used_gb: (ram_used_gb * 10.0).round() / 10.0,
+        ram_total_gb: (ram_total_gb * 10.0).round() / 10.0,
+        ram_percent: (ram_percent * 10.0).round() / 10.0,
+        gpu_percent,
+        disks,
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn read_gpu_usage_windows() -> f64 {
+    // Soma a utilização de todos os "engines" do tipo 3D de todas as GPUs —
+    // é o mesmo contador que o Gerenciador de Tarefas do Windows usa.
+    let ps_cmd = "(Get-Counter '\\GPU Engine(*engtype_3D)\\Utilization Percentage' -ErrorAction SilentlyContinue).CounterSamples | Measure-Object -Property CookedValue -Sum | Select-Object -ExpandProperty Sum";
+
+    let output = Command::new("powershell")
+        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps_cmd])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
+
+    match output {
+        Ok(o) => {
+            let text = String::from_utf8_lossy(&o.stdout);
+            let val: f64 = text.trim().replace(',', ".").parse().unwrap_or(0.0);
+            val.min(100.0).max(0.0)
+        }
+        Err(_) => 0.0,
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn read_gpu_usage_windows() -> f64 {
+    0.0
+}
 
 /// Recebe o texto do .bat gerado pelo painel, salva num arquivo temporário
 /// e executa TOTALMENTE ESCONDIDO (sem console piscando, sem downloads).
@@ -63,8 +161,10 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
-        .invoke_handler(tauri::generate_handler![run_bat_script])
+        .manage(SysState(Mutex::new(System::new_all())))
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats])
         .run(tauri::generate_context!())
         .expect("erro ao rodar o app By Dgeras");
 }
+
 
