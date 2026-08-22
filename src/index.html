@@ -423,6 +423,17 @@
   .home-nav-item:hover{background:var(--item-bg-hover);color:var(--text);border-color:var(--tab-accent-dim);transform:translateY(-2px);}
   .home-nav-item svg{width:20px;height:20px;}
   .home-nav-item span{font-size:11px;font-weight:600;text-align:center;}
+
+  .fps-methodology{margin-top:14px;border-top:1px solid var(--border-soft);padding-top:12px;}
+  .fps-methodology summary{
+    cursor:pointer;font-size:12.5px;font-weight:600;color:var(--accent);list-style:none;
+    display:flex;align-items:center;gap:6px;
+  }
+  .fps-methodology summary::before{content:"▸";transition:transform .15s;}
+  .fps-methodology[open] summary::before{transform:rotate(90deg);}
+  .fps-methodology-body{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
+  .fps-methodology-body p{margin:0;font-size:12px;color:var(--muted);line-height:1.6;}
+  .fps-methodology-body b{color:var(--text);}
   .tab-group-label{
     font-size:10px;letter-spacing:.12em;text-transform:uppercase;
     color:var(--muted2);font-weight:700;margin:14px 4px 6px;
@@ -1173,29 +1184,6 @@
           <p class="profile-card-sub">Começar do zero</p>
         </button>
       </div>
-    </div>
-
-    <div class="bench-card">
-      <div class="bench-head">
-        <p class="bench-title">Estimativa de FPS</p>
-      </div>
-      <p class="bench-note" style="margin:-4px 0 0;">Digite sua placa e processador e veja a estimativa nos 3 modos de ajuste. É uma estimativa por faixas típicas — não substitui medir FPS de verdade no jogo com um overlay (RTSS, MSI Afterburner, etc.).</p>
-      <div class="fps-form-row">
-        <select id="fpsGameSelect">
-          <option value="">Selecione o jogo...</option>
-        </select>
-      </div>
-      <p class="bench-note" id="fpsGameNote" style="display:none;margin:-4px 0 0;color:var(--accent);"></p>
-      <div class="fps-form-row">
-        <input type="text" id="fpsGpuText" placeholder="Sua placa de vídeo (ex: RTX 3060)">
-        <input type="text" id="fpsCpuText" placeholder="Seu processador (ex: Ryzen 5 5600)">
-      </div>
-      <div class="fps-form-row">
-        <input type="number" id="fpsCurrentInput" placeholder="FPS atual medido no jogo (ex: 72)" min="1" max="600">
-        <button type="button" class="bench-run-btn" id="fpsCalcBtn">Calcular</button>
-      </div>
-      <p class="bench-note" id="fpsHwNote" style="display:none;margin:0;"></p>
-      <div id="fpsBody"></div>
     </div>
   </div>
 
@@ -3330,6 +3318,52 @@ homePanel.innerHTML = `
 `;
 panelsEl.appendChild(homePanel);
 
+// ===== Aba Desempenho: estimador de FPS, com metodologia visível =====
+const fpsBtn = document.createElement('button');
+fpsBtn.innerHTML = `${lineIcon('<path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3v2.4M21 12h-2.4M12 12l4.8-4.8"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/>')}<span class="label">Desempenho</span>`;
+fpsBtn.dataset.cat = 'fps';
+fpsBtn.onclick = ()=>switchTab('fps');
+tabsEl.appendChild(fpsBtn);
+
+const fpsPanel = document.createElement('div');
+fpsPanel.className = 'panel';
+fpsPanel.id = 'panel-fps';
+fpsPanel.innerHTML = `
+  <div class="bench-card">
+    <div class="bench-head">
+      <p class="bench-title">Estimativa de ganho de FPS</p>
+    </div>
+    <p class="bench-note" style="margin:-4px 0 0;">Digite sua placa e processador e veja a estimativa nos 3 modos de ajuste. É uma estimativa por faixas típicas — não substitui medir FPS de verdade no jogo com um overlay (RTSS, MSI Afterburner, etc.).</p>
+    <div class="fps-form-row">
+      <select id="fpsGameSelect">
+        <option value="">Selecione o jogo...</option>
+      </select>
+    </div>
+    <p class="bench-note" id="fpsGameNote" style="display:none;margin:-4px 0 0;color:var(--accent);"></p>
+    <div class="fps-form-row">
+      <input type="text" id="fpsGpuText" placeholder="Sua placa de vídeo (ex: RTX 3060)">
+      <input type="text" id="fpsCpuText" placeholder="Seu processador (ex: Ryzen 5 5600)">
+    </div>
+    <div class="fps-form-row">
+      <input type="number" id="fpsCurrentInput" placeholder="FPS atual medido no jogo (ex: 72)" min="1" max="600">
+      <button type="button" class="bench-run-btn" id="fpsCalcBtn">Calcular</button>
+    </div>
+    <p class="bench-note" id="fpsHwNote" style="display:none;margin:0;"></p>
+    <div id="fpsBody"></div>
+
+    <details class="fps-methodology">
+      <summary>Como essa estimativa é calculada?</summary>
+      <div class="fps-methodology-body">
+        <p><b>1. Peso por categoria de ajuste.</b> Cada categoria de tweak (GPU, CPU, RAM, Sistema, etc.) tem um teto de ganho conservador baseado no que testes da comunidade costumam observar em otimizações de SO/driver — nada acima de ${Math.round(FPS_GAIN_CAP*100)}% de ganho total combinado, porque otimização de sistema não substitui hardware melhor.</p>
+        <p><b>2. Fator de gargalo do seu hardware.</b> Quanto mais limitada sua placa/processador, maior o espaço pra otimização de sistema ajudar — porque em hardware potente, o overhead do Windows já é uma fração pequena da capacidade total; em hardware mais antigo, esse mesmo overhead consome uma fatia proporcionalmente maior. Por isso o cálculo <i>aumenta</i> o peso pra hardware mais fraco, e reduz pra hardware topo de linha (o oposto de "quanto melhor sua placa, mais você ganha").</p>
+        <p><b>3. Gênero do jogo.</b> Jogos competitivos/FPS costumam ser mais limitados por CPU; jogos de mundo aberto costumam ser mais limitados por GPU. A estimativa pondera isso ao saber qual jogo você selecionou.</p>
+        <p style="color:var(--muted2);margin-top:10px;">Isso é uma estimativa de faixa, não uma medição real — o único jeito de saber o ganho exato é medir o FPS antes/depois com uma ferramenta como RTSS ou MSI Afterburner.</p>
+      </div>
+    </details>
+  </div>
+`;
+panelsEl.appendChild(fpsPanel);
+
 // preenche os atalhos de navegação rápida reaproveitando os ícones das categorias
 (function buildHomeNav(){
   const grid = document.getElementById('homeNavGrid');
@@ -4359,15 +4393,24 @@ function countPresetInCat(presetIds, catId){
 }
 
 function computeFpsEstimateForPreset(presetIds, gpuScalar, cpuScalar, bias){
-  const avgScalar = (gpuScalar + cpuScalar) / 2;
+  // Fator de gargalo: hardware mais fraco (scalar menor) tem mais overhead
+  // proporcional do Windows consumindo sua capacidade, então tem mais espaço
+  // pra ganhar com otimização de sistema. Hardware topo de linha já "sobra"
+  // capacidade, então o mesmo ajuste rende proporcionalmente menos.
+  // Clampado entre 0.7 (hardware muito forte, pouco espaço) e 1.4 (hardware
+  // mais limitado, mais espaço) pra não exagerar em nenhuma direção.
+  const gpuHeadroom = Math.max(0.7, Math.min(1.4, 2 - gpuScalar));
+  const cpuHeadroom = Math.max(0.7, Math.min(1.4, 2 - cpuScalar));
+  const avgHeadroom = (gpuHeadroom + cpuHeadroom) / 2;
+
   let multiplier = 1;
   Object.keys(FPS_CATEGORY_WEIGHT).forEach(catId=>{
     let weight = FPS_CATEGORY_WEIGHT[catId];
     if(weight <= 0 || !DATA[catId]) return;
     if(bias[catId]) weight *= bias[catId];
-    if(catId === 'gpu') weight *= gpuScalar;
-    else if(catId === 'cpu') weight *= cpuScalar;
-    else weight *= avgScalar;
+    if(catId === 'gpu') weight *= gpuHeadroom;
+    else if(catId === 'cpu') weight *= cpuHeadroom;
+    else weight *= avgHeadroom;
     const { checked, total } = countPresetInCat(presetIds, catId);
     if(!total || checked <= 0) return;
     const fraction = checked/total;
