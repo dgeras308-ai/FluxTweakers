@@ -356,28 +356,18 @@
     padding:9px 10px 9px 13px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;
     font-family:var(--sans);transition:background .12s,color .12s;width:100%;
   }
-  aside#tabs button svg, aside#tabs button .icon-tile{width:26px;height:26px;flex-shrink:0;opacity:.88;transition:opacity .12s,transform .15s;border-radius:7px;}
-  .icon-tile{
-    background:#fff;border-radius:22%;display:flex;align-items:center;justify-content:center;
-    box-shadow:0 1px 2px rgba(0,0,0,.2);
-  }
-  .icon-tile img{width:76%;height:76%;object-fit:contain;display:block;}
+  aside#tabs button svg{width:20px;height:20px;flex-shrink:0;transition:transform .15s;}
   aside#tabs button:hover{color:var(--text);background:var(--card);}
-  aside#tabs button:hover svg, aside#tabs button:hover .icon-tile{opacity:1;}
 
-  aside#tabs button.active{background:var(--tab-accent-dim);color:var(--text);}
-  aside#tabs button.active::before{
-    content:"";position:absolute;left:0;top:20%;bottom:20%;width:2.5px;border-radius:0 3px 3px 0;
-    background:var(--tab-accent);
-  }
-  aside#tabs button.active svg, aside#tabs button.active .icon-tile{opacity:1;}
+  aside#tabs button.active{background:var(--tab-accent);color:#08151a;}
+  aside#tabs button.active .label{color:#08151a;}
   aside#tabs button .label{white-space:nowrap;flex:1;text-transform:uppercase;font-size:11.5px;letter-spacing:.045em;font-weight:700;}
   aside#tabs button .count{
     font-size:10px;font-weight:700;color:var(--muted2);background:var(--card);
     border:1px solid var(--border);border-radius:999px;padding:1px 6px;flex-shrink:0;
     font-family:var(--mono);
   }
-  aside#tabs button.active .count{color:var(--tab-accent);border-color:var(--tab-accent-dim);background:var(--panel);}
+  aside#tabs button.active .count{color:#08151a;border-color:transparent;background:rgba(8,21,26,.15);}
 
   .sidebar-divider{height:1px;background:var(--border-soft);margin:14px 0;}
 
@@ -424,9 +414,6 @@
   .sidebar-compact aside#tabs button .count{display:none;} /* tooltip já mostra o nome; contador some no modo compacto */
   .sidebar-compact aside#tabs button:hover .label{
     opacity:1;transform:translateY(-50%) translateX(10px);
-  }
-  .sidebar-compact aside#tabs button.active::before{
-    left:0;top:14%;bottom:14%;
   }
   .sidebar-compact .sidebar-label{display:none;}
   .sidebar-compact .theme-picker{justify-content:center;}
@@ -2262,6 +2249,41 @@ function diskGlyph(accent){
     <circle cx="12" cy="12" r="1.8" fill="${accent}"/>
     <path d="M5.8 12h2.6M15.6 12h2.6" stroke="${accent}" stroke-width="1.3" stroke-linecap="round"/>`;
 }
+function ramGlyph(accent){
+  return `<rect x="4" y="9" width="16" height="6.2" rx="1.4" fill="#fff"/>
+    <path d="M7 9v-1.6M10.2 9v-1.6M13.4 9v-1.6M16.6 9v-1.6" stroke="#fff" stroke-width="1.3" stroke-linecap="round"/>
+    <path d="M7.4 11.2v2M10.6 11.2v2M13.8 11.2v2M17 11.2v2" stroke="${accent}" stroke-width="1.2" stroke-linecap="round"/>`;
+}
+function mouseGlyph(accent){
+  return `<rect x="8.4" y="4.6" width="7.2" height="14.8" rx="3.6" fill="#fff"/>
+    <path d="M12 7.4v3.4" stroke="${accent}" stroke-width="1.4" stroke-linecap="round"/>`;
+}
+function powerGlyph(accent){
+  return `<path d="M13 4 6.5 13.2h4.2L10 20l7-9.6h-4.3L13 4Z" fill="#fff"/>
+    <path d="M13 4 6.5 13.2h4.2L10 20l7-9.6h-4.3L13 4Z" fill="none" stroke="${accent}" stroke-width=".6" stroke-opacity=".35"/>`;
+}
+function networkGlyph(accent){
+  return `<path d="M5.5 10.3a9.3 9.3 0 0 1 13 0" stroke="#fff" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+    <path d="M8 13.3a5.2 5.2 0 0 1 8 0" stroke="#fff" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+    <circle cx="12" cy="17" r="1.7" fill="${accent}"/>`;
+}
+function systemGlyph(accent){
+  return `<circle cx="12" cy="12" r="3.1" fill="#fff"/>
+    <path d="M12 5.4v1.9M12 16.7v1.9M18.6 12h-1.9M7.3 12H5.4M16.4 7.6l-1.3 1.3M8.9 15.1l-1.3 1.3M16.4 16.4l-1.3-1.3M8.9 8.9 7.6 7.6"
+      stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="12" cy="12" r="1.3" fill="${accent}"/>`;
+}
+function monitorGlyph(accent){
+  return `<rect x="4.5" y="5.6" width="15" height="10.4" rx="1.4" fill="#fff"/>
+    <path d="M9.6 19.4h4.8M12 16v3.4" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>
+    <rect x="6.3" y="7.4" width="11.4" height="6.8" rx=".6" fill="${accent}" fill-opacity=".28"/>`;
+}
+function gamesGlyph(accent){
+  return `<path d="M6.8 9.4h10.4a3.4 3.4 0 0 1 3.3 4.1l-.5 2.3a2.3 2.3 0 0 1-4-.7l-.4-1.1H9.7l-.4 1.1a2.3 2.3 0 0 1-4.3-1.3l.3-2.3a3.4 3.4 0 0 1 1.5-2.1Z" fill="#fff"/>
+    <path d="M8.6 12h2.4M9.8 10.8v2.4" stroke="${accent}" stroke-width="1.2" stroke-linecap="round"/>
+    <circle cx="15.4" cy="11.6" r=".85" fill="${accent}"/>
+    <circle cx="17" cy="13.2" r=".85" fill="${accent}"/>`;
+}
 
 const VENDOR_OPTIONS = {
   gpu: [
@@ -2279,8 +2301,59 @@ const VENDOR_OPTIONS = {
   ],
 };
 
-function imgTile(src){
-  return `<div class="icon-tile"><img src="${src}" alt=""></div>`;
+function lineIcon(inner){
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+}
+function cpuLine(){
+  return `<rect x="7" y="7" width="10" height="10" rx="1.5"/>
+    <path d="M9.5 7V4M14.5 7V4M9.5 20v-3M14.5 20v-3M7 9.5H4M7 14.5H4M20 9.5h-3M20 14.5h-3"/>
+    <rect x="10" y="10" width="4" height="4" rx=".6"/>`;
+}
+function gpuLine(){
+  return `<rect x="3" y="7.5" width="18" height="9" rx="1.6"/>
+    <circle cx="7.3" cy="12" r="1.6"/>
+    <path d="M12 10.6h5M12 13.4h3.2"/>
+    <path d="M6 16.5v1.8M17 16.5v1.8"/>`;
+}
+function ramLine(){
+  return `<rect x="4" y="9" width="16" height="6.5" rx="1"/>
+    <path d="M7 9V6.6M10.3 9V6.6M13.7 9V6.6M17 9V6.6"/>
+    <path d="M7.4 11.3v2M10.7 11.3v2M14 11.3v2M17.2 11.3v2"/>`;
+}
+function storageLine(){
+  return `<circle cx="12" cy="12" r="7.2"/>
+    <circle cx="12" cy="12" r="1.6"/>
+    <path d="M5.4 12h3M15.6 12h3"/>`;
+}
+function mouseLine(){
+  return `<rect x="8" y="3.6" width="8" height="16.8" rx="4"/>
+    <path d="M12 6.6v3.6"/>`;
+}
+function powerLine(){
+  return `<path d="M13 3 6 14h4.5L10 21l8-11h-4.5L13 3Z"/>`;
+}
+function networkLine(){
+  return `<path d="M4.8 9.6a10.4 10.4 0 0 1 14.4 0"/>
+    <path d="M7.6 13a6.4 6.4 0 0 1 8.8 0"/>
+    <path d="M10.6 16.3a2.4 2.4 0 0 1 2.8 0"/>
+    <circle cx="12" cy="19" r=".4" fill="currentColor" stroke="none"/>`;
+}
+function systemLine(){
+  return `<circle cx="12" cy="12" r="3"/>
+    <path d="M12 4.4v2.3M12 17.3v2.3M19.6 12h-2.3M6.7 12H4.4M17.4 6.6l-1.6 1.6M8.2 15.2l-1.6 1.6M17.4 17.4l-1.6-1.6M8.2 8.8 6.6 7.2"/>`;
+}
+function monitorLine(){
+  return `<rect x="3.4" y="5" width="17.2" height="11.4" rx="1.4"/>
+    <path d="M9 20h6M12 16.4V20"/>`;
+}
+function gamesLine(){
+  return `<path d="M6.5 9.8h11a3.2 3.2 0 0 1 3.1 3.9l-.4 1.9a2.1 2.1 0 0 1-3.8.6l-.7-1.2H8.3l-.7 1.2a2.1 2.1 0 0 1-3.8-.6l-.4-1.9a3.2 3.2 0 0 1 3.1-3.9Z"/>
+    <path d="M8.7 12.2h2M9.7 11.2v2"/>
+    <path d="M15.6 11.9h.01M17.2 13.4h.01"/>`;
+}
+function startupLine(){
+  return `<path d="M12 3.6v6.4"/>
+    <path d="M7 6.3a8 8 0 1 0 10 0"/>`;
 }
 
 function startupGlyph(accent){
@@ -2289,17 +2362,17 @@ function startupGlyph(accent){
 }
 
 const ICONS = {
-  cpu: imgTile(UPLOADED_ICONS.cpu),
-  gpu: imgTile(UPLOADED_ICONS.gpu),
-  ram: imgTile(UPLOADED_ICONS.ram),
-  storage: imgTile(UPLOADED_ICONS.storage),
-  mouse: imgTile(UPLOADED_ICONS.mouse),
-  power: imgTile(UPLOADED_ICONS.power),
-  network: imgTile(UPLOADED_ICONS.network),
-  system: imgTile(UPLOADED_ICONS.system),
-  monitor: imgTile(UPLOADED_ICONS.monitor),
-  games: imgTile(UPLOADED_ICONS.games),
-  startup: tileIcon('gIcStartup', '#9b7bff', '#4b31b3', startupGlyph('#4b31b3')),
+  cpu: lineIcon(cpuLine()),
+  gpu: lineIcon(gpuLine()),
+  ram: lineIcon(ramLine()),
+  storage: lineIcon(storageLine()),
+  mouse: lineIcon(mouseLine()),
+  power: lineIcon(powerLine()),
+  network: lineIcon(networkLine()),
+  system: lineIcon(systemLine()),
+  monitor: lineIcon(monitorLine()),
+  games: lineIcon(gamesLine()),
+  startup: lineIcon(startupLine()),
 };
 const CHEVRON = `<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`;
 
@@ -3098,12 +3171,12 @@ function showToast(message){
 })();
 
 const CAT_COLORS = {
-  cpu:"#7c5cff", gpu:"#7c5cff", ram:"#7c5cff", storage:"#7c5cff",
-  mouse:"#7c5cff", power:"#7c5cff", network:"#7c5cff", system:"#7c5cff", monitor:"#7c5cff", games:"#7c5cff"
+  cpu:"#43c9e5", gpu:"#43c9e5", ram:"#43c9e5", storage:"#43c9e5",
+  mouse:"#43c9e5", power:"#43c9e5", network:"#43c9e5", system:"#43c9e5", monitor:"#43c9e5", games:"#43c9e5"
 };
 
 const THEME_COLORS = {
-  roxo:"#7c5cff", vermelho:"#ff4d3d", indigo:"#6470ee", emerald:"#2dd4a7", cyan:"#39c0e0", mono:"#e8e2df"
+  roxo:"#7c5cff", vermelho:"#ff4d3d", indigo:"#6470ee", emerald:"#2dd4a7", cyan:"#43c9e5", mono:"#e8e2df"
 };
 
 function safeLocalGet2(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
