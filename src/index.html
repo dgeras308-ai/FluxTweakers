@@ -2907,7 +2907,7 @@ reg add "HKCU\\Control Panel\\Desktop\\WindowMetrics" /v MinAnimate /t REG_SZ /d
   ]},
 
   games: { label:"Jogos", desc:"Aumenta a prioridade de CPU (High) direto no registro pra cada jogo marcado — não precisa mexer no Gerenciador de Tarefas toda vez que abrir.", special:"games", items:[
-    { id:"game_valorant", group:"FPS Competitivo", title:"VALORANT", desc:"Prioridade High para o jogo e para o launcher RiotClientServices.exe.",
+    { id:"game_valorant", customImg:"assets/games/valorant.jpg", group:"FPS Competitivo", title:"VALORANT", desc:"Prioridade High para o jogo e para o launcher RiotClientServices.exe.",
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\VALORANT-Win64-Shipping.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f
 reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\RiotClientServices.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
     { id:"game_cs2", steam:"730", group:"FPS Competitivo", title:"Counter-Strike 2", desc:"Prioridade High para cs2.exe.",
@@ -2918,61 +2918,31 @@ reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execu
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\RainbowSix.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
     { id:"game_pubg", steam:"578080", group:"Battle Royale", title:"PUBG: Battlegrounds", desc:"Prioridade High para TslGame.exe.",
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\TslGame.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-    { id:"game_fortnite", group:"Battle Royale", title:"Fortnite", desc:"Prioridade High para FortniteClient-Win64-Shipping.exe.",
+    { id:"game_fortnite", customImg:"assets/games/fortnite.jpg", group:"Battle Royale", title:"Fortnite", desc:"Prioridade High para FortniteClient-Win64-Shipping.exe.",
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\FortniteClient-Win64-Shipping.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-    { id:"game_warzone", group:"Battle Royale", title:"Call of Duty (Warzone / Black Ops / MW)", desc:"Prioridade High para cod.exe — launcher unificado da Activision desde 2022, usado por Warzone, Black Ops e Modern Warfare.",
-      cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\cod.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-    { id:"game_battlefield", group:"Battle Royale", title:"Battlefield (toda a franquia)", desc:"Prioridade High para BF1, BF3, BF4, BFV, BF2042 e Hardline de uma vez.",
-      cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\bf1.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f
-reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\bf3.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f
-reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\bf4.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f
-reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\bfh.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f
-reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\bfv.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f
-reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\bf2042.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-    { id:"game_lol", group:"MOBA", title:"League of Legends", desc:"Prioridade High para League of Legends.exe.",
-      cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\League of Legends.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-    { id:"game_dota2", steam:"570", group:"MOBA", title:"Dota 2", desc:"Prioridade High para dota2.exe.",
+                { id:"game_dota2", steam:"570", group:"MOBA", title:"Dota 2", desc:"Prioridade High para dota2.exe.",
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\dota2.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
     { id:"game_gta5", steam:"271590", group:"Mundo Aberto", title:"GTA V", desc:"Prioridade High para GTA5.exe.",
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\GTA5.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-    { id:"game_fivem", group:"Mundo Aberto", title:"FiveM (GTA RP)", desc:"Prioridade High para o processo do FiveM. O nome do executável muda com as versões do FiveM — se não funcionar, confira o nome atual no Gerenciador de Tarefas.",
+    { id:"game_fivem", customImg:"assets/games/fivem.png", group:"Mundo Aberto", title:"FiveM (GTA RP)", desc:"Prioridade High para o processo do FiveM. O nome do executável muda com as versões do FiveM — se não funcionar, confira o nome atual no Gerenciador de Tarefas.",
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\FiveM_b2372_GTAProcess.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
     { id:"game_rdr2", steam:"1174180", group:"Mundo Aberto", title:"Red Dead Redemption 2", desc:"Prioridade High para RDR2.exe.",
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\RDR2.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-    { id:"game_genshin", group:"Mundo Aberto", title:"Genshin Impact", desc:"Prioridade High para GenshinImpact.exe.",
-      cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\GenshinImpact.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-    { id:"game_minecraft_bedrock", group:"Mundo Aberto", title:"Minecraft (Bedrock/Microsoft Store)", desc:"Prioridade High para Minecraft.Windows.exe.",
-      cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\Minecraft.Windows.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-    { id:"game_minecraft_java", group:"Mundo Aberto", title:"Minecraft (Java)", desc:"Prioridade High para java.exe e javaw.exe. Atenção: isso afeta QUALQUER programa Java, não só o Minecraft — só marque se não roda outro app Java importante.",
-      cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\java.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f
-reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\javaw.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-    { id:"game_rocketleague", steam:"252950", group:"Outros", title:"Rocket League", desc:"Prioridade High para RocketLeague.exe.",
+                { id:"game_rocketleague", steam:"252950", group:"Outros", title:"Rocket League", desc:"Prioridade High para RocketLeague.exe.",
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\RocketLeague.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-    { id:"game_roblox", group:"Outros", title:"Roblox", desc:"Prioridade High para RobloxPlayerBeta.exe.",
+    { id:"game_roblox", customImg:"assets/games/roblox.png", group:"Outros", title:"Roblox", desc:"Prioridade High para RobloxPlayerBeta.exe.",
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\RobloxPlayerBeta.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
 
-    { id:"game_bf6", group:"FPS Competitivo", title:"Battlefield 6", desc:"Prioridade High para BF6.exe.",
-      cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\BF6.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-    { id:"game_hll", steam:"686810", group:"FPS Competitivo", title:"Hell Let Loose", desc:"Prioridade High para HLL.exe.",
+        { id:"game_hll", steam:"686810", group:"FPS Competitivo", title:"Hell Let Loose", desc:"Prioridade High para HLL.exe.",
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\HLL.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
     { id:"game_sf6", steam:"1364780", group:"FPS Competitivo", title:"Street Fighter 6", desc:"Prioridade High para StreetFighter6.exe.",
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\StreetFighter6.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
 
-    { id:"game_bloodstrike", group:"Battle Royale", title:"Blood Strike", desc:"Prioridade High para BloodStrike.exe.",
-      cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\BloodStrike.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-    { id:"game_arenabreakout", group:"Battle Royale", title:"Arena Breakout", desc:"Prioridade High para ArenaBreakout.exe.",
-      cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\ArenaBreakout.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-    { id:"game_dayz", steam:"221100", group:"Battle Royale", title:"DayZ", desc:"Prioridade High para DayZ.exe.",
+            { id:"game_dayz", steam:"221100", group:"Battle Royale", title:"DayZ", desc:"Prioridade High para DayZ.exe.",
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\DayZ.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
     { id:"game_rust", steam:"252490", group:"Battle Royale", title:"Rust", desc:"Prioridade High para RustClient.exe.",
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\RustClient.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-    { id:"game_freefire", group:"Battle Royale", title:"Free Fire (via emulador/Bluestacks)", desc:"Prioridade High para HD-Player.exe, o processo do emulador Bluestacks usado pra rodar Free Fire no PC.",
-      cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\HD-Player.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-
-    { id:"game_gow", group:"Mundo Aberto", title:"God of War (2018 / Ragnarök)", desc:"Prioridade High para GoW.exe e GoWRagnarok.exe.",
-      cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\GoW.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f
-reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\GoWRagnarok.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-    { id:"game_mta", group:"Mundo Aberto", title:"MTA: San Andreas", desc:"Prioridade High para o cliente do MTA e o gta_sa.exe.",
+            { id:"game_mta", customImg:"assets/games/mta.webp", group:"Mundo Aberto", title:"MTA: San Andreas", desc:"Prioridade High para o cliente do MTA e o gta_sa.exe.",
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\Multi Theft Auto.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f
 reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\gta_sa.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
     { id:"game_ets", steam:"227300", group:"Mundo Aberto", title:"Euro Truck Simulator (1 e 2)", desc:"Prioridade High para eurotrucks.exe e ets2.exe.",
@@ -2984,10 +2954,7 @@ reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execu
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\re2.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
     { id:"game_revillage", steam:"1196590", group:"Mundo Aberto", title:"Resident Evil Village", desc:"Prioridade High para re8.exe.",
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\re8.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-    { id:"game_tlou", group:"Mundo Aberto", title:"The Last of Us Part I e II", desc:"Prioridade High para tlou-i.exe e tlou-ii.exe.",
-      cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\tlou-i.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f
-reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\tlou-ii.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-    { id:"game_cyberpunk", steam:"1091500", group:"Mundo Aberto", title:"Cyberpunk 2077", desc:"Prioridade High para Cyberpunk2077.exe.",
+        { id:"game_cyberpunk", steam:"1091500", group:"Mundo Aberto", title:"Cyberpunk 2077", desc:"Prioridade High para Cyberpunk2077.exe.",
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\Cyberpunk2077.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
     { id:"game_farmingsim", steam:"1248130", group:"Mundo Aberto", title:"Farming Simulator (22 e 25)", desc:"Prioridade High para FarmingSimulator2022.exe e FarmingSimulator2025.exe.",
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\FarmingSimulator2022.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f
@@ -3003,11 +2970,7 @@ reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execu
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\hollow_knight.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
     { id:"game_terraria", steam:"105600", group:"Outros", title:"Terraria", desc:"Prioridade High para Terraria.exe.",
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\Terraria.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-    { id:"game_choochoo", group:"Outros", title:"Choo-Choo Charles", desc:"Prioridade High para Charles.exe.",
-      cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\Charles.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-    { id:"game_pointblank", group:"Outros", title:"Point Blank", desc:"Prioridade High para PointBlank.exe.",
-      cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\PointBlank.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-  ]},
+          ]},
 
   startup: { label:"Inicialização", desc:"Programas comuns que costumam abrir sozinhos com o Windows e consomem RAM/CPU logo no boot. Marque só os que você realmente não precisa que abram automaticamente.", items:[
     { id:"su_discord", group:"Comunicação", title:"Discord", desc:"Remove o Discord da inicialização automática do Windows (continua funcionando normal se você abrir manualmente).",
@@ -3913,7 +3876,8 @@ function gameTileIcon(title, group){
   let hash = 0;
   for(let i=0;i<title.length;i++){ hash = (hash*31 + title.charCodeAt(i)) >>> 0; }
   const pair = GAME_TILE_PAIRS[hash % GAME_TILE_PAIRS.length];
-  const glyph = genreGlyph(group, pair[1]);
+  const initial = title.trim().charAt(0).toUpperCase();
+  const glyph = `<text x="12" y="16.2" text-anchor="middle" font-family="var(--sans),sans-serif" font-size="13" font-weight="800" fill="#fff">${initial}</text>`;
   return tileIcon('gGameT'+hash, pair[0], pair[1], glyph);
 }
 
@@ -3927,12 +3891,19 @@ function gameTileIcon(title, group){
         if(vc) rowIcon = tileIcon('gRow_'+item.id.replace(/[^a-zA-Z0-9]/g,''), vc[0], vc[1], gpuGlyph(vc[1]));
       }
       if(catId === 'games'){
-        rowIcon = item.steam
-          ? `<span class="game-cover-wrap">
+        if(item.customImg){
+          rowIcon = `<span class="game-cover-wrap">
+               <img class="game-cover" src="${item.customImg}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+               <span class="game-cover-fallback" style="display:none">${gameTileIcon(item.title, item.group)}</span>
+             </span>`;
+        } else if(item.steam){
+          rowIcon = `<span class="game-cover-wrap">
                <img class="game-cover" src="https://cdn.cloudflare.steamstatic.com/steam/apps/${item.steam}/header.jpg" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
                <span class="game-cover-fallback" style="display:none">${gameTileIcon(item.title, item.group)}</span>
-             </span>`
-          : gameTileIcon(item.title, item.group);
+             </span>`;
+        } else {
+          rowIcon = gameTileIcon(item.title, item.group);
+        }
       }
       html += `<div class="setting-row cardIn" id="row_${item.id}" style="animation-delay:${delay}s">
         <div class="setting-row-top">
