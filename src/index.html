@@ -435,10 +435,12 @@
   .fps-methodology-body p{margin:0;font-size:12px;color:var(--muted);line-height:1.6;}
   .fps-methodology-body b{color:var(--text);}
 
-  .game-cover-wrap{display:block;width:64px;height:auto;border-radius:6px;overflow:hidden;flex-shrink:0;}
-  .game-cover{width:64px;height:24px;object-fit:cover;display:block;border-radius:6px;}
-  .game-cover-fallback svg{width:40px;height:40px;}
-  #panel-games .setting-icon{width:64px;height:24px;}
+  .game-cover-wrap{display:block;width:120px;height:auto;border-radius:8px;overflow:hidden;flex-shrink:0;}
+  .game-cover{width:120px;height:56px;object-fit:cover;display:block;border-radius:8px;}
+  .game-cover-fallback svg{width:48px;height:48px;}
+  #panel-games .setting-icon{width:120px;height:56px;display:flex;align-items:center;justify-content:center;}
+  #panel-games .setting-icon > svg{width:48px;height:48px;flex-shrink:0;}
+  #panel-games .setting-row-top{align-items:center;}
   .tab-group-label{
     font-size:10px;letter-spacing:.12em;text-transform:uppercase;
     color:var(--muted2);font-weight:700;margin:14px 4px 6px;
@@ -2937,7 +2939,7 @@ reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execu
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\FiveM_b2372_GTAProcess.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
     { id:"game_rdr2", steam:"1174180", group:"Mundo Aberto", title:"Red Dead Redemption 2", desc:"Prioridade High para RDR2.exe.",
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\RDR2.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
-    { id:"game_genshin", steam:"2711730", group:"Mundo Aberto", title:"Genshin Impact", desc:"Prioridade High para GenshinImpact.exe.",
+    { id:"game_genshin", group:"Mundo Aberto", title:"Genshin Impact", desc:"Prioridade High para GenshinImpact.exe.",
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\GenshinImpact.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
     { id:"game_minecraft_bedrock", group:"Mundo Aberto", title:"Minecraft (Bedrock/Microsoft Store)", desc:"Prioridade High para Minecraft.Windows.exe.",
       cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\Minecraft.Windows.exe\\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f` },
@@ -3927,7 +3929,7 @@ function gameTileIcon(title, group){
       if(catId === 'games'){
         rowIcon = item.steam
           ? `<span class="game-cover-wrap">
-               <img class="game-cover" src="https://cdn.cloudflare.steamstatic.com/steam/apps/${item.steam}/capsule_231x87.jpg" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+               <img class="game-cover" src="https://cdn.cloudflare.steamstatic.com/steam/apps/${item.steam}/header.jpg" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
                <span class="game-cover-fallback" style="display:none">${gameTileIcon(item.title, item.group)}</span>
              </span>`
           : gameTileIcon(item.title, item.group);
