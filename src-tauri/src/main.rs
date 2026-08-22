@@ -26,6 +26,39 @@ struct DiskInfo {
 }
 
 #[derive(Serialize)]
+struct HardwareInfo {
+    cpu_brand: String,
+    cpu_cores: usize,
+    ram_total_gb: f64,
+    os_name: String,
+}
+
+/// Detecta o hardware real da máquina uma vez (chamado ao abrir a aba Início).
+#[tauri::command]
+fn get_hardware_info(state: State<SysState>) -> HardwareInfo {
+    let sys = state.0.lock().unwrap();
+    let cpu_brand = sys
+        .cpus()
+        .first()
+        .map(|c| c.brand().trim().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "Processador não identificado".to_string());
+
+    let os_name = format!(
+        "{} {}",
+        System::name().unwrap_or_else(|| "Windows".to_string()),
+        System::os_version().unwrap_or_default()
+    );
+
+    HardwareInfo {
+        cpu_brand,
+        cpu_cores: sys.cpus().len(),
+        ram_total_gb: ((sys.total_memory() as f64 / 1_073_741_824.0) * 10.0).round() / 10.0,
+        os_name: os_name.trim().to_string(),
+    }
+}
+
+#[derive(Serialize)]
 struct SystemStats {
     cpu_percent: f64,
     ram_used_gb: f64,
@@ -369,7 +402,7 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(SysState(Mutex::new(System::new_all())))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info])
         .run(tauri::generate_context!())
         .expect("erro ao rodar o app By Dgeras");
 }

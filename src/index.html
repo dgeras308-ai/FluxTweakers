@@ -385,6 +385,44 @@
   .ram-cleaner-head p{margin:0;font-size:11.8px;color:var(--item-muted);line-height:1.5;max-width:440px;}
   .ram-cleaner-actions{display:flex;align-items:center;gap:12px;margin-top:14px;}
   .ram-cleaner-status{font-size:11.5px;color:var(--muted);}
+
+  /* ===== Aba Início (dashboard) ===== */
+  .home-dash{display:flex;flex-direction:column;gap:18px;}
+  .home-welcome h2{margin:0 0 6px;font-size:20px;color:var(--text);}
+  .home-welcome p{margin:0;color:var(--muted);font-size:13px;max-width:560px;line-height:1.6;}
+  .home-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media (max-width:820px){.home-grid{grid-template-columns:1fr;}}
+  .home-card{
+    background:var(--item-bg);border:1px solid var(--item-border);border-radius:var(--radius-lg);
+    padding:16px;
+  }
+  .home-card h3{margin:0 0 12px;font-size:12.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;}
+  .home-hw-info{display:flex;flex-direction:column;gap:9px;}
+  .home-hw-row{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;color:var(--muted);}
+  .home-hw-row b{color:var(--text);font-family:var(--mono);font-weight:600;font-size:12.5px;text-align:right;}
+  .home-actions{display:flex;flex-direction:column;}
+  .home-actions h3{margin-bottom:10px;}
+  .home-action-btn{
+    display:flex;align-items:center;gap:12px;text-align:left;
+    background:var(--panel);border:1px solid var(--border-soft);border-radius:9px;
+    padding:10px 12px;margin-bottom:8px;cursor:pointer;color:var(--text);
+    transition:background .15s ease, border-color .15s ease, transform .15s ease;
+  }
+  .home-action-btn:last-child{margin-bottom:0;}
+  .home-action-btn:hover{background:var(--item-bg-hover);border-color:var(--tab-accent-dim);transform:translateX(2px);}
+  .home-action-btn svg{width:18px;height:18px;color:var(--accent);flex-shrink:0;}
+  .home-action-btn div{display:flex;flex-direction:column;gap:1px;}
+  .home-action-btn b{font-size:12.5px;font-weight:700;}
+  .home-action-btn span{font-size:11px;color:var(--muted);}
+  .home-nav-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(120px, 1fr));gap:8px;}
+  .home-nav-item{
+    display:flex;flex-direction:column;align-items:center;gap:6px;
+    background:var(--panel);border:1px solid var(--border-soft);border-radius:9px;
+    padding:14px 8px;cursor:pointer;color:var(--muted);transition:.15s ease;
+  }
+  .home-nav-item:hover{background:var(--item-bg-hover);color:var(--text);border-color:var(--tab-accent-dim);transform:translateY(-2px);}
+  .home-nav-item svg{width:20px;height:20px;}
+  .home-nav-item span{font-size:11px;font-weight:600;text-align:center;}
   .tab-group-label{
     font-size:10px;letter-spacing:.12em;text-transform:uppercase;
     color:var(--muted2);font-weight:700;margin:14px 4px 6px;
@@ -2363,6 +2401,10 @@ function startupLine(){
   return `<path d="M12 3.6v6.4"/>
     <path d="M7 6.3a8 8 0 1 0 10 0"/>`;
 }
+function homeLine(){
+  return `<path d="M4 11.5 12 4l8 7.5"/>
+    <path d="M6.2 9.8V19a1 1 0 0 0 1 1H10v-4.6a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2V20h2.8a1 1 0 0 0 1-1V9.8"/>`;
+}
 
 function startupGlyph(accent){
   return `<circle cx="12" cy="12" r="5.4" fill="#fff"/>
@@ -3229,6 +3271,116 @@ function catItemCount(catId){
   return cat.items.length;
 }
 
+// ===== Aba Início: dashboard de boas-vindas, fora do sistema de categorias =====
+const homeBtn = document.createElement('button');
+homeBtn.innerHTML = `${lineIcon(homeLine())}<span class="label">Início</span>`;
+homeBtn.dataset.cat = 'home';
+homeBtn.classList.add('active');
+homeBtn.onclick = ()=>switchTab('home');
+tabsEl.appendChild(homeBtn);
+
+const homeDivider = document.createElement('div');
+homeDivider.className = 'tab-group-label';
+homeDivider.textContent = '';
+tabsEl.appendChild(homeDivider);
+
+const homePanel = document.createElement('div');
+homePanel.className = 'panel active';
+homePanel.id = 'panel-home';
+homePanel.innerHTML = `
+  <div class="home-dash">
+    <div class="home-welcome">
+      <h2>Bem-vindo de volta 👋</h2>
+      <p>Aqui está um resumo rápido da sua máquina e do que o FluxTweakers pode fazer por ela agora.</p>
+    </div>
+
+    <div class="home-grid">
+      <div class="home-card home-hw">
+        <h3>Hardware detectado</h3>
+        <div id="homeHwInfo" class="home-hw-info">
+          <div class="home-hw-row"><span>Processador</span><b>Detectando...</b></div>
+          <div class="home-hw-row"><span>Núcleos</span><b>—</b></div>
+          <div class="home-hw-row"><span>Memória RAM</span><b>—</b></div>
+          <div class="home-hw-row"><span>Sistema</span><b>—</b></div>
+        </div>
+      </div>
+
+      <div class="home-card home-actions">
+        <h3>Ações rápidas</h3>
+        <button class="home-action-btn" id="homeActApplyRec">
+          ${lineIcon('<path d="M20 6 9 17l-5-5"/>')}
+          <div><b>Aplicar preset Recomendado</b><span>Equilíbrio geral, seguro pra qualquer PC</span></div>
+        </button>
+        <button class="home-action-btn" id="homeActRestore">
+          ${lineIcon(startupLine())}
+          <div><b>Criar ponto de restauração</b><span>Segurança antes de aplicar ajustes</span></div>
+        </button>
+        <button class="home-action-btn" id="homeActRamClean">
+          ${lineIcon(ramLine())}
+          <div><b>Limpar RAM agora</b><span>Libera memória em cache do Windows</span></div>
+        </button>
+      </div>
+    </div>
+
+    <div class="home-card home-nav">
+      <h3>Explore as categorias</h3>
+      <div class="home-nav-grid" id="homeNavGrid"></div>
+    </div>
+  </div>
+`;
+panelsEl.appendChild(homePanel);
+
+// preenche os atalhos de navegação rápida reaproveitando os ícones das categorias
+(function buildHomeNav(){
+  const grid = document.getElementById('homeNavGrid');
+  if (!grid) return;
+  grid.innerHTML = catIds.map(catId => `
+    <button class="home-nav-item" data-goto="${catId}">
+      ${ICONS[catId]}
+      <span>${DATA[catId].label}</span>
+    </button>
+  `).join('');
+  grid.querySelectorAll('.home-nav-item').forEach(el=>{
+    el.onclick = ()=>switchTab(el.dataset.goto);
+  });
+})();
+
+document.getElementById('homeActApplyRec')?.addEventListener('click', ()=>{
+  const btn = document.querySelector('.profile-card.rec');
+  if (btn) btn.click();
+});
+document.getElementById('homeActRestore')?.addEventListener('click', ()=>{
+  const btn = document.getElementById('restoreWidgetBtn');
+  if (btn) btn.click();
+  else showToast('Vá na aba de segurança pra criar um ponto de restauração');
+});
+document.getElementById('homeActRamClean')?.addEventListener('click', ()=>{
+  if (typeof triggerRamClean === 'function') triggerRamClean(false);
+  else showToast('Ative a limpeza de RAM na aba RAM primeiro');
+});
+
+async function loadHomeHardwareInfo(){
+  const el = document.getElementById('homeHwInfo');
+  if (!el) return;
+  if (!window.__TAURI__){
+    el.innerHTML = `<div class="home-hw-row"><span>Detecção de hardware</span><b>Só funciona no app instalado</b></div>`;
+    return;
+  }
+  try{
+    const { invoke } = window.__TAURI__.core;
+    const info = await invoke('get_hardware_info');
+    el.innerHTML = `
+      <div class="home-hw-row"><span>Processador</span><b>${info.cpu_brand}</b></div>
+      <div class="home-hw-row"><span>Núcleos</span><b>${info.cpu_cores}</b></div>
+      <div class="home-hw-row"><span>Memória RAM</span><b>${info.ram_total_gb} GB</b></div>
+      <div class="home-hw-row"><span>Sistema</span><b>${info.os_name}</b></div>
+    `;
+  }catch(err){
+    el.innerHTML = `<div class="home-hw-row"><span>Erro ao detectar</span><b>${err}</b></div>`;
+  }
+}
+loadHomeHardwareInfo();
+
 const TAB_GROUPS = [
   { label: "Hardware", cats: ["cpu","gpu","ram","storage"] },
   { label: "Sistema", cats: ["power","network","system","startup"] },
@@ -3260,12 +3412,11 @@ TAB_GROUPS.forEach(group => {
     btn.dataset.cat = catId;
     btn.style.setProperty('--btn-color', CAT_COLORS[catId]);
     btn.style.setProperty('--btn-bg', CAT_COLORS[catId] + '22');
-    if(i===0) btn.classList.add('active');
     btn.onclick = ()=>switchTab(catId);
     tabsEl.appendChild(btn);
 
     const panel = document.createElement('div');
-    panel.className = 'panel'+(i===0?' active':'');
+    panel.className = 'panel';
     panel.id = 'panel-'+catId;
     panelsEl.appendChild(panel);
   });
