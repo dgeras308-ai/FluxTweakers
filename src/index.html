@@ -357,6 +357,11 @@
     font-family:var(--sans);transition:background .12s,color .12s;width:100%;
   }
   aside#tabs button svg{width:20px;height:20px;flex-shrink:0;transition:transform .15s;}
+  .icon-tile{
+    background:#fff;border-radius:22%;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 1px 2px rgba(0,0,0,.2);
+  }
+  .icon-tile img{width:76%;height:76%;object-fit:contain;display:block;}
   aside#tabs button:hover{color:var(--text);background:var(--card);}
 
   aside#tabs button.active{background:var(--tab-accent);color:#08151a;}
@@ -2301,6 +2306,9 @@ const VENDOR_OPTIONS = {
   ],
 };
 
+function imgTile(src){
+  return `<div class="icon-tile"><img src="${src}" alt=""></div>`;
+}
 function lineIcon(inner){
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
 }
