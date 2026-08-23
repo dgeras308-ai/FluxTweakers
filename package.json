@@ -1,6 +1,6 @@
 {
   "name": "fluxtweakers",
-  "version": "1.0.25",
+  "version": "1.0.26",
   "private": true,
   "scripts": {
     "tauri": "tauri",
@@ -19,5 +19,6 @@
     "@tauri-apps/plugin-process": "^2.0.1"
   }
 }
+
 
 

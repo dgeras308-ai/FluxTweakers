@@ -7,6 +7,7 @@ use std::sync::Mutex;
 use serde::Serialize;
 use sysinfo::{Disks, System};
 use tauri::State;
+use tauri::Manager;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -397,12 +398,54 @@ async fn run_ram_clean() -> Result<String, String> {
     Err("A limpeza não respondeu a tempo — tente de novo".to_string())
 }
 
+// ===== Bordas arredondadas nativas (estilo Windows 11) =====
+// O truque de CSS (transparência + border-radius) é frágil no Windows e nem
+// sempre funciona. O jeito confiável — que Discord, Spotify e outros apps
+// usam — é pedir pro próprio Windows arredondar a janela de verdade, via
+// uma chamada direta à API do sistema (dwmapi.dll), sem precisar de
+// nenhuma biblioteca externa.
+#[cfg(target_os = "windows")]
+#[link(name = "dwmapi")]
+extern "system" {
+    fn DwmSetWindowAttribute(
+        hwnd: isize,
+        dwattribute: u32,
+        pvattribute: *const i32,
+        cbattribute: u32,
+    ) -> i32;
+}
+
+#[cfg(target_os = "windows")]
+fn apply_native_rounded_corners(hwnd_raw: isize) {
+    const DWMWA_WINDOW_CORNER_PREFERENCE: u32 = 33;
+    const DWMWCP_ROUND: i32 = 2; // cantos arredondados "normais" do Windows 11
+    unsafe {
+        DwmSetWindowAttribute(
+            hwnd_raw,
+            DWMWA_WINDOW_CORNER_PREFERENCE,
+            &DWMWCP_ROUND as *const i32,
+            std::mem::size_of::<i32>() as u32,
+        );
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(SysState(Mutex::new(System::new_all())))
         .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info])
+        .setup(|_app| {
+            #[cfg(target_os = "windows")]
+            {
+                if let Some(window) = _app.get_webview_window("main") {
+                    if let Ok(hwnd) = window.hwnd() {
+                        apply_native_rounded_corners(hwnd.0 as isize);
+                    }
+                }
+            }
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("erro ao rodar o app By Dgeras");
 }
