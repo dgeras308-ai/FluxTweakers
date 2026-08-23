@@ -71,7 +71,7 @@ function showUpdateBanner(text) {
     el = document.createElement('div');
     el.id = 'dgerasUpdateBanner';
     el.style.cssText = `
-      position:fixed;top:0;left:0;right:0;z-index:99999;
+      position:fixed;top:40px;left:0;right:0;z-index:9998;
       background:linear-gradient(90deg, var(--accent,#f0b93c), var(--accent2,#ffcf6b));
       color:#1a1410;font:600 12.5px/1 var(--sans,sans-serif);
       padding:8px 16px;text-align:center;
@@ -84,4 +84,16 @@ function showUpdateBanner(text) {
 
 window.addEventListener('DOMContentLoaded', () => {
   checkForAppUpdate();
+
+  // Controles da barra de título customizada (minimizar/fechar)
+  if (window.__TAURI__){
+    try{
+      const { getCurrentWindow } = window.__TAURI__.window;
+      const win = getCurrentWindow();
+      document.getElementById('titlebarMin')?.addEventListener('click', ()=> win.minimize());
+      document.getElementById('titlebarClose')?.addEventListener('click', ()=> win.close());
+    }catch(err){
+      console.log('Controles de janela indisponíveis:', err);
+    }
+  }
 });
