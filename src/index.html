@@ -45,19 +45,20 @@
   ::-webkit-scrollbar-thumb:hover{background:var(--muted2);}
 
   [hidden]{display:none !important;}
-  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
-  html{background:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);height:100%;}
+  html{background:transparent;overflow:hidden;}
   body{
     padding:40px 0 76px 0; overflow-x:hidden; -webkit-font-smoothing:antialiased;
-    background:var(--bg); border-radius:12px; overflow-y:auto;
+    background:var(--bg); border-radius:14px; overflow-y:auto;
     border:1px solid rgba(255,255,255,.08);
+    height:100vh; box-sizing:border-box;
   }
   #customTitlebar{
     position:fixed;top:0;left:0;right:0;height:40px;z-index:9999;
     display:flex;align-items:center;justify-content:space-between;
     padding:0 6px 0 14px;background:rgba(255,255,255,.02);
     border-bottom:1px solid var(--border-soft);
-    border-radius:12px 12px 0 0;
+    border-radius:14px 14px 0 0;
     -webkit-app-region:drag;user-select:none;
   }
   .titlebar-brand{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--muted);}
