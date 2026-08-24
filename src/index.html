@@ -535,6 +535,15 @@
   .cardIn{animation:cardIn .38s cubic-bezier(.2,.8,.2,1) both;}
   @keyframes cardIn{from{opacity:0;transform:translateY(10px) scale(.98);}to{opacity:1;transform:none;}}
 
+  .sidebar-version{
+    display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:12px;
+    border-top:1px solid var(--border-soft);color:var(--muted2);font-size:10.5px;
+  }
+  .sidebar-version svg{width:13px;height:13px;flex-shrink:0;opacity:.7;}
+  .sidebar-version b{color:var(--muted);font-family:var(--mono);font-weight:600;}
+  .sidebar-compact .sidebar-version span{display:none;}
+  .sidebar-compact .sidebar-version{justify-content:center;}
+
   .panel-head{position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border-soft);}
 
   .panel-head-left{display:flex;gap:13px;align-items:flex-start;}
@@ -626,18 +635,26 @@
     display:flex;flex-direction:column;gap:10px;
     background:var(--item-bg);border:1px solid var(--item-border);border-radius:var(--radius);
     padding:14px 16px;
-    transition:background .16s ease, transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    transition:background .16s ease, transform .28s cubic-bezier(.2,.8,.2,1), box-shadow .28s ease, border-color .2s ease;
     box-shadow:var(--item-shadow);
+    perspective:800px;
   }
   .setting-row-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+  .setting-row::after{
+    content:"";position:absolute;inset:0;border-radius:var(--radius);pointer-events:none;
+    background:radial-gradient(180px circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,.06), transparent 70%);
+    opacity:0;transition:opacity .25s ease;
+  }
+  .setting-row:hover::after{opacity:1;}
   .setting-row:hover{
     background:var(--item-bg-hover);
-    transform:translateY(-2px);
-    box-shadow:0 8px 20px -10px rgba(0,0,0,.5);
+    transform:translateY(-3px) rotateX(1.5deg);
+    box-shadow:0 14px 28px -12px rgba(0,0,0,.55);
     border-color:var(--tab-accent-dim);
   }
   .setting-row:active{ transform:translateY(-1px) scale(.997); transition-duration:.08s; }
-  .setting-icon{width:40px;height:40px;flex-shrink:0;margin-top:1px;opacity:.92;transition:opacity .2s ease;}
+  .setting-icon{width:40px;height:40px;flex-shrink:0;margin-top:1px;opacity:.92;transition:opacity .2s ease, transform .28s cubic-bezier(.2,.8,.2,1.4);}
+  .setting-row:hover .setting-icon{transform:scale(1.08) rotate(-2deg);}
   .setting-icon svg, .setting-icon .icon-tile{width:100%;height:100%;}
   .setting-row:hover .setting-icon{opacity:1;}
   .setting-text{flex:1;min-width:0;}
@@ -1309,6 +1326,10 @@
           <label for="restorePoint">Ponto de restauração</label>
           <p>Recomendado. O app pede admin sozinho — reinicie depois.</p>
         </div>
+      </div>
+      <div class="sidebar-version" id="sidebarVersion">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3 6 14h4.5L10 21l8-11h-4.5L13 3Z"/></svg>
+        <span>FluxTweakers <b id="appVersionText">—</b></span>
       </div>
     </aside>
     <main id="panels"></main>
@@ -4088,6 +4109,29 @@ function updateRamSummary(){
 }
 
 catIds.forEach(renderPanel);
+
+// Efeito de "holofote" seguindo o mouse nos cards de ajuste
+document.addEventListener('mousemove', (e)=>{
+  const row = e.target.closest?.('.setting-row');
+  if(!row) return;
+  const rect = row.getBoundingClientRect();
+  row.style.setProperty('--mx', ((e.clientX - rect.left) / rect.width * 100) + '%');
+  row.style.setProperty('--my', ((e.clientY - rect.top) / rect.height * 100) + '%');
+});
+
+// Mostra a versão real do app (lida do Tauri) no rodapé da sidebar
+(async function showAppVersion(){
+  const el = document.getElementById('appVersionText');
+  if(!el) return;
+  if(window.__TAURI__?.app){
+    try{
+      const v = await window.__TAURI__.app.getVersion();
+      el.textContent = 'v' + v;
+      return;
+    }catch(e){}
+  }
+  el.textContent = '';
+})();
 const __ramCleanerToggleEl = document.getElementById('ramCleanerToggle');
 if (__ramCleanerToggleEl) __ramCleanerToggleEl.checked = localStorage.getItem('dgerasRamCleanerOn') === '1';
 setTabAccent(catIds[0]);
