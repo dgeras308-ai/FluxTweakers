@@ -487,6 +487,57 @@
   .profile-result li{font-size:12.5px;color:var(--muted);line-height:1.55;}
   .profile-result li b{color:var(--text);}
 
+  .ram-dashboard{display:flex;flex-direction:column;gap:14px;margin-bottom:18px;}
+  .ram-metrics-row{display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:10px;}
+  .ram-metric-card{
+    background:var(--item-bg);border:1px solid var(--item-border);border-radius:var(--radius);
+    padding:12px 14px;display:flex;flex-direction:column;gap:4px;
+  }
+  .ram-metric-card span{font-size:10px;color:var(--muted2);letter-spacing:.06em;font-weight:700;}
+  .ram-metric-card b{font-size:19px;color:var(--text);font-family:var(--mono);}
+  .ram-metric-card small{font-size:11px;color:var(--muted);font-family:var(--mono);}
+
+  .ram-pressure-card{
+    background:var(--item-bg);border:1px solid var(--item-border);border-radius:var(--radius);
+    padding:16px 18px;
+  }
+  .ram-pressure-title{margin:0 0 8px;font-size:12.5px;color:var(--muted);font-weight:700;}
+  .ram-pressure-value{font-size:30px;font-weight:800;color:var(--text);font-family:var(--mono);display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .ram-pressure-badge{font-size:10.5px;padding:3px 9px;border-radius:999px;font-family:var(--sans);font-weight:700;letter-spacing:.04em;}
+  .ram-pressure-badge.ram-pressure-high{background:rgba(242,85,95,.16);color:var(--off);}
+  .ram-pressure-badge.ram-pressure-ok{background:var(--accent-dim);color:var(--accent);}
+  .ram-pressure-bar{height:8px;border-radius:6px;background:var(--panel);overflow:hidden;margin-bottom:12px;}
+  .ram-pressure-fill{height:100%;border-radius:6px;transition:width .5s ease;background:var(--accent);}
+  .ram-pressure-tips{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px;}
+  .ram-pressure-tips li{font-size:12px;color:var(--muted);line-height:1.5;}
+  .ram-pressure-tips li b{color:var(--text);}
+
+  .ram-actions-row{display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:12px;}
+  .ram-action-card{
+    background:var(--item-bg);border:1px solid var(--item-border);border-radius:var(--radius);
+    padding:14px 16px;display:flex;flex-direction:column;gap:8px;
+  }
+  .ram-action-card h4{margin:0;font-size:13px;color:var(--text);}
+  .ram-action-card p{margin:0;font-size:11.5px;color:var(--muted);line-height:1.5;flex:1;}
+
+  .ram-processes-card{
+    background:var(--item-bg);border:1px solid var(--item-border);border-radius:var(--radius);
+    padding:14px 16px;
+  }
+  .ram-processes-title{margin:0 0 10px;font-size:12.5px;color:var(--muted);font-weight:700;}
+  .ram-process-list{display:flex;flex-direction:column;gap:2px;}
+  .ram-process-row{
+    display:flex;align-items:center;gap:10px;padding:8px 4px;
+    border-bottom:1px solid var(--border-soft);font-size:12.5px;
+  }
+  .ram-process-row:last-child{border-bottom:none;}
+  .ram-process-name{flex:1;color:var(--text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ram-process-mem{color:var(--muted);font-family:var(--mono);min-width:60px;text-align:right;}
+  .ram-process-sev{font-size:9.5px;padding:2px 8px;border-radius:999px;font-weight:700;letter-spacing:.03em;min-width:48px;text-align:center;}
+  .ram-process-sev-alto{background:rgba(242,85,95,.16);color:var(--off);}
+  .ram-process-sev-medio{background:rgba(240,185,60,.16);color:#f0b93c;}
+  .ram-process-sev-baixo{background:var(--panel);color:var(--muted);}
+
   .game-cover-wrap{display:block;width:120px;height:auto;border-radius:8px;overflow:hidden;flex-shrink:0;}
   .game-cover{width:120px;height:56px;object-fit:cover;display:block;border-radius:8px;}
   .game-cover-fallback svg{width:48px;height:48px;}
@@ -3803,15 +3854,17 @@ async function enableRamCleaner(){
   }
 }
 
-async function triggerRamClean(silent){
+async function triggerRamClean(silent, mode){
   if (!window.__TAURI__) return;
   const { invoke } = window.__TAURI__.core;
   try{
     if(!silent) setRamCleanerStatus('Limpando...');
-    const msg = await invoke('run_ram_clean');
+    const msg = await invoke('run_ram_clean', { mode: mode || 'standby' });
     setRamCleanerStatus(msg + ' — ' + new Date().toLocaleTimeString('pt-BR'));
+    return msg;
   }catch(err){
     setRamCleanerStatus('Erro: ' + err);
+    throw err;
   }
 }
 
@@ -3920,6 +3973,73 @@ setInterval(() => {
   updateLiveMonitor(includeGpu);
 }, 2000);
 
+// ---------- Dashboard detalhado de memória (aba RAM) ----------
+async function loadRamDashboard(){
+  const dash = document.getElementById('ramDashboard');
+  if (!dash) return; // só existe quando a aba RAM está de fato renderizada
+  if (!window.__TAURI__){
+    dash.innerHTML = '<p class="bench-note">O dashboard de memória detalhado só funciona no app instalado.</p>';
+    return;
+  }
+  try{
+    const { invoke } = window.__TAURI__.core;
+    const d = await invoke('get_ram_details');
+
+    const freeGb = (d.free_mb/1024).toFixed(1);
+    const cacheGb = (d.cached_mb/1024).toFixed(1);
+    document.getElementById('ramMetricsRow').innerHTML = `
+      <div class="ram-metric-card"><span>MEMÓRIA TOTAL</span><b>${d.total_gb} GB</b></div>
+      <div class="ram-metric-card"><span>EM USO</span><b>${d.used_gb} GB</b><small>${d.pressure_percent}%</small></div>
+      <div class="ram-metric-card"><span>LIVRE</span><b>${freeGb} GB</b></div>
+      <div class="ram-metric-card"><span>EM CACHE</span><b>${cacheGb} GB</b></div>
+    `;
+
+    const p = d.pressure_percent;
+    const level = p >= 90 ? 'CRÍTICA' : p >= 70 ? 'ALTA' : p >= 45 ? 'MODERADA' : 'BAIXA';
+    document.getElementById('ramPressureValue').innerHTML = `${p}<span style="font-size:15px;color:var(--muted)">%</span> <span class="ram-pressure-badge ram-pressure-${level==='CRÍTICA'||level==='ALTA'?'high':'ok'}">${level}</span>`;
+    document.getElementById('ramPressureFill').style.width = Math.min(100, p) + '%';
+    document.getElementById('ramPressureFill').style.background = (p>=70) ? 'var(--off)' : 'var(--accent)';
+
+    const tips = [];
+    if(p >= 70) tips.push('Feche abas de navegador e overlays não usados antes de abrir jogos.');
+    if(d.top_processes[0]) tips.push(`<b>${d.top_processes[0].name}</b> é o maior consumidor agora — considere fechar se não estiver usando.`);
+    if(p >= 85) tips.push('Use a limpeza de cache abaixo e reinicie se a pressão continuar crítica.');
+    if(tips.length === 0) tips.push('Memória sob controle — nenhuma ação necessária agora.');
+    document.getElementById('ramPressureTips').innerHTML = tips.map(t=>`<li>${t}</li>`).join('');
+
+    document.getElementById('ramProcessList').innerHTML = d.top_processes.map(p=>{
+      const sev = p.memory_mb > 2000 ? 'alto' : p.memory_mb > 800 ? 'medio' : 'baixo';
+      const sevLabel = sev === 'alto' ? 'ALTO' : sev === 'medio' ? 'MÉDIO' : 'BAIXO';
+      const display = p.memory_mb >= 1024 ? (p.memory_mb/1024).toFixed(1)+' GB' : Math.round(p.memory_mb)+' MB';
+      return `<div class="ram-process-row">
+        <span class="ram-process-name">${p.name}</span>
+        <span class="ram-process-mem">${display}</span>
+        <span class="ram-process-sev ram-process-sev-${sev}">${sevLabel}</span>
+      </div>`;
+    }).join('');
+  }catch(err){
+    dash.innerHTML = `<p class="bench-note">Erro ao carregar dados de memória: ${err}</p>`;
+  }
+}
+
+document.addEventListener('click', (e)=>{
+  if(e.target?.id === 'ramActStandby'){
+    e.target.textContent = 'Limpando...';
+    triggerRamClean(false, 'standby').finally(()=>{ e.target.textContent = 'Limpar cache'; loadRamDashboard(); });
+  }
+  if(e.target?.id === 'ramActModified'){
+    e.target.textContent = 'Descarregando...';
+    triggerRamClean(false, 'modified').finally(()=>{ e.target.textContent = 'Descarregar'; loadRamDashboard(); });
+  }
+});
+
+// recarrega o dashboard sempre que a aba RAM é aberta
+document.addEventListener('click', (e)=>{
+  const btn = e.target.closest?.('#tabs button[data-cat="ram"]');
+  if(btn) setTimeout(loadRamDashboard, 50);
+});
+if(document.getElementById('ramDashboard')) loadRamDashboard();
+
 // ---------- anel de porcentagem (0-100%) ----------
 function ringSVG(pct, sizeClass){
   const p = Math.max(0, Math.min(100, Math.round(pct)));
@@ -4014,7 +4134,32 @@ function renderPanel(catId){
   }
 
   if(cat.special === 'ram'){
-    html += `<div class="ram-input-row">
+    html += `<div class="ram-dashboard" id="ramDashboard">
+      <div class="ram-metrics-row" id="ramMetricsRow"></div>
+      <div class="ram-pressure-card">
+        <p class="ram-pressure-title">Pressão de memória</p>
+        <div class="ram-pressure-value" id="ramPressureValue">—</div>
+        <div class="ram-pressure-bar"><div class="ram-pressure-fill" id="ramPressureFill"></div></div>
+        <ul class="ram-pressure-tips" id="ramPressureTips"></ul>
+      </div>
+      <div class="ram-actions-row">
+        <div class="ram-action-card">
+          <h4>Limpar cache do sistema</h4>
+          <p>Libera memória "presa" em cache (Standby List) — mesma técnica do ISLC/RAMMap.</p>
+          <button class="preset-btn" id="ramActStandby">Limpar cache</button>
+        </div>
+        <div class="ram-action-card">
+          <h4>Descarregar páginas modificadas</h4>
+          <p>Grava no disco páginas modificadas pendentes, liberando essa memória de volta.</p>
+          <button class="preset-btn" id="ramActModified">Descarregar</button>
+        </div>
+      </div>
+      <div class="ram-processes-card">
+        <p class="ram-processes-title">Maiores consumidores de RAM agora</p>
+        <div id="ramProcessList" class="ram-process-list"></div>
+      </div>
+    </div>
+    <div class="ram-input-row">
       <span>Quanto de RAM você tem?</span>
       <input type="number" id="ramGB" value="${ramGB}" min="2" step="2">
       <span>GB</span>
@@ -4024,7 +4169,7 @@ function renderPanel(catId){
       <div class="ram-cleaner-head">
         <div>
           <h3>Limpeza automática de RAM</h3>
-          <p>Libera memória "presa" em cache do Windows (Standby List) — mesma técnica do ISLC/RAMMap. Roda sozinho a cada 3 minutos quando ativado.</p>
+          <p>Roda a limpeza de cache sozinho a cada 3 minutos quando ativado.</p>
         </div>
         <label class="switch">
           <input type="checkbox" id="ramCleanerToggle">

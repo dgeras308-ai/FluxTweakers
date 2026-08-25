@@ -5,7 +5,7 @@ use std::fs;
 use std::process::Command;
 use std::sync::Mutex;
 use serde::Serialize;
-use sysinfo::{Disks, System};
+use sysinfo::{Disks, ProcessesToUpdate, System};
 use tauri::State;
 use tauri::Manager;
 
@@ -56,6 +56,72 @@ fn get_hardware_info(state: State<SysState>) -> HardwareInfo {
         cpu_cores: sys.cpus().len(),
         ram_total_gb: ((sys.total_memory() as f64 / 1_073_741_824.0) * 10.0).round() / 10.0,
         os_name: os_name.trim().to_string(),
+    }
+}
+
+#[derive(Serialize)]
+struct ProcessMemInfo {
+    name: String,
+    memory_mb: f64,
+}
+
+#[derive(Serialize)]
+struct RamDetails {
+    total_gb: f64,
+    used_gb: f64,
+    free_mb: f64,
+    cached_mb: f64,
+    pressure_percent: f64,
+    top_processes: Vec<ProcessMemInfo>,
+}
+
+/// Dados detalhados de memória pra aba RAM: total/uso/livre/cache reais,
+/// e os processos que mais consomem RAM agora — pra mostrar exatamente
+/// o que está pesando, não só um número solto.
+#[tauri::command]
+fn get_ram_details(state: State<SysState>) -> RamDetails {
+    let mut sys = state.0.lock().unwrap();
+    sys.refresh_memory();
+    sys.refresh_processes(ProcessesToUpdate::All, true);
+
+    let total = sys.total_memory() as f64;
+    let used = sys.used_memory() as f64;
+    let free = sys.free_memory() as f64;
+    let available = sys.available_memory() as f64;
+    let cached = (available - free).max(0.0);
+
+    let mut processes: Vec<ProcessMemInfo> = sys
+        .processes()
+        .values()
+        .map(|p| ProcessMemInfo {
+            name: p.name().to_string_lossy().to_string(),
+            memory_mb: p.memory() as f64 / 1_048_576.0,
+        })
+        .filter(|p| p.memory_mb > 30.0) // ignora processos irrelevantes
+        .collect();
+
+    // soma processos com o mesmo nome (ex: várias abas/instâncias do mesmo app)
+    let mut grouped: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
+    for p in processes.drain(..) {
+        *grouped.entry(p.name).or_insert(0.0) += p.memory_mb;
+    }
+    let mut top_processes: Vec<ProcessMemInfo> = grouped
+        .into_iter()
+        .map(|(name, memory_mb)| ProcessMemInfo {
+            name,
+            memory_mb: (memory_mb * 10.0).round() / 10.0,
+        })
+        .collect();
+    top_processes.sort_by(|a, b| b.memory_mb.partial_cmp(&a.memory_mb).unwrap());
+    top_processes.truncate(8);
+
+    RamDetails {
+        total_gb: (total / 1_073_741_824.0 * 10.0).round() / 10.0,
+        used_gb: (used / 1_073_741_824.0 * 10.0).round() / 10.0,
+        free_mb: (free / 1_048_576.0 * 10.0).round() / 10.0,
+        cached_mb: (cached / 1_048_576.0 * 10.0).round() / 10.0,
+        pressure_percent: if total > 0.0 { (used / total * 100.0 * 10.0).round() / 10.0 } else { 0.0 },
+        top_processes,
     }
 }
 
@@ -278,11 +344,15 @@ $priv.Privileges.Attributes = 0x2  # SE_PRIVILEGE_ENABLED
 
 [FluxRam]::AdjustTokenPrivileges($hToken, $false, [ref]$priv, 0, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
 
-# Agora sim, purga a Standby List (mesma chamada que RAMMap/ISLC usam)
+# Lê qual tipo de limpeza rodar (standby = cache normal, modified = páginas
+# modificadas pendentes de gravação) — o app grava esse arquivo antes de disparar.
+$modeFile = "$env:TEMP\FluxTweakers\ram_action_mode.txt"
+$mode = if (Test-Path $modeFile) { (Get-Content $modeFile -Raw).Trim() } else { "standby" }
+$purgeValue = if ($mode -eq "modified") { 3 } else { 4 }  # MemoryFlushModifiedList=3, MemoryPurgeStandbyList=4
 $SystemMemoryListInformation = 80
-$MemoryPurgeStandbyList = 4
+
 $ptr = [System.Runtime.InteropServices.Marshal]::AllocHGlobal(4)
-[System.Runtime.InteropServices.Marshal]::WriteInt32($ptr, $MemoryPurgeStandbyList)
+[System.Runtime.InteropServices.Marshal]::WriteInt32($ptr, $purgeValue)
 $status = [FluxRam]::NtSetSystemInformation($SystemMemoryListInformation, $ptr, 4)
 [System.Runtime.InteropServices.Marshal]::FreeHGlobal($ptr)
 
@@ -349,9 +419,15 @@ fn setup_ram_cleaner() -> Result<String, String> {
 /// Dispara a limpeza (roda a tarefa agendada já configurada). Não pede UAC
 /// de novo — a tarefa já "nasceu" elevada. Espera um pouco e lê o resultado
 /// real gravado pelo script (sucesso + quanto de RAM foi liberado, ou erro).
+/// `mode`: "standby" (cache padrão) ou "modified" (páginas modificadas pendentes).
 #[tauri::command]
-async fn run_ram_clean() -> Result<String, String> {
-    let result_path = std::env::temp_dir().join("FluxTweakers").join("ram_clean_result.txt");
+async fn run_ram_clean(mode: Option<String>) -> Result<String, String> {
+    let dir = std::env::temp_dir().join("FluxTweakers");
+    let _ = fs::create_dir_all(&dir);
+    let mode_str = mode.unwrap_or_else(|| "standby".to_string());
+    let _ = fs::write(dir.join("ram_action_mode.txt"), &mode_str);
+
+    let result_path = dir.join("ram_clean_result.txt");
     let _ = fs::remove_file(&result_path); // limpa resultado antigo antes de rodar de novo
 
     #[cfg(target_os = "windows")]
@@ -434,7 +510,7 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(SysState(Mutex::new(System::new_all())))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details])
         .setup(|_app| {
             #[cfg(target_os = "windows")]
             {
