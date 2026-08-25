@@ -468,6 +468,25 @@
   .fps-methodology-body p{margin:0;font-size:12px;color:var(--muted);line-height:1.6;}
   .fps-methodology-body b{color:var(--text);}
 
+  .profile-form-grid{
+    display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;
+    margin-top:6px;
+  }
+  .profile-form-field{display:flex;flex-direction:column;gap:5px;}
+  .profile-form-field label{font-size:11.5px;color:var(--muted);font-weight:600;}
+  .profile-form-field select{
+    background:var(--panel);color:var(--text);border:1px solid var(--border);
+    border-radius:8px;padding:8px 10px;font-size:13px;font-family:var(--sans);cursor:pointer;
+  }
+  .profile-result{
+    margin-top:16px;padding-top:16px;border-top:1px solid var(--border-soft);
+    animation:cardIn .35s ease both;
+  }
+  .profile-result-title{margin:0 0 8px;font-size:13px;font-weight:700;color:var(--text);}
+  .profile-result ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:7px;}
+  .profile-result li{font-size:12.5px;color:var(--muted);line-height:1.55;}
+  .profile-result li b{color:var(--text);}
+
   .game-cover-wrap{display:block;width:120px;height:auto;border-radius:8px;overflow:hidden;flex-shrink:0;}
   .game-cover{width:120px;height:56px;object-fit:cover;display:block;border-radius:8px;}
   .game-cover-fallback svg{width:48px;height:48px;}
@@ -3399,6 +3418,131 @@ fpsPanel.innerHTML = `
   </div>
 `;
 panelsEl.appendChild(fpsPanel);
+
+// ===== Aba Perfil de Otimização: formulário que analisa a config e recomenda =====
+const profileTabBtn = document.createElement('button');
+profileTabBtn.innerHTML = `${lineIcon('<circle cx="12" cy="8" r="3.4"/><path d="M5 20c1.2-4 4-6 7-6s5.8 2 7 6"/>')}<span class="label">Perfil</span>`;
+profileTabBtn.dataset.cat = 'profile';
+profileTabBtn.onclick = ()=>switchTab('profile');
+tabsEl.appendChild(profileTabBtn);
+
+const profileTabPanel = document.createElement('div');
+profileTabPanel.className = 'panel';
+profileTabPanel.id = 'panel-profile';
+profileTabPanel.innerHTML = `
+  <div class="bench-card">
+    <p class="bench-title">Perfil de Otimização</p>
+    <p class="bench-note" style="margin:-4px 0 0;">Responde essas perguntas rápidas e o app monta uma seleção de ajustes sob medida pra sua máquina — te explicando o motivo de cada escolha.</p>
+
+    <div class="profile-form-grid">
+      <div class="profile-form-field">
+        <label>Placa de vídeo</label>
+        <select id="pfGpu">
+          <option value="nvidia">NVIDIA</option>
+          <option value="amd">AMD</option>
+          <option value="intel">Intel (integrada/Arc)</option>
+        </select>
+      </div>
+      <div class="profile-form-field">
+        <label>Processador</label>
+        <select id="pfCpu">
+          <option value="intel">Intel</option>
+          <option value="amd">AMD</option>
+        </select>
+      </div>
+      <div class="profile-form-field">
+        <label>Memória RAM</label>
+        <select id="pfRam">
+          <option value="8">8 GB ou menos</option>
+          <option value="16" selected>16 GB</option>
+          <option value="32">32 GB ou mais</option>
+        </select>
+      </div>
+      <div class="profile-form-field">
+        <label>Tipo de disco (onde tá o Windows)</label>
+        <select id="pfStorage">
+          <option value="ssd">SSD / NVMe</option>
+          <option value="hdd">HD comum</option>
+        </select>
+      </div>
+      <div class="profile-form-field">
+        <label>Notebook ou desktop?</label>
+        <select id="pfDevice">
+          <option value="desktop">Desktop</option>
+          <option value="laptop">Notebook</option>
+        </select>
+      </div>
+      <div class="profile-form-field">
+        <label>Principal uso</label>
+        <select id="pfUse">
+          <option value="gaming">Jogos</option>
+          <option value="balanced">Uso geral + jogos</option>
+          <option value="work">Trabalho / produtividade</option>
+        </select>
+      </div>
+    </div>
+
+    <button type="button" class="bench-run-btn" id="pfGenerateBtn" style="margin-top:4px;">Gerar recomendação</button>
+
+    <div id="pfResult" class="profile-result" hidden></div>
+  </div>
+`;
+panelsEl.appendChild(profileTabPanel);
+
+document.getElementById('pfGenerateBtn')?.addEventListener('click', ()=>{
+  const gpu = document.getElementById('pfGpu').value;
+  const cpu = document.getElementById('pfCpu').value;
+  const ram = parseInt(document.getElementById('pfRam').value, 10);
+  const storage = document.getElementById('pfStorage').value;
+  const device = document.getElementById('pfDevice').value;
+  const use = document.getElementById('pfUse').value;
+
+  // aplica os selects de fabricante que várias abas já usam (GPU/CPU/Disco)
+  selectedVendor.gpu = gpu;
+  selectedVendor.cpu = cpu;
+  selectedVendor.storage = storage;
+  ['gpu','cpu','storage'].forEach(cat=>{ if(DATA[cat]) renderPanel(cat); });
+
+  // sincroniza a caixa "quanto de RAM você tem" da aba RAM
+  ramGB = ram;
+  const ramInput = document.getElementById('ramGB');
+  if(ramInput) ramInput.value = ram;
+  if(typeof renderPanel === 'function') renderPanel('ram');
+
+  // escolhe a base de preset conforme o uso informado
+  let basePreset, presetLabel;
+  if(use === 'gaming'){ basePreset = ULTRA_PRESET; presetLabel = 'Ultra Performance'; }
+  else if(use === 'work'){ basePreset = RECOMMENDED_PRESET; presetLabel = 'Recomendado'; }
+  else { basePreset = PERFORMANCE_PRESET; presetLabel = 'Performance'; }
+
+  applyPreset(basePreset, `Perfil aplicado (base: ${presetLabel})`);
+
+  // liga a limpeza automática de RAM se a máquina tem pouca memória
+  const reasons = [];
+  reasons.push(`Base de ajustes: <b>${presetLabel}</b>, escolhida pelo uso principal que você marcou.`);
+  reasons.push(`GPU configurada como <b>${gpu.toUpperCase()}</b> — os tweaks específicos de fabricante na aba GPU já foram ajustados pra isso.`);
+  if(ram <= 8){
+    reasons.push(`Com <b>8 GB de RAM ou menos</b>, isso costuma ser o maior gargalo do dia a dia — vale ativar a limpeza automática de RAM na aba RAM.`);
+  } else if(ram >= 32){
+    reasons.push(`Com <b>32 GB+</b>, RAM não deve ser seu gargalo — os ajustes de RAM aqui têm efeito pequeno, o foco real é CPU/GPU.`);
+  }
+  if(storage === 'hdd'){
+    reasons.push(`Como o Windows está num <b>HD comum</b> (não SSD), tempos de carregamento tendem a pesar mais que FPS — ajustes de indexação e cache de disco importam mais pra você.`);
+  }
+  if(device === 'laptop'){
+    reasons.push(`Em <b>notebook</b>, ajustes agressivos de energia (Ultra Performance) podem esquentar e derrubar a bateria rápido — se notar isso, prefira o preset Performance.`);
+  }
+  reasons.push(`${basePreset.length} ajustes foram marcados. Você pode revisar e desmarcar qualquer um antes de aplicar.`);
+
+  const resultEl = document.getElementById('pfResult');
+  resultEl.hidden = false;
+  resultEl.innerHTML = `
+    <p class="profile-result-title">Por que essas escolhas:</p>
+    <ul>${reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
+  `;
+
+  showToast('Perfil analisado — ' + basePreset.length + ' ajustes selecionados');
+});
 
 // preenche os atalhos de navegação rápida reaproveitando os ícones das categorias
 (function buildHomeNav(){
