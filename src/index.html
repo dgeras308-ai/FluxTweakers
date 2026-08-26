@@ -4040,6 +4040,15 @@ document.addEventListener('click', (e)=>{
 });
 if(document.getElementById('ramDashboard')) loadRamDashboard();
 
+// Atualiza os números da aba RAM sozinho a cada 4s, só enquanto ela estiver aberta
+// (evita ficar preso mostrando o valor de quando você abriu a aba pela última vez).
+setInterval(()=>{
+  const panel = document.getElementById('panel-ram');
+  if(panel && panel.classList.contains('active') && document.getElementById('ramDashboard')){
+    loadRamDashboard();
+  }
+}, 4000);
+
 // ---------- anel de porcentagem (0-100%) ----------
 function ringSVG(pct, sizeClass){
   const p = Math.max(0, Math.min(100, Math.round(pct)));

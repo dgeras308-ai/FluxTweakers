@@ -430,6 +430,29 @@ async fn run_ram_clean(mode: Option<String>) -> Result<String, String> {
     let result_path = dir.join("ram_clean_result.txt");
     let _ = fs::remove_file(&result_path); // limpa resultado antigo antes de rodar de novo
 
+    // Confere se a tarefa agendada já existe (isso NÃO precisa de admin, só consulta).
+    // Se ainda não existir (primeira vez que qualquer botão de RAM é usado, sem
+    // ter passado pelo interruptor antes), configura ela agora mesmo — só nesse
+    // caso vai pedir UAC uma vez; nas próximas chamadas já está tudo pronto.
+    #[cfg(target_os = "windows")]
+    let task_exists = Command::new("schtasks")
+        .args(["/Query", "/TN", RAM_CLEAN_TASK_NAME])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+
+    #[cfg(not(target_os = "windows"))]
+    let task_exists = Command::new("schtasks")
+        .args(["/Query", "/TN", RAM_CLEAN_TASK_NAME])
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+
+    if !task_exists {
+        setup_ram_cleaner()?;
+    }
+
     #[cfg(target_os = "windows")]
     let spawn_result = Command::new("schtasks")
         .args(["/Run", "/TN", RAM_CLEAN_TASK_NAME])
@@ -444,7 +467,7 @@ async fn run_ram_clean(mode: Option<String>) -> Result<String, String> {
     match spawn_result {
         Ok(o) if !o.status.success() => {
             return Err(format!(
-                "Tarefa não encontrada — ative o interruptor de novo para reconfigurar. ({})",
+                "Não consegui iniciar a tarefa de limpeza. ({})",
                 String::from_utf8_lossy(&o.stderr).trim()
             ));
         }
