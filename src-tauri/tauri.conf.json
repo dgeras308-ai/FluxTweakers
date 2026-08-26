@@ -1,9 +1,7 @@
-cd C:\Users\dgera\Downloads\FluxTweakers-oficial
-@'
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "FluxTweakers",
-  "version": "1.0.35",
+  "version": "1.0.36",
   "identifier": "com.dgeras.fluxtweakers",
   "build": {
     "frontendDist": "../src"
@@ -54,6 +52,3 @@ cd C:\Users\dgera\Downloads\FluxTweakers-oficial
     }
   }
 }
-'@ | Set-Content -Path src-tauri\tauri.conf.json -Encoding utf8
-
-Get-Content src-tauri\tauri.conf.json -Raw
