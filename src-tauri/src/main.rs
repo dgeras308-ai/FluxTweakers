@@ -320,43 +320,76 @@ public class FluxRam {
 
     [DllImport("kernel32.dll")]
     public static extern IntPtr GetCurrentProcess();
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern IntPtr OpenProcess(uint processAccess, bool bInheritHandle, int processId);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool CloseHandle(IntPtr hObject);
+
+    [DllImport("psapi.dll", SetLastError = true)]
+    public static extern bool EmptyWorkingSet(IntPtr hProcess);
 }
 "@
 Add-Type -TypeDefinition $sig -ErrorAction SilentlyContinue
 
 $before = (Get-Counter '\Memory\Available MBytes').CounterSamples[0].CookedValue
 
-# Habilita o privilégio SeProfileSingleProcessPrivilege no processo atual —
-# sem isso o Windows recusa a limpeza sem avisar nada.
-$TOKEN_ADJUST_PRIVILEGES = 0x20
-$TOKEN_QUERY = 0x8
-$hToken = [IntPtr]::Zero
-[FluxRam]::OpenProcessToken([FluxRam]::GetCurrentProcess(), ($TOKEN_ADJUST_PRIVILEGES -bor $TOKEN_QUERY), [ref]$hToken) | Out-Null
+function Enable-Priv($name) {
+    $TOKEN_ADJUST_PRIVILEGES = 0x20
+    $TOKEN_QUERY = 0x8
+    $hToken = [IntPtr]::Zero
+    [FluxRam]::OpenProcessToken([FluxRam]::GetCurrentProcess(), ($TOKEN_ADJUST_PRIVILEGES -bor $TOKEN_QUERY), [ref]$hToken) | Out-Null
+    $luid = 0
+    [FluxRam]::LookupPrivilegeValue($null, $name, [ref]$luid) | Out-Null
+    $priv = New-Object FluxRam+TOKEN_PRIVILEGES
+    $priv.PrivilegeCount = 1
+    $priv.Privileges = New-Object FluxRam+LUID_AND_ATTRIBUTES
+    $priv.Privileges.Luid = $luid
+    $priv.Privileges.Attributes = 0x2  # SE_PRIVILEGE_ENABLED
+    [FluxRam]::AdjustTokenPrivileges($hToken, $false, [ref]$priv, 0, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+}
 
-$luid = 0
-[FluxRam]::LookupPrivilegeValue($null, "SeProfileSingleProcessPrivilege", [ref]$luid) | Out-Null
+# Habilita os dois privilégios que a limpeza de verdade precisa:
+# - SeProfileSingleProcessPrivilege: pra purgar a standby list
+# - SeDebugPrivilege: pra conseguir "tocar" em processos de outros usuários/sistema
+#   e forçar eles a soltarem memória que não estão usando de verdade agora
+Enable-Priv "SeProfileSingleProcessPrivilege"
+Enable-Priv "SeDebugPrivilege"
 
-$priv = New-Object FluxRam+TOKEN_PRIVILEGES
-$priv.PrivilegeCount = 1
-$priv.Privileges = New-Object FluxRam+LUID_AND_ATTRIBUTES
-$priv.Privileges.Luid = $luid
-$priv.Privileges.Attributes = 0x2  # SE_PRIVILEGE_ENABLED
-
-[FluxRam]::AdjustTokenPrivileges($hToken, $false, [ref]$priv, 0, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
-
-# Lê qual tipo de limpeza rodar (standby = cache normal, modified = páginas
-# modificadas pendentes de gravação) — o app grava esse arquivo antes de disparar.
 $modeFile = "$env:TEMP\FluxTweakers\ram_action_mode.txt"
 $mode = if (Test-Path $modeFile) { (Get-Content $modeFile -Raw).Trim() } else { "standby" }
-$purgeValue = if ($mode -eq "modified") { 3 } else { 4 }  # MemoryFlushModifiedList=3, MemoryPurgeStandbyList=4
-$SystemMemoryListInformation = 80
 
+if ($mode -eq "workingset") {
+    # Técnica real de redução agressiva de RAM (mesma do Mem Reduct/RAMMap):
+    # força cada processo a devolver pro Windows a memória "working set" que
+    # não está sendo usada ativamente agora — é isso que derruba o número
+    # de "em uso" de verdade, não só o cache.
+    $PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+    $PROCESS_SET_QUOTA = 0x0100
+    $access = $PROCESS_QUERY_LIMITED_INFORMATION -bor $PROCESS_SET_QUOTA
+
+    Get-Process | ForEach-Object {
+        try {
+            $h = [FluxRam]::OpenProcess($access, $false, $_.Id)
+            if ($h -ne [IntPtr]::Zero) {
+                [FluxRam]::EmptyWorkingSet($h) | Out-Null
+                [FluxRam]::CloseHandle($h) | Out-Null
+            }
+        } catch {}
+    }
+}
+
+# Sempre purga a standby list também (cache "solto" que o Windows guarda),
+# combinando os dois efeitos pro resultado mais completo possível.
+$SystemMemoryListInformation = 80
+$MemoryPurgeStandbyList = 4
 $ptr = [System.Runtime.InteropServices.Marshal]::AllocHGlobal(4)
-[System.Runtime.InteropServices.Marshal]::WriteInt32($ptr, $purgeValue)
+[System.Runtime.InteropServices.Marshal]::WriteInt32($ptr, $MemoryPurgeStandbyList)
 $status = [FluxRam]::NtSetSystemInformation($SystemMemoryListInformation, $ptr, 4)
 [System.Runtime.InteropServices.Marshal]::FreeHGlobal($ptr)
 
-Start-Sleep -Milliseconds 400
+Start-Sleep -Milliseconds 500
 $after = (Get-Counter '\Memory\Available MBytes').CounterSamples[0].CookedValue
 $freed = [math]::Round($after - $before, 0)
 

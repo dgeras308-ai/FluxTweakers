@@ -4023,13 +4023,13 @@ async function loadRamDashboard(){
 }
 
 document.addEventListener('click', (e)=>{
+  if(e.target?.id === 'ramActWorkingset'){
+    e.target.textContent = 'Reduzindo...';
+    triggerRamClean(false, 'workingset').finally(()=>{ e.target.textContent = 'Reduzir em uso'; loadRamDashboard(); });
+  }
   if(e.target?.id === 'ramActStandby'){
     e.target.textContent = 'Limpando...';
     triggerRamClean(false, 'standby').finally(()=>{ e.target.textContent = 'Limpar cache'; loadRamDashboard(); });
-  }
-  if(e.target?.id === 'ramActModified'){
-    e.target.textContent = 'Descarregando...';
-    triggerRamClean(false, 'modified').finally(()=>{ e.target.textContent = 'Descarregar'; loadRamDashboard(); });
   }
 });
 
@@ -4153,14 +4153,14 @@ function renderPanel(catId){
       </div>
       <div class="ram-actions-row">
         <div class="ram-action-card">
+          <h4>Reduzir memória em uso</h4>
+          <p>Força cada processo a devolver memória que não está usando agora — a limpeza mais forte, igual ferramentas como Mem Reduct fazem.</p>
+          <button class="preset-btn" id="ramActWorkingset">Reduzir em uso</button>
+        </div>
+        <div class="ram-action-card">
           <h4>Limpar cache do sistema</h4>
           <p>Libera memória "presa" em cache (Standby List) — mesma técnica do ISLC/RAMMap.</p>
           <button class="preset-btn" id="ramActStandby">Limpar cache</button>
-        </div>
-        <div class="ram-action-card">
-          <h4>Descarregar páginas modificadas</h4>
-          <p>Grava no disco páginas modificadas pendentes, liberando essa memória de volta.</p>
-          <button class="preset-btn" id="ramActModified">Descarregar</button>
         </div>
       </div>
       <div class="ram-processes-card">
