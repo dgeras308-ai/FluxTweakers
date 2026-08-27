@@ -79,50 +79,59 @@ struct RamDetails {
 /// e os processos que mais consomem RAM agora — pra mostrar exatamente
 /// o que está pesando, não só um número solto.
 #[tauri::command]
-fn get_ram_details(state: State<SysState>) -> RamDetails {
-    let mut sys = state.0.lock().unwrap();
-    sys.refresh_memory();
-    sys.refresh_processes(ProcessesToUpdate::All, true);
+async fn get_ram_details(state: State<'_, SysState>) -> Result<RamDetails, String> {
+    let (total, used, free, top_processes) = {
+        let mut sys = state.0.lock().unwrap();
+        sys.refresh_memory();
+        sys.refresh_processes(ProcessesToUpdate::All, true);
 
-    let total = sys.total_memory() as f64;
-    let used = sys.used_memory() as f64;
-    let free = sys.free_memory() as f64;
-    let available = sys.available_memory() as f64;
-    let cached = (available - free).max(0.0);
+        let total = sys.total_memory() as f64;
+        let used = sys.used_memory() as f64;
+        let free = sys.free_memory() as f64;
 
-    let mut processes: Vec<ProcessMemInfo> = sys
-        .processes()
-        .values()
-        .map(|p| ProcessMemInfo {
-            name: p.name().to_string_lossy().to_string(),
-            memory_mb: p.memory() as f64 / 1_048_576.0,
-        })
-        .filter(|p| p.memory_mb > 30.0) // ignora processos irrelevantes
-        .collect();
+        let mut processes: Vec<ProcessMemInfo> = sys
+            .processes()
+            .values()
+            .map(|p| ProcessMemInfo {
+                name: p.name().to_string_lossy().to_string(),
+                memory_mb: p.memory() as f64 / 1_048_576.0,
+            })
+            .filter(|p| p.memory_mb > 30.0) // ignora processos irrelevantes
+            .collect();
 
-    // soma processos com o mesmo nome (ex: várias abas/instâncias do mesmo app)
-    let mut grouped: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
-    for p in processes.drain(..) {
-        *grouped.entry(p.name).or_insert(0.0) += p.memory_mb;
-    }
-    let mut top_processes: Vec<ProcessMemInfo> = grouped
-        .into_iter()
-        .map(|(name, memory_mb)| ProcessMemInfo {
-            name,
-            memory_mb: (memory_mb * 10.0).round() / 10.0,
-        })
-        .collect();
-    top_processes.sort_by(|a, b| b.memory_mb.partial_cmp(&a.memory_mb).unwrap());
-    top_processes.truncate(8);
+        // soma processos com o mesmo nome (ex: várias abas/instâncias do mesmo app)
+        let mut grouped: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
+        for p in processes.drain(..) {
+            *grouped.entry(p.name).or_insert(0.0) += p.memory_mb;
+        }
+        let mut top_processes: Vec<ProcessMemInfo> = grouped
+            .into_iter()
+            .map(|(name, memory_mb)| ProcessMemInfo {
+                name,
+                memory_mb: (memory_mb * 10.0).round() / 10.0,
+            })
+            .collect();
+        top_processes.sort_by(|a, b| b.memory_mb.partial_cmp(&a.memory_mb).unwrap());
+        top_processes.truncate(8);
 
-    RamDetails {
+        (total, used, free, top_processes)
+    };
+
+    // Lê o contador real "Cache Bytes" do Windows (o mesmo que o Gerenciador de
+    // Tarefas usa) em vez de estimar — assim o número realmente reflete o que
+    // a limpeza afeta, e cai de verdade quando você limpa.
+    let cached = tauri::async_runtime::spawn_blocking(read_cache_bytes_windows)
+        .await
+        .unwrap_or(0.0);
+
+    Ok(RamDetails {
         total_gb: (total / 1_073_741_824.0 * 10.0).round() / 10.0,
         used_gb: (used / 1_073_741_824.0 * 10.0).round() / 10.0,
         free_mb: (free / 1_048_576.0 * 10.0).round() / 10.0,
         cached_mb: (cached / 1_048_576.0 * 10.0).round() / 10.0,
         pressure_percent: if total > 0.0 { (used / total * 100.0 * 10.0).round() / 10.0 } else { 0.0 },
         top_processes,
-    }
+    })
 }
 
 #[derive(Serialize)]
@@ -224,6 +233,31 @@ fn read_gpu_usage_windows() -> f64 {
 
 #[cfg(not(target_os = "windows"))]
 fn read_gpu_usage_windows() -> f64 {
+    0.0
+}
+
+#[cfg(target_os = "windows")]
+fn read_cache_bytes_windows() -> f64 {
+    // Mesmo contador que o Gerenciador de Tarefas usa pra mostrar "Em cache" —
+    // é isso que realmente cai quando a limpeza de Standby List roda de verdade.
+    let ps_cmd = "(Get-Counter '\\Memory\\Cache Bytes' -ErrorAction SilentlyContinue).CounterSamples[0].CookedValue";
+
+    let output = Command::new("powershell")
+        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps_cmd])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
+
+    match output {
+        Ok(o) => {
+            let text = String::from_utf8_lossy(&o.stdout);
+            text.trim().replace(',', ".").parse().unwrap_or(0.0)
+        }
+        Err(_) => 0.0,
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn read_cache_bytes_windows() -> f64 {
     0.0
 }
 
