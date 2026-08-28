@@ -32,6 +32,7 @@ struct HardwareInfo {
     cpu_cores: usize,
     ram_total_gb: f64,
     os_name: String,
+    gpu_name: String,
 }
 
 /// Detecta o hardware real da máquina uma vez (chamado ao abrir a aba Início).
@@ -56,7 +57,31 @@ fn get_hardware_info(state: State<SysState>) -> HardwareInfo {
         cpu_cores: sys.cpus().len(),
         ram_total_gb: ((sys.total_memory() as f64 / 1_073_741_824.0) * 10.0).round() / 10.0,
         os_name: os_name.trim().to_string(),
+        gpu_name: read_gpu_name_windows(),
     }
+}
+
+#[cfg(target_os = "windows")]
+fn read_gpu_name_windows() -> String {
+    // Pega o nome da primeira GPU "ativa" (status OK) reportada pelo Windows.
+    // Evita listar adaptadores virtuais/desligados quando há mais de uma GPU.
+    let ps_cmd = "(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'OK' } | Select-Object -First 1 -ExpandProperty Name)";
+    let output = Command::new("powershell")
+        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps_cmd])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
+    match output {
+        Ok(o) => {
+            let text = String::from_utf8_lossy(&o.stdout).trim().to_string();
+            if text.is_empty() { "GPU não identificada".to_string() } else { text }
+        }
+        Err(_) => "GPU não identificada".to_string(),
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn read_gpu_name_windows() -> String {
+    "Detecção disponível apenas no Windows".to_string()
 }
 
 #[derive(Serialize)]

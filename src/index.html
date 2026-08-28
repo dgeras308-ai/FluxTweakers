@@ -472,8 +472,9 @@
   .home-score-label b{font-size:26px;color:var(--text);line-height:1;}
   .home-score-label span{font-size:9.5px;color:var(--muted);letter-spacing:.08em;margin-top:3px;}
 
-  .home-spec-grid{display:grid;grid-template-columns:repeat(2, 1fr);gap:12px;}
-  @media (max-width:820px){.home-spec-grid{grid-template-columns:1fr;}}
+  .home-spec-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:12px;}
+  @media (max-width:1000px){.home-spec-grid{grid-template-columns:repeat(2, 1fr);}}
+  @media (max-width:600px){.home-spec-grid{grid-template-columns:1fr;}}
   .home-spec-card{
     background:var(--item-bg);border:1px solid var(--item-border);border-radius:10px;
     padding:12px 14px;display:flex;flex-direction:column;gap:4px;
@@ -1364,6 +1365,7 @@
   </div>
   <div class="titlebar-controls">
     <button id="titlebarMin" aria-label="Minimizar"><svg viewBox="0 0 12 12"><path d="M2 6h8" stroke="currentColor" stroke-width="1.3"/></svg></button>
+    <button id="titlebarMax" aria-label="Maximizar"><svg viewBox="0 0 12 12"><rect x="2.2" y="2.2" width="7.6" height="7.6" rx=".5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button>
     <button id="titlebarClose" aria-label="Fechar"><svg viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" stroke-width="1.3"/></svg></button>
   </div>
 </div>
@@ -3702,6 +3704,7 @@ homePanel.innerHTML = `
     <div class="home-spec-grid" id="homeHwInfo">
       <div class="home-spec-card"><span>Sistema</span><b>Detectando...</b></div>
       <div class="home-spec-card"><span>Processador</span><b>Detectando...</b></div>
+      <div class="home-spec-card"><span>Placa de vídeo</span><b>Detectando...</b></div>
       <div class="home-spec-card"><span>Núcleos</span><b>—</b></div>
       <div class="home-spec-card"><span>Memória</span><b>—</b></div>
     </div>
@@ -3964,6 +3967,7 @@ async function loadHomeHardwareInfo(){
     el.innerHTML = `
       <div class="home-spec-card"><span>Sistema</span><b>${info.os_name}</b></div>
       <div class="home-spec-card"><span>Processador</span><b>${info.cpu_brand}</b></div>
+      <div class="home-spec-card"><span>Placa de vídeo</span><b>${info.gpu_name}</b></div>
       <div class="home-spec-card"><span>Núcleos</span><b>${info.cpu_cores}</b></div>
       <div class="home-spec-card"><span>Memória</span><b>${info.ram_total_gb} GB</b></div>
     `;

@@ -85,13 +85,34 @@ function showUpdateBanner(text) {
 window.addEventListener('DOMContentLoaded', () => {
   checkForAppUpdate();
 
-  // Controles da barra de título customizada (minimizar/fechar)
+  // Controles da barra de título customizada (minimizar/maximizar/fechar)
   if (window.__TAURI__){
     try{
       const { getCurrentWindow } = window.__TAURI__.window;
       const win = getCurrentWindow();
       document.getElementById('titlebarMin')?.addEventListener('click', ()=> win.minimize());
       document.getElementById('titlebarClose')?.addEventListener('click', ()=> win.close());
+
+      const maxBtn = document.getElementById('titlebarMax');
+      const RESTORE_ICON = '<svg viewBox="0 0 12 12"><rect x="3.4" y="1.6" width="6" height="6" rx=".5" fill="none" stroke="currentColor" stroke-width="1.1"/><path d="M2.6 4.4H2A.4.4 0 0 0 1.6 4.8v5.6c0 .22.18.4.4.4h5.6c.22 0 .4-.18.4-.4v-.6" fill="none" stroke="currentColor" stroke-width="1.1"/></svg>';
+      const MAX_ICON = '<svg viewBox="0 0 12 12"><rect x="2.2" y="2.2" width="7.6" height="7.6" rx=".5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>';
+
+      async function syncMaxIcon(){
+        if (!maxBtn) return;
+        const isMax = await win.isMaximized();
+        maxBtn.innerHTML = isMax ? RESTORE_ICON : MAX_ICON;
+        maxBtn.setAttribute('aria-label', isMax ? 'Restaurar' : 'Maximizar');
+      }
+      maxBtn?.addEventListener('click', async ()=>{
+        await win.toggleMaximize();
+        syncMaxIcon();
+      });
+      document.getElementById('customTitlebar')?.addEventListener('dblclick', (e)=>{
+        if (e.target.closest('.titlebar-controls')) return;
+        win.toggleMaximize().then(syncMaxIcon);
+      });
+      win.onResized(()=> syncMaxIcon());
+      syncMaxIcon();
     }catch(err){
       console.log('Controles de janela indisponíveis:', err);
     }
