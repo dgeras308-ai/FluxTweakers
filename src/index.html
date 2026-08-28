@@ -2751,6 +2751,12 @@ function startupLine(){
   return `<path d="M12 3.6v6.4"/>
     <path d="M7 6.3a8 8 0 1 0 10 0"/>`;
 }
+function windowsLine(){
+  return `<rect x="3.5" y="3.5" width="7.3" height="7.3" rx=".6"/>
+    <rect x="13.2" y="3.5" width="7.3" height="7.3" rx=".6"/>
+    <rect x="3.5" y="13.2" width="7.3" height="7.3" rx=".6"/>
+    <rect x="13.2" y="13.2" width="7.3" height="7.3" rx=".6"/>`;
+}
 function homeLine(){
   return `<path d="M4 11.5 12 4l8 7.5"/>
     <path d="M6.2 9.8V19a1 1 0 0 0 1 1H10v-4.6a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2V20h2.8a1 1 0 0 0 1-1V9.8"/>`;
@@ -2773,6 +2779,7 @@ const ICONS = {
   monitor: lineIcon(monitorLine()),
   games: lineIcon(gamesLine()),
   startup: lineIcon(startupLine()),
+  windows: lineIcon(windowsLine()),
 };
 const CHEVRON = `<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`;
 
@@ -3357,6 +3364,68 @@ reg delete "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" /v "Adobe A
     { id:"su_cortana", group:"Sistema", title:"Cortana", desc:"Remove a Cortana da inicialização automática do Windows.",
       cmd:`reg delete "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "Cortana" /f` },
   ]},
+
+  windows: { label:"Windows", desc:"Debloat, privacidade, elementos gráficos e personalização do Windows — Explorador, taskbar, menu Iniciar e mais.", items:[
+    { id:"win_widgets", group:"Debloat", title:"Remover Widgets da barra de tarefas", desc:"Desativa o painel de Widgets (notícias/clima) do Windows 10 e 11.",
+      cmd:`reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" /v TaskbarDa /t REG_DWORD /d 0 /f
+reg add "HKLM\\SOFTWARE\\Policies\\Microsoft\\Dsh" /v AllowNewsAndInterests /t REG_DWORD /d 0 /f
+reg add "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Feeds" /v EnableFeeds /t REG_DWORD /d 0 /f` },
+    { id:"win_copilot", group:"Debloat", title:"Remover Copilot", desc:"Desativa o botão e o processo do Windows Copilot na barra de tarefas.",
+      cmd:`reg add "HKCU\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsCopilot" /v TurnOffWindowsCopilot /t REG_DWORD /d 1 /f
+reg add "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsCopilot" /v TurnOffWindowsCopilot /t REG_DWORD /d 1 /f
+reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" /v ShowCopilotButton /t REG_DWORD /d 0 /f` },
+    { id:"win_onedrive_run", group:"Debloat", title:"Desinstalar OneDrive", desc:"Fecha e desinstala o cliente do OneDrive do PC. Seus arquivos na nuvem não são apagados, só o programa local.",
+      cmd:`taskkill /f /im OneDrive.exe >nul 2>&1
+%SystemRoot%\\System32\\OneDriveSetup.exe /uninstall >nul 2>&1
+%SystemRoot%\\SysWOW64\\OneDriveSetup.exe /uninstall >nul 2>&1` },
+    { id:"win_startmenu_ads", group:"Debloat", title:"Remover anúncios e apps sugeridos no menu Iniciar", desc:"Para o Windows de instalar apps sozinho (tipo Candy Crush) e de mostrar sugestões/anúncios fixados no menu Iniciar.",
+      cmd:`reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager" /v SystemPaneSuggestionsEnabled /t REG_DWORD /d 0 /f
+reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager" /v SilentInstalledAppsEnabled /t REG_DWORD /d 0 /f
+reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager" /v OEMPreInstalledAppsEnable /t REG_DWORD /d 0 /f
+reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager" /v PreInstalledAppsEnable /t REG_DWORD /d 0 /f
+reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager" /v SubscribedContent-338388Enabled /t REG_DWORD /d 0 /f` },
+    { id:"win_lockscreen_ads", group:"Debloat", title:"Remover dicas e anúncios na tela de bloqueio", desc:"Desliga o Windows Spotlight, dicas e sugestões que aparecem na tela de bloqueio.",
+      cmd:`reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager" /v RotatingLockScreenOverlayEnabled /t REG_DWORD /d 0 /f
+reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager" /v SubscribedContent-338387Enabled /t REG_DWORD /d 0 /f` },
+    { id:"win_debloat_list", group:"Debloat", title:"Remover apps de terceiros pré-instalados (mais seguro)", desc:"Remove uma lista curada de bloatware (Candy Crush, Xbox, Bing News/Weather, Duolingo etc). Mesma lista já usada na aba Sistema — deixado aqui também por conveniência.",
+      cmd:`powershell -NoProfile -Command "$apps=@('Microsoft.3DBuilder','Microsoft.Microsoft3DViewer','Microsoft.BingWeather','Microsoft.BingSports','Microsoft.BingNews','Microsoft.BingFinance','Microsoft.Office.Sway','Microsoft.XboxApp','Microsoft.Xbox.TCUI','Microsoft.XboxGamingOverlay','Microsoft.XboxGameOverlay','Microsoft.XboxIdentityProvider','Microsoft.YourPhone','king.com.CandyCrushSaga','king.com.CandyCrushSodaSaga','ShazamEntertainmentLtd.Shazam','Flipboard.Flipboard','9E2F88E3.Twitter','D5EA27B7.Duolingo-LearnLanguagesforFree','SpotifyAB.SpotifyMusic','Microsoft.GetHelp','Microsoft.Getstarted','Microsoft.WindowsFeedbackHub','Microsoft.MixedReality.Portal'); foreach($a in $apps){ Get-AppxPackage $a -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue }"` },
+
+    { id:"win_advertising_id", group:"Privacidade", title:"Desativar ID de publicidade", desc:"Impede que apps usem um ID único pra te mostrar anúncios personalizados entre eles.",
+      cmd:`reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo" /v Enabled /t REG_DWORD /d 0 /f` },
+    { id:"win_location", group:"Privacidade", title:"Desativar rastreamento de localização", desc:"Bloqueia o acesso de apps e do sistema à sua localização.",
+      cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\CapabilityAccessManager\\ConsentStore\\location" /v Value /t REG_SZ /d Deny /f` },
+    { id:"win_tailored", group:"Privacidade", title:"Desativar experiências personalizadas com dados de diagnóstico", desc:"Impede o Windows de usar seus dados de uso pra 'personalizar' dicas e sugestões.",
+      cmd:`reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Privacy" /v TailoredExperiencesWithDiagnosticDataEnabled /t REG_DWORD /d 0 /f` },
+    { id:"win_feedback_freq", group:"Privacidade", title:"Reduzir pedidos de feedback do Windows", desc:"Praticamente elimina os pop-ups pedindo pra avaliar o Windows.",
+      cmd:`reg add "HKCU\\SOFTWARE\\Microsoft\\Siuf\\Rules" /v NumberOfSIUFInPeriod /t REG_DWORD /d 0 /f
+reg add "HKCU\\SOFTWARE\\Microsoft\\Siuf\\Rules" /v PeriodInNanoSeconds /t REG_DWORD /d 0 /f` },
+    { id:"win_clipboard_cloud", group:"Privacidade", title:"Desativar sincronização de área de transferência entre dispositivos", desc:"O histórico da área de transferência continua funcionando localmente, só para de sincronizar com sua conta Microsoft em outros PCs.",
+      cmd:`reg add "HKCU\\SOFTWARE\\Microsoft\\Clipboard" /v CloudClipboardAutomaticUpload /t REG_DWORD /d 0 /f
+reg add "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System" /v AllowCrossDeviceClipboard /t REG_DWORD /d 0 /f` },
+    { id:"win_findmydevice", group:"Privacidade", title:"Desativar 'Encontrar meu dispositivo'", desc:"Para o Windows de reportar a localização do PC pra sua conta Microsoft.",
+      cmd:`reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\FindMyDevice" /v LocationSyncEnabled /t REG_DWORD /d 0 /f` },
+
+    { id:"win_transparency", group:"Elementos Gráficos", title:"Desativar transparência do Windows", desc:"Desliga o efeito de vidro/transparência do menu Iniciar, taskbar e janelas de configuração — reduz um pouco o uso de GPU na interface.",
+      cmd:`reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize" /v EnableTransparency /t REG_DWORD /d 0 /f` },
+    { id:"win_taskbar_anim", group:"Elementos Gráficos", title:"Desativar animações da barra de tarefas", desc:"Remove as animações de abrir/fechar janelas e ícones pulando na barra de tarefas.",
+      cmd:`reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" /v TaskbarAnimations /t REG_DWORD /d 0 /f` },
+    { id:"win_aeropeek", group:"Elementos Gráficos", title:"Desativar Aero Peek", desc:"Desliga a pré-visualização transparente ao passar o mouse no botão 'mostrar área de trabalho'.",
+      cmd:`reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\DWM" /v EnableAeroPeek /t REG_DWORD /d 0 /f` },
+    { id:"win_dragfullwindows", group:"Elementos Gráficos", title:"Mostrar só o contorno ao arrastar janelas", desc:"Em vez de redesenhar a janela inteira enquanto arrasta, mostra só o contorno — mais leve em PCs fracos.",
+      cmd:`reg add "HKCU\\Control Panel\\Desktop" /v DragFullWindows /t REG_SZ /d "0" /f` },
+    { id:"win_darkmode", group:"Elementos Gráficos", title:"Forçar tema escuro (apps e sistema)", desc:"Ativa o modo escuro tanto nos apps quanto na interface do Windows.",
+      cmd:`reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize" /v AppsUseLightTheme /t REG_DWORD /d 0 /f
+reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize" /v SystemUsesLightTheme /t REG_DWORD /d 0 /f` },
+
+    { id:"win_explorer_thispc", group:"Explorador e Personalização", title:"Abrir Explorador de Arquivos em 'Este Computador'", desc:"Troca a tela inicial do Explorador de Arquivos de 'Acesso Rápido' para 'Este Computador'.",
+      cmd:`reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" /v LaunchTo /t REG_DWORD /d 1 /f` },
+    { id:"win_show_extensions", group:"Explorador e Personalização", title:"Mostrar extensões de arquivo", desc:"Exibe a extensão (.exe, .txt, .png...) de todos os arquivos no Explorador — ajuda a identificar arquivo malicioso disfarçado.",
+      cmd:`reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" /v HideFileExt /t REG_DWORD /d 0 /f` },
+    { id:"win_taskbar_left", group:"Explorador e Personalização", title:"Alinhar ícones da barra de tarefas à esquerda (Windows 11)", desc:"Volta o alinhamento clássico dos ícones da taskbar para a esquerda, em vez de centralizado.",
+      cmd:`reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" /v TaskbarAl /t REG_DWORD /d 0 /f` },
+    { id:"win_classic_contextmenu", group:"Explorador e Personalização", title:"Restaurar menu de contexto clássico (Windows 11)", desc:"Traz de volta o menu de clique direito completo do Windows 10, sem precisar clicar em 'Mostrar mais opções'.",
+      cmd:`reg add "HKCU\\Software\\Classes\\CLSID\\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\\InprocServer32" /f /ve` },
+  ]},
 };
 
 let selectedVendor = { gpu:"nvidia", cpu:"intel", storage:"ssd" };
@@ -3535,7 +3604,7 @@ function showToast(message){
 
 const CAT_COLORS = {
   cpu:"#43c9e5", gpu:"#43c9e5", ram:"#43c9e5", storage:"#43c9e5",
-  mouse:"#43c9e5", power:"#43c9e5", network:"#43c9e5", system:"#43c9e5", monitor:"#43c9e5", games:"#43c9e5"
+  mouse:"#43c9e5", power:"#43c9e5", network:"#43c9e5", system:"#43c9e5", monitor:"#43c9e5", games:"#43c9e5", windows:"#43c9e5"
 };
 
 const THEME_COLORS = {
@@ -4041,6 +4110,7 @@ document.getElementById('homeActApplyRec2')?.addEventListener('click', ()=>{
 const TAB_GROUPS = [
   { label: "Hardware", cats: ["cpu","gpu","ram","storage"] },
   { label: "Sistema", cats: ["power","network","system","startup"] },
+  { label: "Windows", cats: ["windows"] },
   { label: "Periféricos", cats: ["mouse","monitor"] },
   { label: "Jogos", cats: ["games"] },
 ];
