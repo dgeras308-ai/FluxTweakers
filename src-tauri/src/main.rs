@@ -210,6 +210,161 @@ async fn get_system_stats(state: State<'_, SysState>, include_gpu: bool) -> Resu
     })
 }
 
+#[derive(Serialize)]
+struct DiagnosticCheck {
+    label: String,
+    status: String, // "ok" | "warn" | "bad"
+    detail: String,
+}
+
+#[derive(Serialize)]
+struct DiagnosticReport {
+    checks: Vec<DiagnosticCheck>,
+}
+
+/// Roda uma checagem rápida e real da máquina (sem precisar de UAC, só leitura):
+/// espaço em disco, saúde física dos discos (S.M.A.R.T.), dispositivos com erro
+/// no Gerenciador de Dispositivos, e erros críticos recentes no Log de Eventos.
+/// Não roda SFC/DISM aqui de propósito — isso demora minutos e travaria o clique.
+#[tauri::command]
+async fn run_diagnostics(state: State<'_, SysState>) -> Result<DiagnosticReport, String> {
+    let (cpu_percent, ram_percent) = {
+        let mut sys = state.0.lock().unwrap();
+        sys.refresh_cpu_usage();
+        sys.refresh_memory();
+        let cpu = sys.global_cpu_usage() as f64;
+        let total = sys.total_memory() as f64;
+        let used = sys.used_memory() as f64;
+        let ram = if total > 0.0 { (used / total) * 100.0 } else { 0.0 };
+        (cpu, ram)
+    };
+
+    let mut checks = Vec::new();
+
+    // Espaço livre em disco (sysinfo, funciona em qualquer SO)
+    let disks_list = Disks::new_with_refreshed_list();
+    let mut low_space: Vec<String> = Vec::new();
+    for d in disks_list.iter() {
+        let total = d.total_space() as f64;
+        let avail = d.available_space() as f64;
+        if total <= 0.0 { continue; }
+        let free_pct = (avail / total) * 100.0;
+        if free_pct < 10.0 {
+            let name = d.mount_point().to_string_lossy().to_string();
+            low_space.push(format!("{name} ({:.0}% livre)", free_pct));
+        }
+    }
+    checks.push(if low_space.is_empty() {
+        DiagnosticCheck{ label: "Espaço em disco".into(), status: "ok".into(), detail: "Espaço livre saudável em todos os discos".into() }
+    } else {
+        DiagnosticCheck{ label: "Espaço em disco".into(), status: "warn".into(), detail: format!("Pouco espaço livre: {}", low_space.join(", ")) }
+    });
+
+    // Uso atual de CPU/RAM
+    checks.push(if cpu_percent >= 90.0 {
+        DiagnosticCheck{ label: "Uso de CPU".into(), status: "bad".into(), detail: format!("CPU em {:.0}% agora — algo pode estar travando o sistema", cpu_percent) }
+    } else if cpu_percent >= 75.0 {
+        DiagnosticCheck{ label: "Uso de CPU".into(), status: "warn".into(), detail: format!("CPU em {:.0}% agora", cpu_percent) }
+    } else {
+        DiagnosticCheck{ label: "Uso de CPU".into(), status: "ok".into(), detail: format!("CPU em {:.0}%, dentro do normal", cpu_percent) }
+    });
+    checks.push(if ram_percent >= 90.0 {
+        DiagnosticCheck{ label: "Uso de RAM".into(), status: "bad".into(), detail: format!("RAM em {:.0}% agora — considere fechar programas", ram_percent) }
+    } else if ram_percent >= 80.0 {
+        DiagnosticCheck{ label: "Uso de RAM".into(), status: "warn".into(), detail: format!("RAM em {:.0}% agora", ram_percent) }
+    } else {
+        DiagnosticCheck{ label: "Uso de RAM".into(), status: "ok".into(), detail: format!("RAM em {:.0}%, dentro do normal", ram_percent) }
+    });
+
+    // Checagens específicas do Windows (dispositivos, saúde física dos discos, eventos)
+    let (dev_status, dev_detail) = check_device_errors_windows();
+    checks.push(DiagnosticCheck{ label: "Dispositivos (drivers)".into(), status: dev_status, detail: dev_detail });
+
+    let (disk_status, disk_detail) = check_disk_health_windows();
+    checks.push(DiagnosticCheck{ label: "Saúde física dos discos".into(), status: disk_status, detail: disk_detail });
+
+    let (evt_status, evt_detail) = check_recent_critical_events_windows();
+    checks.push(DiagnosticCheck{ label: "Erros críticos recentes".into(), status: evt_status, detail: evt_detail });
+
+    Ok(DiagnosticReport{ checks })
+}
+
+#[cfg(target_os = "windows")]
+fn check_device_errors_windows() -> (String, String) {
+    let ps_cmd = "(Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object { $_.ConfigManagerErrorCode -ne 0 }).FriendlyName -join ', '";
+    let output = Command::new("powershell")
+        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps_cmd])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
+    match output {
+        Ok(o) => {
+            let text = String::from_utf8_lossy(&o.stdout).trim().to_string();
+            if text.is_empty() {
+                ("ok".to_string(), "Nenhum dispositivo com erro de driver".to_string())
+            } else {
+                ("bad".to_string(), format!("Dispositivos com erro: {text}"))
+            }
+        }
+        Err(_) => ("warn".to_string(), "Não foi possível checar (permissão ou PowerShell indisponível)".to_string()),
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn check_disk_health_windows() -> (String, String) {
+    let ps_cmd = "(Get-PhysicalDisk -ErrorAction SilentlyContinue | Where-Object { $_.HealthStatus -ne 'Healthy' }).FriendlyName -join ', '";
+    let output = Command::new("powershell")
+        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps_cmd])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
+    match output {
+        Ok(o) => {
+            let text = String::from_utf8_lossy(&o.stdout).trim().to_string();
+            if text.is_empty() {
+                ("ok".to_string(), "Todos os discos reportam saúde OK (S.M.A.R.T.)".to_string())
+            } else {
+                ("bad".to_string(), format!("Discos com alerta de saúde: {text}"))
+            }
+        }
+        Err(_) => ("warn".to_string(), "Não foi possível checar a saúde dos discos".to_string()),
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn check_recent_critical_events_windows() -> (String, String) {
+    let ps_cmd = "(Get-WinEvent -FilterHashtable @{LogName='System'; Level=1,2; StartTime=(Get-Date).AddHours(-24)} -ErrorAction SilentlyContinue | Measure-Object).Count";
+    let output = Command::new("powershell")
+        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps_cmd])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
+    match output {
+        Ok(o) => {
+            let text = String::from_utf8_lossy(&o.stdout).trim().to_string();
+            let count: i64 = text.parse().unwrap_or(0);
+            if count == 0 {
+                ("ok".to_string(), "Nenhum erro crítico nas últimas 24h".to_string())
+            } else if count <= 5 {
+                ("warn".to_string(), format!("{count} erro(s) crítico(s) nas últimas 24h"))
+            } else {
+                ("bad".to_string(), format!("{count} erros críticos nas últimas 24h — vale investigar"))
+            }
+        }
+        Err(_) => ("warn".to_string(), "Não foi possível checar o Log de Eventos".to_string()),
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn check_device_errors_windows() -> (String, String) {
+    ("ok".to_string(), "Checagem disponível apenas no Windows".to_string())
+}
+#[cfg(not(target_os = "windows"))]
+fn check_disk_health_windows() -> (String, String) {
+    ("ok".to_string(), "Checagem disponível apenas no Windows".to_string())
+}
+#[cfg(not(target_os = "windows"))]
+fn check_recent_critical_events_windows() -> (String, String) {
+    ("ok".to_string(), "Checagem disponível apenas no Windows".to_string())
+}
+
 #[cfg(target_os = "windows")]
 fn read_gpu_usage_windows() -> f64 {
     // Soma a utilização de todos os "engines" do tipo 3D de todas as GPUs —
@@ -600,7 +755,7 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(SysState(Mutex::new(System::new_all())))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics])
         .setup(|_app| {
             #[cfg(target_os = "windows")]
             {

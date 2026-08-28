@@ -958,6 +958,51 @@
     background:var(--bg);
   }
   #warningModal{z-index:110;}
+  #diagModal{
+    position:fixed;inset:0;z-index:115;display:flex;align-items:center;justify-content:center;
+    background:rgba(0,0,0,.6);
+  }
+  #diagModal[hidden]{display:none;}
+  .diag-card{
+    width:100%;max-width:460px;max-height:78vh;display:flex;flex-direction:column;
+    background:var(--panel);border:1px solid var(--border);border-radius:14px;
+    box-shadow:var(--shadow-lg);overflow:hidden;
+    animation:cardEnter .35s cubic-bezier(.16,1,.3,1);
+  }
+  .diag-head{display:flex;align-items:center;gap:12px;padding:20px 20px 16px;border-bottom:1px solid var(--border);position:relative;}
+  .diag-head-icon{
+    width:38px;height:38px;border-radius:10px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--tab-accent-dim);color:var(--tab-accent);
+    transition:background .25s ease, color .25s ease;
+  }
+  .diag-head-icon svg{width:19px;height:19px;}
+  .diag-head-icon.spin svg{animation:diagSpin 1.1s linear infinite;}
+  @keyframes diagSpin{to{transform:rotate(360deg);}}
+  .diag-head-icon.ok{background:rgba(74,222,128,.15);color:#4ade80;}
+  .diag-head-icon.warn{background:rgba(245,165,36,.15);color:#f5a524;}
+  .diag-head-icon.bad{background:rgba(239,90,111,.15);color:#ef5a6f;}
+  .diag-title{margin:0;font-size:14.5px;font-weight:700;color:var(--text);}
+  .diag-sub{margin:2px 0 0;font-size:12px;color:var(--muted);}
+  .diag-close{
+    position:absolute;top:14px;right:14px;width:26px;height:26px;border-radius:7px;
+    background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:13px;
+  }
+  .diag-close:hover{background:var(--item-bg);color:var(--text);}
+  .diag-list{padding:14px 20px 20px;overflow-y:auto;display:flex;flex-direction:column;gap:9px;}
+  .diag-item{
+    display:flex;align-items:flex-start;gap:10px;padding:11px 12px;border-radius:9px;
+    background:var(--item-bg);border:1px solid var(--item-border);
+    opacity:0;transform:translateY(6px);animation:diagItemIn .35s ease forwards;
+  }
+  @keyframes diagItemIn{to{opacity:1;transform:translateY(0);}}
+  .diag-item-icon{width:18px;height:18px;flex-shrink:0;margin-top:1px;}
+  .diag-item-icon svg{width:100%;height:100%;}
+  .diag-item.ok .diag-item-icon{color:#4ade80;}
+  .diag-item.warn .diag-item-icon{color:#f5a524;}
+  .diag-item.bad .diag-item-icon{color:#ef5a6f;}
+  .diag-item-text b{display:block;font-size:12.5px;color:var(--text);margin-bottom:2px;}
+  .diag-item-text span{font-size:11.5px;color:var(--muted);line-height:1.5;}
   .login-btn-secondary{
     background:transparent;color:var(--muted);border:1px solid var(--border);
     margin-top:10px;
@@ -1432,6 +1477,22 @@
     <p class="warning-title">⚠ Aviso</p>
     <p class="login-sub">Você optou por pular a criação do ponto de restauração. A partir daqui, qualquer risco ou problema causado pelas alterações é de sua responsabilidade — você foi avisado.</p>
     <button id="btnAckWarning" class="login-btn">Entendi, continuar mesmo assim</button>
+  </div>
+</div>
+
+<div id="diagModal" hidden>
+  <div class="diag-card">
+    <div class="diag-head">
+      <div class="diag-head-icon" id="diagHeadIcon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+      </div>
+      <div>
+        <p class="diag-title" id="diagTitle">Analisando seu sistema...</p>
+        <p class="diag-sub" id="diagSub">Rodando checagens reais, isso leva alguns segundos</p>
+      </div>
+      <button class="diag-close" id="diagClose">✕</button>
+    </div>
+    <div class="diag-list" id="diagList"></div>
   </div>
 </div>
 
@@ -3895,21 +3956,24 @@ async function updateHomeStats(){
   try{
     const { invoke } = window.__TAURI__.core;
     const stats = await invoke('get_system_stats', { includeGpu: true });
+    const cpuVal = Math.round(stats.cpu_percent);
+    const ramVal = Math.round(stats.ram_percent);
     const diskAvg = stats.disks && stats.disks.length
       ? Math.round(stats.disks.reduce((a,d)=>a+d.percent,0) / stats.disks.length)
       : 0;
-    const gpuVal = (stats.gpu_percent === null) ? (window.__lastGpuPct ?? 0) : stats.gpu_percent;
+    const gpuVal = Math.round((stats.gpu_percent === null) ? (window.__lastGpuPct ?? 0) : stats.gpu_percent);
+    window.__lastGpuPct = gpuVal;
 
-    document.getElementById('homeStatCpuVal').textContent = `${stats.cpu_percent}%`;
-    document.getElementById('homeStatCpuBar').style.width = `${stats.cpu_percent}%`;
-    document.getElementById('homeStatRamVal').textContent = `${stats.ram_percent}%`;
-    document.getElementById('homeStatRamBar').style.width = `${stats.ram_percent}%`;
+    document.getElementById('homeStatCpuVal').textContent = `${cpuVal}%`;
+    document.getElementById('homeStatCpuBar').style.width = `${cpuVal}%`;
+    document.getElementById('homeStatRamVal').textContent = `${ramVal}%`;
+    document.getElementById('homeStatRamBar').style.width = `${ramVal}%`;
     document.getElementById('homeStatDiskVal').textContent = `${diskAvg}%`;
     document.getElementById('homeStatDiskBar').style.width = `${diskAvg}%`;
     document.getElementById('homeStatGpuVal').textContent = `${gpuVal}%`;
     document.getElementById('homeStatGpuBar').style.width = `${gpuVal}%`;
 
-    const score = 100 - Math.round((stats.cpu_percent + stats.ram_percent + diskAvg) / 3);
+    const score = 100 - Math.round((cpuVal + ramVal + diskAvg) / 3);
     updateHomeScoreRing(score);
   }catch(err){
     console.log('Stats do dashboard indisponíveis:', err);
@@ -3918,19 +3982,83 @@ async function updateHomeStats(){
 setInterval(updateHomeStats, 2500);
 updateHomeStats();
 
-document.getElementById('homeActAnalyze')?.addEventListener('click', (e)=>{
-  const btn = e.currentTarget;
-  const original = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = 'Analisando...';
+function diagIconSvg(status){
+  if (status === 'ok') return '<path d="M20 6 9 17l-5-5"/>';
+  if (status === 'warn') return '<path d="M12 9v4M12 17h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L14.7 3.86a2 2 0 0 0-3.4 0Z"/>';
+  return '<circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/>';
+}
+async function runSystemDiagnostics(){
+  const modal = document.getElementById('diagModal');
+  const list = document.getElementById('diagList');
+  const headIcon = document.getElementById('diagHeadIcon');
+  const title = document.getElementById('diagTitle');
+  const sub = document.getElementById('diagSub');
+
+  modal.hidden = false;
+  headIcon.className = 'diag-head-icon spin';
+  headIcon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>';
+  title.textContent = 'Analisando seu sistema...';
+  sub.textContent = 'Checando disco, drivers, saúde e uso de recursos';
+  list.innerHTML = '';
+
+  if (!window.__TAURI__){
+    title.textContent = 'Disponível só no app instalado';
+    sub.textContent = 'Essa checagem roda comandos reais do Windows';
+    headIcon.className = 'diag-head-icon warn';
+    headIcon.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${diagIconSvg('warn')}</svg>`;
+    return;
+  }
+
+  try{
+    const { invoke } = window.__TAURI__.core;
+    const report = await invoke('run_diagnostics');
+    const checks = report.checks || [];
+    const bad = checks.filter(c => c.status === 'bad').length;
+    const warn = checks.filter(c => c.status === 'warn').length;
+
+    let worst = 'ok';
+    if (bad > 0) worst = 'bad';
+    else if (warn > 0) worst = 'warn';
+
+    headIcon.className = `diag-head-icon ${worst}`;
+    headIcon.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${diagIconSvg(worst)}</svg>`;
+
+    if (worst === 'ok'){
+      title.textContent = 'Tudo certo por aqui';
+      sub.textContent = 'Nenhum problema encontrado nas checagens';
+    } else if (worst === 'warn'){
+      title.textContent = `${warn} alerta(s) encontrado(s)`;
+      sub.textContent = 'Nada crítico, mas vale de olho';
+    } else {
+      title.textContent = `${bad} problema(s) encontrado(s)`;
+      sub.textContent = 'Recomendamos resolver o quanto antes';
+    }
+
+    list.innerHTML = checks.map((c, i) => `
+      <div class="diag-item ${c.status}" style="animation-delay:${i * 60}ms">
+        <div class="diag-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${diagIconSvg(c.status)}</svg></div>
+        <div class="diag-item-text"><b>${c.label}</b><span>${c.detail}</span></div>
+      </div>
+    `).join('');
+
+    updateHomeScoreRing(100 - bad * 20 - warn * 8);
+  }catch(err){
+    headIcon.className = 'diag-head-icon bad';
+    headIcon.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${diagIconSvg('bad')}</svg>`;
+    title.textContent = 'Não foi possível analisar';
+    sub.textContent = String(err);
+  }
+}
+document.getElementById('diagClose')?.addEventListener('click', ()=>{
+  document.getElementById('diagModal').hidden = true;
+});
+document.getElementById('diagModal')?.addEventListener('click', (e)=>{
+  if (e.target.id === 'diagModal') document.getElementById('diagModal').hidden = true;
+});
+document.getElementById('homeActAnalyze')?.addEventListener('click', ()=>{
   loadHomeHardwareInfo();
-  updateHomeStats().finally(()=>{
-    setTimeout(()=>{
-      btn.disabled = false;
-      btn.innerHTML = original;
-      showToast('Sistema analisado — dados atualizados');
-    }, 700);
-  });
+  updateHomeStats();
+  runSystemDiagnostics();
 });
 document.getElementById('homeActApplyRec2')?.addEventListener('click', ()=>{
   document.getElementById('homeActApplyRec')?.click();
