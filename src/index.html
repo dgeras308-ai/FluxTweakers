@@ -423,6 +423,85 @@
   .home-dash{display:flex;flex-direction:column;gap:18px;}
   .home-welcome h2{margin:0 0 6px;font-size:20px;color:var(--text);}
   .home-welcome p{margin:0;color:var(--muted);font-size:13px;max-width:560px;line-height:1.6;}
+
+  .home-hero{
+    position:relative;overflow:hidden;
+    display:flex;align-items:center;justify-content:space-between;gap:24px;
+    background:linear-gradient(135deg, var(--item-bg) 0%, var(--panel) 100%);
+    border:1px solid var(--item-border);border-radius:var(--radius-lg);
+    padding:28px 30px;
+  }
+  .home-hero::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(420px 260px at 12% -10%, var(--accent-dim) 0%, transparent 65%);
+  }
+  .home-hero-left{position:relative;z-index:1;max-width:420px;}
+  .home-hero-tag{
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--tab-accent-dim);color:var(--tab-accent);
+    font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+    padding:5px 10px;border-radius:20px;margin-bottom:14px;
+  }
+  .home-hero-tag svg{width:12px;height:12px;}
+  .home-hero-left h2{margin:0 0 10px;font-size:24px;line-height:1.28;font-weight:800;color:var(--text);}
+  .home-hero-left .accent-text{color:var(--accent);}
+  .home-hero-left p{margin:0 0 20px;color:var(--muted);font-size:13px;line-height:1.6;}
+  .home-hero-actions{display:flex;gap:10px;flex-wrap:wrap;}
+  .home-hero-btn{
+    display:inline-flex;align-items:center;gap:8px;
+    border-radius:9px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;
+    font-family:var(--sans);transition:.15s ease;border:1px solid transparent;
+  }
+  .home-hero-btn svg{width:15px;height:15px;}
+  .home-hero-btn.primary{background:var(--accent);color:#000;}
+  .home-hero-btn.primary:hover{filter:brightness(1.08);transform:translateY(-1px);}
+  .home-hero-btn.primary:disabled{opacity:.6;cursor:default;transform:none;}
+  .home-hero-btn.secondary{background:transparent;border-color:var(--border);color:var(--text);}
+  .home-hero-btn.secondary:hover{border-color:var(--tab-accent);color:var(--tab-accent);}
+
+  .home-hero-score{position:relative;z-index:1;width:110px;height:110px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+  .home-score-ring{width:110px;height:110px;transform:rotate(-90deg);}
+  .home-score-bg{fill:none;stroke:var(--border-soft);stroke-width:8;}
+  .home-score-fill{
+    fill:none;stroke-width:8;stroke-linecap:round;
+    transition:stroke-dashoffset .6s ease, stroke .3s ease;
+  }
+  .home-score-label{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  }
+  .home-score-label b{font-size:26px;color:var(--text);line-height:1;}
+  .home-score-label span{font-size:9.5px;color:var(--muted);letter-spacing:.08em;margin-top:3px;}
+
+  .home-spec-grid{display:grid;grid-template-columns:repeat(2, 1fr);gap:12px;}
+  @media (max-width:820px){.home-spec-grid{grid-template-columns:1fr;}}
+  .home-spec-card{
+    background:var(--item-bg);border:1px solid var(--item-border);border-radius:10px;
+    padding:12px 14px;display:flex;flex-direction:column;gap:4px;
+  }
+  .home-spec-card span{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;}
+  .home-spec-card b{font-size:13px;color:var(--text);font-family:var(--mono);}
+
+  .home-stat-grid{display:grid;grid-template-columns:repeat(4, 1fr);gap:12px;}
+  @media (max-width:820px){.home-stat-grid{grid-template-columns:repeat(2, 1fr);}}
+  .home-stat-card{
+    background:var(--item-bg);border:1px solid var(--item-border);border-radius:10px;
+    padding:14px;
+  }
+  .home-stat-top{display:flex;align-items:center;gap:7px;margin-bottom:10px;}
+  .home-stat-top b{font-size:12px;color:var(--text);font-weight:700;flex:1;}
+  .home-stat-top em{font-size:13px;font-style:normal;font-weight:700;color:var(--text);font-family:var(--mono);}
+  .home-stat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .home-stat-dot.cpu{background:#5ab8ff;}
+  .home-stat-dot.ram{background:#b48cff;}
+  .home-stat-dot.disk{background:#4ade80;}
+  .home-stat-dot.gpu{background:#ff9f5a;}
+  .home-stat-bar{height:6px;border-radius:4px;background:var(--border-soft);overflow:hidden;}
+  .home-stat-bar-fill{height:100%;border-radius:4px;width:0%;transition:width .6s ease;}
+  .home-stat-bar-fill.cpu{background:#5ab8ff;}
+  .home-stat-bar-fill.ram{background:#b48cff;}
+  .home-stat-bar-fill.disk{background:#4ade80;}
+  .home-stat-bar-fill.gpu{background:#ff9f5a;}
+
   .home-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
   @media (max-width:820px){.home-grid{grid-template-columns:1fr;}}
   .home-card{
@@ -3481,22 +3560,61 @@ homePanel.className = 'panel active';
 homePanel.id = 'panel-home';
 homePanel.innerHTML = `
   <div class="home-dash">
-    <div class="home-welcome">
-      <h2>Bem-vindo de volta 👋</h2>
-      <p>Aqui está um resumo rápido da sua máquina e do que o FluxTweakers pode fazer por ela agora.</p>
+    <div class="home-hero">
+      <div class="home-hero-left">
+        <div class="home-hero-tag">${lineIcon(homeLine())}<span>FluxTweakers Optimizer</span></div>
+        <h2>Máximo Desempenho,<br><span class="accent-text">Sob seu Controle.</span></h2>
+        <p>Analise, otimize e monitore seu PC em tempo real.</p>
+        <div class="home-hero-actions">
+          <button class="home-hero-btn primary" id="homeActAnalyze">
+            ${lineIcon('<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>')}
+            Analisar Sistema
+          </button>
+          <button class="home-hero-btn secondary" id="homeActApplyRec2">
+            ${lineIcon('<path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>')}
+            Otimização Total
+          </button>
+        </div>
+      </div>
+      <div class="home-hero-score">
+        <svg viewBox="0 0 120 120" class="home-score-ring">
+          <circle cx="60" cy="60" r="52" class="home-score-bg"/>
+          <circle cx="60" cy="60" r="52" class="home-score-fill" id="homeScoreFillCircle"/>
+        </svg>
+        <div class="home-score-label">
+          <b id="homeScoreValue">—</b>
+          <span>SAÚDE</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="home-spec-grid" id="homeHwInfo">
+      <div class="home-spec-card"><span>Sistema</span><b>Detectando...</b></div>
+      <div class="home-spec-card"><span>Processador</span><b>Detectando...</b></div>
+      <div class="home-spec-card"><span>Núcleos</span><b>—</b></div>
+      <div class="home-spec-card"><span>Memória</span><b>—</b></div>
+    </div>
+
+    <div class="home-stat-grid" id="homeStatGrid">
+      <div class="home-stat-card">
+        <div class="home-stat-top"><span class="home-stat-dot cpu"></span><b>CPU</b><em id="homeStatCpuVal">—</em></div>
+        <div class="home-stat-bar"><div class="home-stat-bar-fill cpu" id="homeStatCpuBar"></div></div>
+      </div>
+      <div class="home-stat-card">
+        <div class="home-stat-top"><span class="home-stat-dot ram"></span><b>RAM</b><em id="homeStatRamVal">—</em></div>
+        <div class="home-stat-bar"><div class="home-stat-bar-fill ram" id="homeStatRamBar"></div></div>
+      </div>
+      <div class="home-stat-card">
+        <div class="home-stat-top"><span class="home-stat-dot disk"></span><b>Disco</b><em id="homeStatDiskVal">—</em></div>
+        <div class="home-stat-bar"><div class="home-stat-bar-fill disk" id="homeStatDiskBar"></div></div>
+      </div>
+      <div class="home-stat-card">
+        <div class="home-stat-top"><span class="home-stat-dot gpu"></span><b>GPU</b><em id="homeStatGpuVal">—</em></div>
+        <div class="home-stat-bar"><div class="home-stat-bar-fill gpu" id="homeStatGpuBar"></div></div>
+      </div>
     </div>
 
     <div class="home-grid">
-      <div class="home-card home-hw">
-        <h3>Hardware detectado</h3>
-        <div id="homeHwInfo" class="home-hw-info">
-          <div class="home-hw-row"><span>Processador</span><b>Detectando...</b></div>
-          <div class="home-hw-row"><span>Núcleos</span><b>—</b></div>
-          <div class="home-hw-row"><span>Memória RAM</span><b>—</b></div>
-          <div class="home-hw-row"><span>Sistema</span><b>—</b></div>
-        </div>
-      </div>
-
       <div class="home-card home-actions">
         <h3>Ações rápidas</h3>
         <button class="home-action-btn" id="homeActApplyRec">
@@ -3512,11 +3630,11 @@ homePanel.innerHTML = `
           <div><b>Limpar RAM agora</b><span>Libera memória em cache do Windows</span></div>
         </button>
       </div>
-    </div>
 
-    <div class="home-card home-nav">
-      <h3>Explore as categorias</h3>
-      <div class="home-nav-grid" id="homeNavGrid"></div>
+      <div class="home-card home-nav">
+        <h3>Explore as categorias</h3>
+        <div class="home-nav-grid" id="homeNavGrid"></div>
+      </div>
     </div>
   </div>
 `;
@@ -3726,23 +3844,90 @@ async function loadHomeHardwareInfo(){
   const el = document.getElementById('homeHwInfo');
   if (!el) return;
   if (!window.__TAURI__){
-    el.innerHTML = `<div class="home-hw-row"><span>Detecção de hardware</span><b>Só funciona no app instalado</b></div>`;
+    el.innerHTML = `<div class="home-spec-card"><span>Detecção de hardware</span><b>Só funciona no app instalado</b></div>`;
     return;
   }
   try{
     const { invoke } = window.__TAURI__.core;
     const info = await invoke('get_hardware_info');
     el.innerHTML = `
-      <div class="home-hw-row"><span>Processador</span><b>${info.cpu_brand}</b></div>
-      <div class="home-hw-row"><span>Núcleos</span><b>${info.cpu_cores}</b></div>
-      <div class="home-hw-row"><span>Memória RAM</span><b>${info.ram_total_gb} GB</b></div>
-      <div class="home-hw-row"><span>Sistema</span><b>${info.os_name}</b></div>
+      <div class="home-spec-card"><span>Sistema</span><b>${info.os_name}</b></div>
+      <div class="home-spec-card"><span>Processador</span><b>${info.cpu_brand}</b></div>
+      <div class="home-spec-card"><span>Núcleos</span><b>${info.cpu_cores}</b></div>
+      <div class="home-spec-card"><span>Memória</span><b>${info.ram_total_gb} GB</b></div>
     `;
   }catch(err){
-    el.innerHTML = `<div class="home-hw-row"><span>Erro ao detectar</span><b>${err}</b></div>`;
+    el.innerHTML = `<div class="home-spec-card"><span>Erro ao detectar</span><b>${err}</b></div>`;
   }
 }
 loadHomeHardwareInfo();
+
+// ---------- Cards de uso (CPU/RAM/Disco/GPU) e score de saúde do dashboard Início ----------
+const HOME_SCORE_CIRC = 2 * Math.PI * 52;
+function scoreColor(score){
+  if (score >= 70) return '#4ade80';
+  if (score >= 40) return '#f5a524';
+  return '#ef5a6f';
+}
+function updateHomeScoreRing(score){
+  const circle = document.getElementById('homeScoreFillCircle');
+  const label = document.getElementById('homeScoreValue');
+  if (!circle || !label) return;
+  const clamped = Math.max(0, Math.min(100, score));
+  const offset = HOME_SCORE_CIRC * (1 - clamped / 100);
+  circle.style.strokeDasharray = `${HOME_SCORE_CIRC}`;
+  circle.style.strokeDashoffset = `${offset}`;
+  circle.style.stroke = scoreColor(clamped);
+  label.textContent = Math.round(clamped);
+}
+async function updateHomeStats(){
+  if (!window.__TAURI__) return;
+  if (document.getElementById('appContent').hidden) return;
+  const panel = document.getElementById('panel-home');
+  if (!panel || !panel.classList.contains('active')) return;
+  try{
+    const { invoke } = window.__TAURI__.core;
+    const stats = await invoke('get_system_stats', { includeGpu: true });
+    const diskAvg = stats.disks && stats.disks.length
+      ? Math.round(stats.disks.reduce((a,d)=>a+d.percent,0) / stats.disks.length)
+      : 0;
+    const gpuVal = (stats.gpu_percent === null) ? (window.__lastGpuPct ?? 0) : stats.gpu_percent;
+
+    document.getElementById('homeStatCpuVal').textContent = `${stats.cpu_percent}%`;
+    document.getElementById('homeStatCpuBar').style.width = `${stats.cpu_percent}%`;
+    document.getElementById('homeStatRamVal').textContent = `${stats.ram_percent}%`;
+    document.getElementById('homeStatRamBar').style.width = `${stats.ram_percent}%`;
+    document.getElementById('homeStatDiskVal').textContent = `${diskAvg}%`;
+    document.getElementById('homeStatDiskBar').style.width = `${diskAvg}%`;
+    document.getElementById('homeStatGpuVal').textContent = `${gpuVal}%`;
+    document.getElementById('homeStatGpuBar').style.width = `${gpuVal}%`;
+
+    const score = 100 - Math.round((stats.cpu_percent + stats.ram_percent + diskAvg) / 3);
+    updateHomeScoreRing(score);
+  }catch(err){
+    console.log('Stats do dashboard indisponíveis:', err);
+  }
+}
+setInterval(updateHomeStats, 2500);
+updateHomeStats();
+
+document.getElementById('homeActAnalyze')?.addEventListener('click', (e)=>{
+  const btn = e.currentTarget;
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = 'Analisando...';
+  loadHomeHardwareInfo();
+  updateHomeStats().finally(()=>{
+    setTimeout(()=>{
+      btn.disabled = false;
+      btn.innerHTML = original;
+      showToast('Sistema analisado — dados atualizados');
+    }, 700);
+  });
+});
+document.getElementById('homeActApplyRec2')?.addEventListener('click', ()=>{
+  document.getElementById('homeActApplyRec')?.click();
+});
 
 const TAB_GROUPS = [
   { label: "Hardware", cats: ["cpu","gpu","ram","storage"] },
