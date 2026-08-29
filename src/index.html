@@ -4042,7 +4042,7 @@ async function loadDetectedGames(){
       <div class="game-detected-card">
         <div class="game-detected-info">
           <b>${g.name}</b>
-          <span class="game-detected-src">${g.source === 'steam' ? 'Steam' : 'Epic Games'}</span>
+          <span class="game-detected-src">${({steam:'Steam', epic:'Epic Games', ubisoft:'Ubisoft Connect', rockstar:'Rockstar Games'})[g.source] || g.source}</span>
           <span class="game-detected-path" title="${g.exe_path}">${g.exe_path}</span>
         </div>
         <div class="game-detected-actions">
@@ -4773,7 +4773,7 @@ function renderPanel(catId){
       <div class="detected-games-head">
         <div>
           <h3>Meus jogos</h3>
-          <p>Detecta jogos instalados (Steam/Epic) e otimiza cada um com um clique.</p>
+          <p>Detecta jogos instalados (Steam, Epic, Ubisoft Connect e Rockstar Games) e otimiza cada um com um clique.</p>
         </div>
         <button id="rescanGamesBtn" class="preset-btn">↻ Procurar jogos</button>
       </div>

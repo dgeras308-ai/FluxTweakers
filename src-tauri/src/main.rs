@@ -93,12 +93,16 @@ struct InstalledGame {
 }
 
 /// Detecta jogos realmente instalados na máquina (sem precisar de admin, só leitura):
-/// olha as bibliotecas da Steam (libraryfolders.vdf + appmanifest_*.acf) e os
-/// manifestos da Epic Games Launcher. Não inventa jogo — só lista o que achou de fato.
+/// olha as bibliotecas da Steam (libraryfolders.vdf + appmanifest_*.acf), os
+/// manifestos da Epic Games, as chaves de instalação da Ubisoft Connect no registro,
+/// e a pasta padrão de instalação da Rockstar Games Launcher.
+/// Não inventa jogo — só lista o que achou de fato.
 #[tauri::command]
 fn scan_installed_games() -> Vec<InstalledGame> {
     let mut games = scan_steam_games();
     games.extend(scan_epic_games());
+    games.extend(scan_ubisoft_games());
+    games.extend(scan_rockstar_games());
     games
 }
 
@@ -118,6 +122,77 @@ fn reg_query_value(key: &str, value: &str) -> Option<String> {
         }
     }
     None
+}
+
+/// Lista as subchaves diretas de uma chave do registro (sem valores).
+/// Usado pra enumerar cada jogo instalado pela Ubisoft Connect, um por subchave.
+#[cfg(target_os = "windows")]
+fn reg_list_subkeys(key: &str) -> Vec<String> {
+    let output = Command::new("reg")
+        .args(["query", key])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
+    let mut result = Vec::new();
+    if let Ok(o) = output {
+        let text = String::from_utf8_lossy(&o.stdout);
+        for line in text.lines() {
+            let line = line.trim();
+            if line.to_uppercase().starts_with("HKEY") && !line.eq_ignore_ascii_case(key) {
+                result.push(line.to_string());
+            }
+        }
+    }
+    result
+}
+
+#[cfg(target_os = "windows")]
+fn scan_ubisoft_games() -> Vec<InstalledGame> {
+    let mut result = Vec::new();
+    let bases = [
+        r"HKLM\SOFTWARE\WOW6432Node\Ubisoft\Launcher\Installs",
+        r"HKLM\SOFTWARE\Ubisoft\Launcher\Installs",
+    ];
+    for base in bases {
+        for subkey in reg_list_subkeys(base) {
+            if let Some(install_dir) = reg_query_value(&subkey, "InstallDir") {
+                let dir = PathBuf::from(install_dir.trim());
+                if let Some(exe) = find_main_exe(&dir) {
+                    let name = dir.file_name()
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_else(|| "Jogo Ubisoft".to_string());
+                    if !result.iter().any(|g: &InstalledGame| g.exe_path == exe) {
+                        result.push(InstalledGame { name, exe_path: exe, source: "ubisoft".to_string() });
+                    }
+                }
+            }
+        }
+    }
+    result
+}
+
+/// A Rockstar Games Launcher não expõe uma chave de registro única e confiável
+/// listando todos os jogos instalados (varia por título). Por isso, aqui a gente
+/// procura direto na pasta padrão onde ela instala os jogos — funciona pra quem
+/// não mudou o local de instalação, que é o caso da grande maioria.
+#[cfg(target_os = "windows")]
+fn scan_rockstar_games() -> Vec<InstalledGame> {
+    let mut result = Vec::new();
+    let bases = [std::env::var("ProgramFiles").ok(), std::env::var("ProgramFiles(x86)").ok()];
+    for pf in bases.into_iter().flatten() {
+        let dir = Path::new(&pf).join("Rockstar Games");
+        let entries = match fs::read_dir(&dir) { Ok(e) => e, Err(_) => continue };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_dir() { continue; }
+            let lower = path.file_name().unwrap_or_default().to_string_lossy().to_lowercase();
+            if lower.contains("launcher") || lower.contains("social club") { continue; }
+            if let Some(exe) = find_main_exe(&path) {
+                let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "Jogo Rockstar".to_string());
+                result.push(InstalledGame { name, exe_path: exe, source: "rockstar".to_string() });
+            }
+        }
+    }
+    result
 }
 
 #[cfg(target_os = "windows")]
@@ -241,6 +316,10 @@ fn scan_epic_games() -> Vec<InstalledGame> {
 fn scan_steam_games() -> Vec<InstalledGame> { Vec::new() }
 #[cfg(not(target_os = "windows"))]
 fn scan_epic_games() -> Vec<InstalledGame> { Vec::new() }
+#[cfg(not(target_os = "windows"))]
+fn scan_ubisoft_games() -> Vec<InstalledGame> { Vec::new() }
+#[cfg(not(target_os = "windows"))]
+fn scan_rockstar_games() -> Vec<InstalledGame> { Vec::new() }
 
 #[derive(Serialize)]
 struct ProcessMemInfo {
