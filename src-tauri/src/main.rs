@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::fs;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::Mutex;
 use serde::Serialize;
@@ -83,6 +84,163 @@ fn read_gpu_name_windows() -> String {
 fn read_gpu_name_windows() -> String {
     "Detecção disponível apenas no Windows".to_string()
 }
+
+#[derive(Serialize, Clone)]
+struct InstalledGame {
+    name: String,
+    exe_path: String,
+    source: String, // "steam" | "epic"
+}
+
+/// Detecta jogos realmente instalados na máquina (sem precisar de admin, só leitura):
+/// olha as bibliotecas da Steam (libraryfolders.vdf + appmanifest_*.acf) e os
+/// manifestos da Epic Games Launcher. Não inventa jogo — só lista o que achou de fato.
+#[tauri::command]
+fn scan_installed_games() -> Vec<InstalledGame> {
+    let mut games = scan_steam_games();
+    games.extend(scan_epic_games());
+    games
+}
+
+#[cfg(target_os = "windows")]
+fn reg_query_value(key: &str, value: &str) -> Option<String> {
+    let output = Command::new("reg")
+        .args(["query", key, "/v", value])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output()
+        .ok()?;
+    let text = String::from_utf8_lossy(&output.stdout);
+    for line in text.lines() {
+        if line.trim_start().starts_with(value) {
+            if let Some(idx) = line.find("REG_SZ") {
+                return Some(line[idx + 6..].trim().to_string());
+            }
+        }
+    }
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn scan_steam_games() -> Vec<InstalledGame> {
+    let mut result = Vec::new();
+    let steam_path = reg_query_value(r"HKCU\Software\Valve\Steam", "SteamPath")
+        .or_else(|| reg_query_value(r"HKLM\SOFTWARE\WOW6432Node\Valve\Steam", "InstallPath"));
+    let steam_path = match steam_path {
+        Some(p) => p.replace('/', "\\"),
+        None => return result,
+    };
+
+    let mut libraries = vec![PathBuf::from(&steam_path)];
+    let vdf_path = Path::new(&steam_path).join("steamapps").join("libraryfolders.vdf");
+    if let Ok(content) = fs::read_to_string(&vdf_path) {
+        for line in content.lines() {
+            let line = line.trim();
+            if line.starts_with("\"path\"") {
+                if let Some(val) = extract_vdf_value(line) {
+                    let p = PathBuf::from(val.replace("\\\\", "\\"));
+                    if !libraries.contains(&p) { libraries.push(p); }
+                }
+            }
+        }
+    }
+
+    for lib in libraries {
+        let steamapps = lib.join("steamapps");
+        let entries = match fs::read_dir(&steamapps) { Ok(e) => e, Err(_) => continue };
+        for entry in entries.flatten() {
+            let fname = entry.file_name().to_string_lossy().to_string();
+            if !fname.starts_with("appmanifest_") || !fname.ends_with(".acf") { continue; }
+            let content = match fs::read_to_string(entry.path()) { Ok(c) => c, Err(_) => continue };
+            let mut name = None;
+            let mut installdir = None;
+            for line in content.lines() {
+                let line = line.trim();
+                if line.starts_with("\"name\"") { name = extract_vdf_value(line); }
+                if line.starts_with("\"installdir\"") { installdir = extract_vdf_value(line); }
+            }
+            if let (Some(name), Some(installdir)) = (name, installdir) {
+                let game_dir = steamapps.join("common").join(&installdir);
+                if let Some(exe) = find_main_exe(&game_dir) {
+                    result.push(InstalledGame { name, exe_path: exe, source: "steam".to_string() });
+                }
+            }
+        }
+    }
+    result
+}
+
+#[cfg(target_os = "windows")]
+fn extract_vdf_value(line: &str) -> Option<String> {
+    let parts: Vec<&str> = line.split('"').filter(|s| !s.trim().is_empty()).collect();
+    parts.get(1).map(|s| s.to_string())
+}
+
+#[cfg(target_os = "windows")]
+fn find_main_exe(dir: &Path) -> Option<String> {
+    if !dir.is_dir() { return None; }
+    let ignore = ["unins", "redist", "vcredist", "dotnet", "crashpad", "crashhandler",
+                  "easyanticheat", "battleye", "setup", "directx", "prereq", "vc_redist",
+                  "helper", "updater", "cef", "dxwebsetup"];
+    let mut best: Option<(PathBuf, u64)> = None;
+    let mut stack = vec![dir.to_path_buf()];
+    let mut depth = 0;
+    while let Some(d) = stack.pop() {
+        depth += 1;
+        if depth > 60 { break; } // limite de segurança, evita ficar preso em pastas gigantes
+        let entries = match fs::read_dir(&d) { Ok(e) => e, Err(_) => continue };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                if stack.len() < 200 { stack.push(path); }
+                continue;
+            }
+            let ext_ok = path.extension().map(|e| e.eq_ignore_ascii_case("exe")).unwrap_or(false);
+            if !ext_ok { continue; }
+            let lower = path.file_name().unwrap_or_default().to_string_lossy().to_lowercase();
+            if ignore.iter().any(|kw| lower.contains(kw)) { continue; }
+            if let Ok(meta) = entry.metadata() {
+                let size = meta.len();
+                if best.as_ref().map(|(_, s)| size > *s).unwrap_or(true) {
+                    best = Some((path, size));
+                }
+            }
+        }
+    }
+    best.map(|(p, _)| p.to_string_lossy().to_string())
+}
+
+#[cfg(target_os = "windows")]
+fn scan_epic_games() -> Vec<InstalledGame> {
+    let mut result = Vec::new();
+    let program_data = std::env::var("PROGRAMDATA").unwrap_or_else(|_| "C:\\ProgramData".to_string());
+    let manifests_dir = Path::new(&program_data).join("Epic").join("EpicGamesLauncher").join("Data").join("Manifests");
+    let entries = match fs::read_dir(&manifests_dir) { Ok(e) => e, Err(_) => return result };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().map(|e| e != "item").unwrap_or(true) { continue; }
+        let content = match fs::read_to_string(&path) { Ok(c) => c, Err(_) => continue };
+        let json: serde_json::Value = match serde_json::from_str(&content) { Ok(j) => j, Err(_) => continue };
+        let name = json.get("DisplayName").and_then(|v| v.as_str());
+        let install_loc = json.get("InstallLocation").and_then(|v| v.as_str());
+        let exe_rel = json.get("LaunchExecutable").and_then(|v| v.as_str());
+        if let (Some(name), Some(install_loc), Some(exe_rel)) = (name, install_loc, exe_rel) {
+            let full = Path::new(install_loc).join(exe_rel);
+            if full.exists() {
+                result.push(InstalledGame {
+                    name: name.to_string(),
+                    exe_path: full.to_string_lossy().to_string(),
+                    source: "epic".to_string(),
+                });
+            }
+        }
+    }
+    result
+}
+
+#[cfg(not(target_os = "windows"))]
+fn scan_steam_games() -> Vec<InstalledGame> { Vec::new() }
+#[cfg(not(target_os = "windows"))]
+fn scan_epic_games() -> Vec<InstalledGame> { Vec::new() }
 
 #[derive(Serialize)]
 struct ProcessMemInfo {
@@ -780,7 +938,7 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(SysState(Mutex::new(System::new_all())))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games])
         .setup(|_app| {
             #[cfg(target_os = "windows")]
             {

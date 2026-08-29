@@ -419,6 +419,34 @@
   .ram-cleaner-actions{display:flex;align-items:center;gap:12px;margin-top:14px;}
   .ram-cleaner-status{font-size:11.5px;color:var(--muted);}
 
+  /* ===== Meus Jogos (detecção automática Steam/Epic) ===== */
+  .detected-games-box{
+    background:var(--item-bg);border:1px solid var(--item-border);border-radius:12px;
+    padding:16px;margin-bottom:14px;
+  }
+  .detected-games-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px;}
+  .detected-games-head h3{margin:0 0 4px;font-size:14px;color:var(--item-text);}
+  .detected-games-head p{margin:0;font-size:11.8px;color:var(--item-muted);line-height:1.5;max-width:440px;}
+  .detected-games-list{display:flex;flex-direction:column;gap:8px;}
+  .detected-games-empty{margin:8px 0;font-size:12.5px;color:var(--muted);text-align:center;padding:10px;}
+  .game-detected-card{
+    display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+    background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;
+  }
+  .game-detected-info{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .game-detected-info b{font-size:13px;color:var(--text);}
+  .game-detected-src{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--accent);font-weight:700;}
+  .game-detected-path{font-size:10.5px;color:var(--muted);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:360px;}
+  .game-detected-actions{display:flex;gap:6px;flex-shrink:0;}
+  .game-preset-btn{
+    padding:7px 12px;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;
+    background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--sans);
+    transition:.15s;
+  }
+  .game-preset-btn:hover{color:var(--text);border-color:var(--muted2);}
+  .game-preset-btn.active{background:var(--accent);color:#000;border-color:var(--accent);}
+  .game-preset-btn:disabled{opacity:.6;cursor:default;}
+
   /* ===== Aba Início (dashboard) ===== */
   .home-dash{display:flex;flex-direction:column;gap:18px;}
   .home-welcome h2{margin:0 0 6px;font-size:20px;color:var(--text);}
@@ -3954,6 +3982,87 @@ document.getElementById('homeActRamClean')?.addEventListener('click', ()=>{
   else showToast('Ative a limpeza de RAM na aba RAM primeiro');
 });
 
+// ---------- Meus Jogos: detecção real (Steam/Epic) + presets por jogo ----------
+function gamePresetScript(exePath, preset){
+  const exeName = exePath.split('\\').pop();
+  const fsoKey = `HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers`;
+  const gpuKey = `HKCU\\Software\\Microsoft\\DirectX\\UserGpuPreference`;
+  const ifeoKey = `HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\${exeName}\\PerfOptions`;
+  const lines = [];
+  if(preset === 'performance'){
+    lines.push(`reg add "${ifeoKey}" /v CpuPriorityClass /t REG_DWORD /d 3 /f`);
+    lines.push(`reg add "${gpuKey}" /v "${exePath}" /t REG_SZ /d "GpuPreference=2;" /f`);
+    lines.push(`reg add "${fsoKey}" /v "${exePath}" /t REG_SZ /d "~ DISABLEDXMAXIMIZEDWINDOWEDMODE" /f`);
+  } else if(preset === 'quality'){
+    lines.push(`reg delete "${ifeoKey}" /v CpuPriorityClass /f`);
+    lines.push(`reg add "${gpuKey}" /v "${exePath}" /t REG_SZ /d "GpuPreference=1;" /f`);
+    lines.push(`reg delete "${fsoKey}" /v "${exePath}" /f`);
+  } else {
+    lines.push(`reg delete "${ifeoKey}" /v CpuPriorityClass /f`);
+    lines.push(`reg delete "${gpuKey}" /v "${exePath}" /f`);
+    lines.push(`reg delete "${fsoKey}" /v "${exePath}" /f`);
+  }
+  return lines.map(l => l + ' 2>nul').join('\n');
+}
+const PRESET_LABELS = {
+  performance: { label:'Desempenho', title:'CPU em prioridade Alta + GPU dedicada + desativa otimizações de tela cheia' },
+  balanced: { label:'Equilibrado', title:'Restaura tudo pro padrão do Windows decidir sozinho' },
+  quality: { label:'Qualidade', title:'Usa a GPU mais eficiente (menos calor/consumo) e prioridade normal de CPU' },
+};
+async function applyGamePreset(exePath, preset, btn){
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '...';
+  const script = gamePresetScript(exePath, preset);
+  const ok = await saveOrRunScript(script, 'otimizar-jogo-dgeras.bat');
+  btn.disabled = false;
+  btn.textContent = original;
+  if (ok) {
+    const card = btn.closest('.game-detected-card');
+    card?.querySelectorAll('.game-preset-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+}
+async function loadDetectedGames(){
+  const list = document.getElementById('detectedGamesList');
+  if (!list) return;
+  if (!window.__TAURI__){
+    list.innerHTML = `<p class="detected-games-empty">Detecção automática só funciona no app instalado.</p>`;
+    return;
+  }
+  list.innerHTML = `<p class="detected-games-empty">Procurando jogos instalados (Steam/Epic)...</p>`;
+  try{
+    const { invoke } = window.__TAURI__.core;
+    const games = await invoke('scan_installed_games');
+    if (!games || !games.length){
+      list.innerHTML = `<p class="detected-games-empty">Nenhum jogo da Steam ou Epic Games encontrado nesta máquina.</p>`;
+      return;
+    }
+    list.innerHTML = games.map((g, i) => `
+      <div class="game-detected-card">
+        <div class="game-detected-info">
+          <b>${g.name}</b>
+          <span class="game-detected-src">${g.source === 'steam' ? 'Steam' : 'Epic Games'}</span>
+          <span class="game-detected-path" title="${g.exe_path}">${g.exe_path}</span>
+        </div>
+        <div class="game-detected-actions">
+          <button class="game-preset-btn perf" data-preset="performance" data-exe="${i}" title="${PRESET_LABELS.performance.title}">Desempenho</button>
+          <button class="game-preset-btn bal" data-preset="balanced" data-exe="${i}" title="${PRESET_LABELS.balanced.title}">Equilibrado</button>
+          <button class="game-preset-btn qual" data-preset="quality" data-exe="${i}" title="${PRESET_LABELS.quality.title}">Qualidade</button>
+        </div>
+      </div>
+    `).join('');
+    list.querySelectorAll('.game-preset-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const g = games[+btn.dataset.exe];
+        applyGamePreset(g.exe_path, btn.dataset.preset, btn);
+      });
+    });
+  }catch(err){
+    list.innerHTML = `<p class="detected-games-empty">Não foi possível procurar jogos: ${err}</p>`;
+  }
+}
+
 async function loadHomeHardwareInfo(){
   const el = document.getElementById('homeHwInfo');
   if (!el) return;
@@ -4660,9 +4769,21 @@ function renderPanel(catId){
   }
 
   if(cat.special === 'games'){
-    html += `<div class="ram-input-row">
+    html += `<div class="detected-games-box">
+      <div class="detected-games-head">
+        <div>
+          <h3>Meus jogos</h3>
+          <p>Detecta jogos instalados (Steam/Epic) e otimiza cada um com um clique.</p>
+        </div>
+        <button id="rescanGamesBtn" class="preset-btn">↻ Procurar jogos</button>
+      </div>
+      <div id="detectedGamesList" class="detected-games-list">
+        <p class="detected-games-empty">Clique em "Procurar jogos" pra detectar o que você tem instalado.</p>
+      </div>
+    </div>
+    <div class="ram-input-row">
       <input type="text" id="customGameInput" placeholder="Nome do .exe do jogo (ex: MeuJogo.exe)" style="flex:1;background:var(--card);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-size:13px;font-family:var(--sans);">
-      <button id="addGameBtn" class="preset-btn preset-btn-highlight">+ Adicionar jogo</button>
+      <button id="addGameBtn" class="preset-btn preset-btn-highlight">+ Adicionar jogo manualmente</button>
     </div>`;
   }
 
@@ -4837,6 +4958,9 @@ function gameTileIcon(title, group){
     };
     addBtn.onclick = addGame;
     gameInput.addEventListener('keydown', e=>{ if(e.key==='Enter') addGame(); });
+
+    panel.querySelector('#rescanGamesBtn')?.addEventListener('click', ()=> loadDetectedGames());
+    loadDetectedGames();
   }
 
   panel.querySelectorAll('input[type=checkbox]').forEach(c=>{
