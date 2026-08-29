@@ -1311,24 +1311,43 @@
   .account-badge button:hover{color:var(--text);}
   .account-badge button svg{width:15px;height:15px;}
   #adminScreen .login-card{max-width:640px;width:94vw;text-align:left;}
-  .admin-users{max-height:340px;overflow-y:auto;margin:14px 0;border:1px solid var(--border-soft);border-radius:10px;}
-  .admin-user-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border-soft);flex-wrap:wrap;}
+  .admin-icon-badge{background:linear-gradient(135deg, var(--tab-accent-dim), transparent);border-radius:12px;}
+  .admin-icon-badge svg{color:var(--tab-accent);}
+
+  .admin-section{
+    background:var(--item-bg);border:1px solid var(--item-border);border-radius:12px;
+    padding:16px;margin-bottom:14px;
+    animation:cardIn .38s cubic-bezier(.2,.8,.2,1) both;
+  }
+  .admin-section-head{display:flex;flex-direction:column;gap:2px;margin-bottom:12px;}
+  .admin-section-title{display:flex;align-items:center;gap:9px;}
+  .admin-section-title svg{width:18px;height:18px;color:var(--tab-accent);flex-shrink:0;}
+  .admin-section-title h3{margin:0;font-size:13.5px;color:var(--item-text);font-weight:700;}
+  .admin-section-sub{font-size:11.3px;color:var(--item-muted);margin-left:27px;}
+
+  .admin-users{max-height:340px;overflow-y:auto;margin:0;border:1px solid var(--item-border);border-radius:10px;background:var(--card);}
+  .admin-user-row{
+    display:flex;align-items:center;gap:10px;padding:11px 13px;border-bottom:1px solid var(--item-border);flex-wrap:wrap;
+    transition:background .15s ease;
+  }
+  .admin-user-row:hover{background:var(--item-bg-hover);}
   .admin-user-row:last-child{border-bottom:none;}
   .admin-user-row .u-info{flex:1;min-width:0;}
-  .admin-user-row .u-name{font-weight:700;font-size:13px;}
-  .admin-user-row .u-meta{font-size:11px;color:var(--muted);}
-  .admin-user-row .u-plan{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,.08);}
+  .admin-user-row .u-name{font-weight:700;font-size:13px;color:var(--item-text);}
+  .admin-user-row .u-meta{font-size:11px;color:var(--item-muted);margin-top:1px;}
+  .admin-user-row .u-plan{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(255,255,255,.08);color:var(--muted);}
   .admin-user-row .u-plan.paid{background:rgba(123,224,139,.15);color:#7be08b;}
   .admin-user-row .u-plan.pending{background:rgba(255,196,0,.15);color:#ffc400;}
   .admin-row-actions{display:flex;gap:6px;align-items:center;}
-  .admin-row-actions input{width:52px;padding:6px;border-radius:6px;border:1px solid var(--border-soft);background:transparent;color:var(--text);font-size:12px;}
-  .admin-row-actions button{border:none;border-radius:6px;padding:6px 9px;font-size:11px;font-weight:700;cursor:pointer;}
+  .admin-row-actions input{width:52px;padding:6px;border-radius:6px;border:1px solid var(--item-border);background:transparent;color:var(--text);font-size:12px;}
+  .admin-row-actions button{border:none;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;transition:filter .12s ease, transform .12s ease;}
+  .admin-row-actions button:hover{filter:brightness(1.15);transform:translateY(-1px);}
   .admin-btn-approve{background:var(--accent);color:#000;}
   .admin-btn-revoke{background:rgba(255,255,255,.08);color:var(--muted);}
-  .admin-empty{padding:20px;text-align:center;color:var(--muted);font-size:12.5px;}
+  .admin-btn-delete{background:rgba(239,90,111,.15);color:#ef5a6f;}
+  .admin-empty{padding:24px;text-align:center;color:var(--muted);font-size:12.5px;}
   #tabs button.locked-cat{opacity:.55;cursor:not-allowed;}
   #tabs button.locked-cat:hover{opacity:.75;}
-  .admin-new-client{border:1px solid var(--border-soft);border-radius:10px;padding:12px;margin:8px 0 16px;}
   .admin-new-row{display:flex;gap:8px;margin-bottom:8px;}
   .admin-new-row:last-child{margin-bottom:0;}
   .admin-new-row .login-input{margin:0;flex:1;}
@@ -1336,7 +1355,9 @@
   select.login-input option{background:#1c1c22;color:#f2f2f4;}
   .admin-new-row select.login-input{flex:1.4;min-width:0;}
   .admin-new-row button.login-btn{flex:1;white-space:nowrap;}
-  .admin-list-head{display:flex;align-items:center;justify-content:space-between;margin:4px 0 8px;}
+  .admin-btn-solid{background:linear-gradient(135deg, var(--accent), var(--accent2) 130%) !important;color:#000 !important;transition:filter .15s ease, transform .15s ease;}
+  .admin-btn-solid:hover{filter:brightness(1.08);transform:translateY(-1px);}
+  .admin-list-head{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px;}
   .admin-legend{font-size:10.5px;color:var(--muted);display:flex;align-items:center;gap:4px;}
   .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:2px;}
   .dot.online{background:#3ddc71;box-shadow:0 0 4px #3ddc71;}
@@ -2818,6 +2839,20 @@ function homeLine(){
   return `<path d="M4 11.5 12 4l8 7.5"/>
     <path d="M6.2 9.8V19a1 1 0 0 0 1 1H10v-4.6a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2V20h2.8a1 1 0 0 0 1-1V9.8"/>`;
 }
+function keyLine(){
+  return `<circle cx="7.5" cy="15.5" r="4.2"/>
+    <path d="M10.6 12.4 20 3"/>
+    <path d="M16.5 6.5 19 9"/>
+    <path d="M13.3 9.7 15.5 11.9"/>`;
+}
+function shieldLine(){
+  return `<path d="M12 3.5 5 6v5.2c0 4.6 3 7.7 7 9.3 4-1.6 7-4.7 7-9.3V6l-7-2.5Z"/>
+    <path d="M9.3 12.2 11.3 14.2 15 10"/>`;
+}
+function personLine(){
+  return `<circle cx="12" cy="8" r="3.6"/>
+    <path d="M4.8 20c1-3.6 4-5.6 7.2-5.6s6.2 2 7.2 5.6"/>`;
+}
 
 function startupGlyph(accent){
   return `<circle cx="12" cy="12" r="5.4" fill="#fff"/>
@@ -4297,7 +4332,7 @@ TAB_GROUPS.forEach(group => {
   btn.style.display = 'none';
   btn.style.setProperty('--btn-color', '#ffb020');
   btn.style.setProperty('--btn-bg', '#ffb02022');
-  btn.innerHTML = `${imgTile(UPLOADED_ICONS.keys)}<span class="label">Keys</span>`;
+  btn.innerHTML = `${lineIcon(keyLine())}<span class="label">Keys</span>`;
   btn.onclick = ()=>switchTab('admin');
   tabsEl.appendChild(btn);
 
@@ -4307,13 +4342,16 @@ TAB_GROUPS.forEach(group => {
   panel.innerHTML = `
     <div class="panel-head">
       <div class="panel-head-left">
-        <div class="panel-icon-badge">${imgTile(UPLOADED_ICONS.keys)}</div>
+        <div class="panel-icon-badge admin-icon-badge">${lineIcon(keyLine())}</div>
         <div><h2>Keys · Painel do Dono</h2><p class="panel-desc">Cadastre clientes, aprove pedidos de plano pago e acompanhe quem está online.</p></div>
       </div>
     </div>
 
-    <div class="admin-new-client">
-      <label class="login-label">Gerar key</label>
+    <div class="admin-section">
+      <div class="admin-section-head">
+        <div class="admin-section-title">${lineIcon(keyLine())}<h3>Gerar key</h3></div>
+        <span class="admin-section-sub">Cria um código de ativação pra vender/repassar</span>
+      </div>
       <div class="admin-new-row">
         <select id="genKeyDays" class="login-input">
           <option value="7">7 dias</option>
@@ -4321,17 +4359,22 @@ TAB_GROUPS.forEach(group => {
           <option value="90">90 dias (trimestral)</option>
           <option value="365">365 dias (anual)</option>
         </select>
-        <button type="button" id="genKeyBtn" class="login-btn" style="margin:0;">Gerar key</button>
+        <button type="button" id="genKeyBtn" class="login-btn admin-btn-solid" style="margin:0;">+ Gerar key</button>
       </div>
     </div>
 
-    <div class="admin-list-head">
-      <p class="login-label" style="margin:0;">Keys geradas (<span id="genKeyCount">0</span>)</p>
+    <div class="admin-section">
+      <div class="admin-list-head">
+        <div class="admin-section-title" style="margin:0;">${lineIcon(keyLine())}<h3 style="margin:0;">Keys geradas</h3><span class="acc-badge">${'<span id="genKeyCount">0</span>'}</span></div>
+      </div>
+      <div id="genKeysList" class="admin-users"></div>
     </div>
-    <div id="genKeysList" class="admin-users" style="margin-bottom:16px;"></div>
 
-    <div class="admin-new-client">
-      <label class="login-label">Verificar key (diagnóstico)</label>
+    <div class="admin-section">
+      <div class="admin-section-head">
+        <div class="admin-section-title">${lineIcon(shieldLine())}<h3>Verificar key</h3></div>
+        <span class="admin-section-sub">Diagnóstico — confere se uma key existe e o status dela</span>
+      </div>
       <div class="admin-new-row">
         <input type="text" id="checkKeyInput" class="login-input" placeholder="Cole a key aqui pra checar" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false">
         <button type="button" id="checkKeyBtn" class="login-btn login-btn-secondary" style="margin:0;">Checar</button>
@@ -4339,8 +4382,11 @@ TAB_GROUPS.forEach(group => {
       <p id="checkKeyMsg" class="login-error" hidden></p>
     </div>
 
-    <div class="admin-new-client">
-      <label class="login-label">Novo cliente</label>
+    <div class="admin-section">
+      <div class="admin-section-head">
+        <div class="admin-section-title">${lineIcon(personLine())}<h3>Novo cliente</h3></div>
+        <span class="admin-section-sub">Cadastro manual direto, sem precisar de key</span>
+      </div>
       <div class="admin-new-row">
         <input type="text" id="adminNewUser" class="login-input" placeholder="Usuário">
         <input type="text" id="adminNewPass" class="login-input" placeholder="Senha">
@@ -4353,16 +4399,18 @@ TAB_GROUPS.forEach(group => {
           <option value="90">Pago · 90 dias (trimestral)</option>
           <option value="365">Pago · 365 dias (anual)</option>
         </select>
-        <button type="button" id="adminNewClientBtn" class="login-btn" style="margin:0;">Cadastrar</button>
+        <button type="button" id="adminNewClientBtn" class="login-btn admin-btn-solid" style="margin:0;">Cadastrar</button>
       </div>
       <p class="login-error" id="adminNewError" hidden></p>
     </div>
 
-    <div class="admin-list-head">
-      <p class="login-label" style="margin:0;">Contas (<span id="adminUserCount">0</span>)</p>
-      <span class="admin-legend"><i class="dot online"></i> online <i class="dot offline"></i> offline</span>
+    <div class="admin-section">
+      <div class="admin-list-head">
+        <div class="admin-section-title" style="margin:0;">${lineIcon(personLine())}<h3 style="margin:0;">Contas</h3><span class="acc-badge">${'<span id="adminUserCount">0</span>'}</span></div>
+        <span class="admin-legend"><i class="dot online"></i> online <i class="dot offline"></i> offline</span>
+      </div>
+      <div id="adminUsersList" class="admin-users"></div>
     </div>
-    <div id="adminUsersList" class="admin-users"></div>
   `;
   panelsEl.appendChild(panel);
 
