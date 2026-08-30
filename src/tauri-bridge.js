@@ -99,17 +99,18 @@ window.addEventListener('DOMContentLoaded', () => {
 
       async function syncMaxIcon(){
         if (!maxBtn) return;
-        const isMax = await win.isMaximized();
-        maxBtn.innerHTML = isMax ? RESTORE_ICON : MAX_ICON;
-        maxBtn.setAttribute('aria-label', isMax ? 'Restaurar' : 'Maximizar');
+        const isFs = await win.isFullscreen();
+        maxBtn.innerHTML = isFs ? RESTORE_ICON : MAX_ICON;
+        maxBtn.setAttribute('aria-label', isFs ? 'Sair da tela cheia' : 'Tela cheia');
       }
       maxBtn?.addEventListener('click', async ()=>{
-        await win.toggleMaximize();
+        const isFs = await win.isFullscreen();
+        await win.setFullscreen(!isFs);
         syncMaxIcon();
       });
       document.getElementById('customTitlebar')?.addEventListener('dblclick', (e)=>{
         if (e.target.closest('.titlebar-controls')) return;
-        win.toggleMaximize().then(syncMaxIcon);
+        win.isFullscreen().then(isFs => win.setFullscreen(!isFs)).then(syncMaxIcon);
       });
       win.onResized(()=> syncMaxIcon());
       syncMaxIcon();
