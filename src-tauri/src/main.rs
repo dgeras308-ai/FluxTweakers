@@ -115,9 +115,12 @@ fn reg_query_value(key: &str, value: &str) -> Option<String> {
         .ok()?;
     let text = String::from_utf8_lossy(&output.stdout);
     for line in text.lines() {
-        if line.trim_start().starts_with(value) {
-            if let Some(idx) = line.find("REG_SZ") {
-                return Some(line[idx + 6..].trim().to_string());
+        let trimmed = line.trim_start();
+        if trimmed.starts_with(value) {
+            for ty in ["REG_SZ", "REG_DWORD", "REG_EXPAND_SZ", "REG_BINARY", "REG_QWORD", "REG_MULTI_SZ"] {
+                if let Some(idx) = line.find(ty) {
+                    return Some(line[idx + ty.len()..].trim().to_string());
+                }
             }
         }
     }
@@ -550,6 +553,132 @@ async fn run_diagnostics(state: State<'_, SysState>) -> Result<DiagnosticReport,
 
     Ok(DiagnosticReport{ checks })
 }
+
+/// Analisa um jogo específico (pelo caminho do .exe): confere se os ajustes de
+/// performance já foram aplicados pra ele, se tem espaço livre suficiente no disco
+/// onde ele está instalado, o uso atual de CPU/RAM da máquina, e lista os apps mais
+/// pesados rodando agora que podem estar competindo por recurso.
+/// Não estima "tantos % de FPS a mais" — isso exigiria rodar o jogo com benchmark
+/// de verdade, o que este app não faz. O que dá pra afirmar com dado real é isto aqui.
+#[tauri::command]
+async fn analyze_game(state: State<'_, SysState>, exe_path: String) -> Result<DiagnosticReport, String> {
+    let mut checks = Vec::new();
+    let exe_name = exe_path.split(['\\', '/']).last().unwrap_or(&exe_path).to_string();
+
+    let (cpu_percent, ram_percent, running, heavy_procs) = {
+        let mut sys = state.0.lock().unwrap();
+        sys.refresh_cpu_usage();
+        sys.refresh_memory();
+        sys.refresh_processes(ProcessesToUpdate::All, true);
+        let cpu = sys.global_cpu_usage() as f64;
+        let total = sys.total_memory() as f64;
+        let used = sys.used_memory() as f64;
+        let ram = if total > 0.0 { (used / total) * 100.0 } else { 0.0 };
+
+        let running = sys.processes().values().any(|p| {
+            p.name().to_string_lossy().eq_ignore_ascii_case(&exe_name)
+        });
+
+        // apps pesados (>400MB) rodando agora, exceto o próprio jogo e processos do sistema/app
+        let ignore_names = ["fluxtweakers", "system", "registry", "memory compression", &exe_name.to_lowercase()];
+        let mut grouped: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
+        for p in sys.processes().values() {
+            let name = p.name().to_string_lossy().to_string();
+            if ignore_names.iter().any(|i| name.to_lowercase().contains(i)) { continue; }
+            *grouped.entry(name).or_insert(0.0) += p.memory() as f64 / 1_048_576.0;
+        }
+        let mut heavy: Vec<(String, f64)> = grouped.into_iter().filter(|(_, mb)| *mb > 400.0).collect();
+        heavy.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        heavy.truncate(3);
+        (cpu, ram, running, heavy)
+    };
+
+    checks.push(DiagnosticCheck{
+        label: "Status agora".into(),
+        status: "ok".into(),
+        detail: if running { format!("{exe_name} está rodando neste momento") } else { format!("{exe_name} não está aberto agora — os números de CPU/RAM abaixo são da máquina em geral, não do jogo") },
+    });
+
+    // espaço livre no disco onde o jogo está instalado
+    let drive_prefix: String = exe_path.chars().take(3).collect();
+    let disks_list = Disks::new_with_refreshed_list();
+    if let Some(disk) = disks_list.iter().find(|d| {
+        d.mount_point().to_string_lossy().to_uppercase().starts_with(&drive_prefix.to_uppercase())
+    }) {
+        let total = disk.total_space() as f64;
+        let avail = disk.available_space() as f64;
+        let free_gb = avail / 1_073_741_824.0;
+        let free_pct = if total > 0.0 { (avail / total) * 100.0 } else { 0.0 };
+        checks.push(if free_pct < 8.0 {
+            DiagnosticCheck{ label: "Espaço em disco".into(), status: "bad".into(), detail: format!("Só {:.0} GB livres no disco do jogo ({:.0}%) — isso pode causar engasgos de streaming de textura", free_gb, free_pct) }
+        } else if free_pct < 15.0 {
+            DiagnosticCheck{ label: "Espaço em disco".into(), status: "warn".into(), detail: format!("{:.0} GB livres no disco do jogo ({:.0}%) — vale liberar espaço", free_gb, free_pct) }
+        } else {
+            DiagnosticCheck{ label: "Espaço em disco".into(), status: "ok".into(), detail: format!("{:.0} GB livres no disco do jogo", free_gb) }
+        });
+    }
+
+    // tweaks de performance já aplicados pra esse exe especificamente
+    let (cpu_pri_status, cpu_pri_detail) = check_game_cpu_priority_windows(&exe_name);
+    checks.push(DiagnosticCheck{ label: "Prioridade de CPU".into(), status: cpu_pri_status, detail: cpu_pri_detail });
+
+    let (gpu_pref_status, gpu_pref_detail) = check_game_gpu_preference_windows(&exe_path);
+    checks.push(DiagnosticCheck{ label: "Preferência de GPU".into(), status: gpu_pref_status, detail: gpu_pref_detail });
+
+    let (fso_status, fso_detail) = check_game_fso_windows(&exe_path);
+    checks.push(DiagnosticCheck{ label: "Otimizações de tela cheia".into(), status: fso_status, detail: fso_detail });
+
+    // uso atual de CPU/RAM da máquina
+    checks.push(if cpu_percent >= 85.0 {
+        DiagnosticCheck{ label: "CPU disponível agora".into(), status: "warn".into(), detail: format!("CPU já em {:.0}% de uso — pouca folga sobrando pro jogo", cpu_percent) }
+    } else {
+        DiagnosticCheck{ label: "CPU disponível agora".into(), status: "ok".into(), detail: format!("CPU em {:.0}%, com folga", cpu_percent) }
+    });
+    checks.push(if ram_percent >= 85.0 {
+        DiagnosticCheck{ label: "RAM disponível agora".into(), status: "warn".into(), detail: format!("RAM já em {:.0}% de uso — pode faltar memória durante o jogo", ram_percent) }
+    } else {
+        DiagnosticCheck{ label: "RAM disponível agora".into(), status: "ok".into(), detail: format!("RAM em {:.0}%, com folga", ram_percent) }
+    });
+
+    if !heavy_procs.is_empty() {
+        let list = heavy_procs.iter().map(|(n, mb)| format!("{n} ({:.0} MB)", mb)).collect::<Vec<_>>().join(", ");
+        checks.push(DiagnosticCheck{ label: "Apps pesados rodando agora".into(), status: "warn".into(), detail: format!("{list} — feche o que não precisar antes de jogar") });
+    } else {
+        checks.push(DiagnosticCheck{ label: "Apps pesados rodando agora".into(), status: "ok".into(), detail: "Nada consumindo memória pesado em segundo plano".into() });
+    }
+
+    Ok(DiagnosticReport{ checks })
+}
+
+#[cfg(target_os = "windows")]
+fn check_game_cpu_priority_windows(exe_name: &str) -> (String, String) {
+    let key = format!(r"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\{exe_name}\PerfOptions");
+    match reg_query_value(&key, "CpuPriorityClass") {
+        Some(v) if v.trim() == "0x3" => ("ok".to_string(), "Prioridade Alta já configurada pra esse jogo".to_string()),
+        _ => ("warn".to_string(), "Prioridade padrão (Normal) — use o preset Desempenho na aba Meus Jogos pra subir".to_string()),
+    }
+}
+#[cfg(target_os = "windows")]
+fn check_game_gpu_preference_windows(exe_path: &str) -> (String, String) {
+    match reg_query_value(r"HKCU\Software\Microsoft\DirectX\UserGpuPreference", exe_path) {
+        Some(v) if v.contains("GpuPreference=2") => ("ok".to_string(), "Já configurado pra usar a GPU dedicada/de alto desempenho".to_string()),
+        _ => ("warn".to_string(), "Ainda no automático — use o preset Desempenho na aba Meus Jogos pra forçar a GPU dedicada".to_string()),
+    }
+}
+#[cfg(target_os = "windows")]
+fn check_game_fso_windows(exe_path: &str) -> (String, String) {
+    let key = r"HKCU\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers";
+    match reg_query_value(key, exe_path) {
+        Some(v) if v.contains("DISABLEDXMAXIMIZEDWINDOWEDMODE") => ("ok".to_string(), "Otimizações de tela cheia já desativadas (reduz latência)".to_string()),
+        _ => ("warn".to_string(), "Otimizações de tela cheia do Windows ainda ativas — o preset Desempenho desativa isso".to_string()),
+    }
+}
+#[cfg(not(target_os = "windows"))]
+fn check_game_cpu_priority_windows(_exe_name: &str) -> (String, String) { ("ok".to_string(), "Checagem disponível apenas no Windows".to_string()) }
+#[cfg(not(target_os = "windows"))]
+fn check_game_gpu_preference_windows(_exe_path: &str) -> (String, String) { ("ok".to_string(), "Checagem disponível apenas no Windows".to_string()) }
+#[cfg(not(target_os = "windows"))]
+fn check_game_fso_windows(_exe_path: &str) -> (String, String) { ("ok".to_string(), "Checagem disponível apenas no Windows".to_string()) }
 
 #[cfg(target_os = "windows")]
 fn check_device_errors_windows() -> (String, String) {
@@ -1017,7 +1146,7 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(SysState(Mutex::new(System::new_all())))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game])
         .setup(|_app| {
             #[cfg(target_os = "windows")]
             {

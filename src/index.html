@@ -4275,13 +4275,20 @@ async function loadDetectedGames(){
           <span class="game-detected-path" title="${g.exe_path}">${g.exe_path}</span>
         </div>
         <div class="game-detected-actions">
+          <button class="game-preset-btn analyze" data-exe-analyze="${i}" title="Roda um diagnóstico real: prioridade, GPU, espaço em disco, apps pesados abertos">🔍 Analisar</button>
           <button class="game-preset-btn perf" data-preset="performance" data-exe="${i}" title="${PRESET_LABELS.performance.title}">Desempenho</button>
           <button class="game-preset-btn bal" data-preset="balanced" data-exe="${i}" title="${PRESET_LABELS.balanced.title}">Equilibrado</button>
           <button class="game-preset-btn qual" data-preset="quality" data-exe="${i}" title="${PRESET_LABELS.quality.title}">Qualidade</button>
         </div>
       </div>
     `).join('');
-    list.querySelectorAll('.game-preset-btn').forEach(btn=>{
+    list.querySelectorAll('.game-preset-btn[data-exe-analyze]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const g = games[+btn.dataset.exeAnalyze];
+        runGameAnalysis(g);
+      });
+    });
+    list.querySelectorAll('.game-preset-btn[data-preset]').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         const g = games[+btn.dataset.exe];
         applyGamePreset(g.exe_path, btn.dataset.preset, btn);
@@ -4372,7 +4379,7 @@ function diagIconSvg(status){
   if (status === 'warn') return '<path d="M12 9v4M12 17h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L14.7 3.86a2 2 0 0 0-3.4 0Z"/>';
   return '<circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/>';
 }
-async function runSystemDiagnostics(){
+async function runDiagnosticFlow({ loadingTitle, loadingSub, invokeCmd, invokeArgs, notFoundTitle, notFoundSub, verdictOk, verdictWarn, verdictBad, updateScore }){
   const modal = document.getElementById('diagModal');
   const list = document.getElementById('diagList');
   const headIcon = document.getElementById('diagHeadIcon');
@@ -4382,13 +4389,13 @@ async function runSystemDiagnostics(){
   modal.hidden = false;
   headIcon.className = 'diag-head-icon spin';
   headIcon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>';
-  title.textContent = 'Analisando seu sistema...';
-  sub.textContent = 'Checando disco, drivers, saúde e uso de recursos';
+  title.textContent = loadingTitle;
+  sub.textContent = loadingSub;
   list.innerHTML = '';
 
   if (!window.__TAURI__){
-    title.textContent = 'Disponível só no app instalado';
-    sub.textContent = 'Essa checagem roda comandos reais do Windows';
+    title.textContent = notFoundTitle;
+    sub.textContent = notFoundSub;
     headIcon.className = 'diag-head-icon warn';
     headIcon.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${diagIconSvg('warn')}</svg>`;
     return;
@@ -4396,7 +4403,7 @@ async function runSystemDiagnostics(){
 
   try{
     const { invoke } = window.__TAURI__.core;
-    const report = await invoke('run_diagnostics');
+    const report = await invoke(invokeCmd, invokeArgs);
     const checks = report.checks || [];
     const bad = checks.filter(c => c.status === 'bad').length;
     const warn = checks.filter(c => c.status === 'warn').length;
@@ -4408,16 +4415,9 @@ async function runSystemDiagnostics(){
     headIcon.className = `diag-head-icon ${worst}`;
     headIcon.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${diagIconSvg(worst)}</svg>`;
 
-    if (worst === 'ok'){
-      title.textContent = 'Tudo certo por aqui';
-      sub.textContent = 'Nenhum problema encontrado nas checagens';
-    } else if (worst === 'warn'){
-      title.textContent = `${warn} alerta(s) encontrado(s)`;
-      sub.textContent = 'Nada crítico, mas vale de olho';
-    } else {
-      title.textContent = `${bad} problema(s) encontrado(s)`;
-      sub.textContent = 'Recomendamos resolver o quanto antes';
-    }
+    if (worst === 'ok'){ title.textContent = verdictOk.title; sub.textContent = verdictOk.sub; }
+    else if (worst === 'warn'){ title.textContent = verdictWarn.title(warn); sub.textContent = verdictWarn.sub; }
+    else { title.textContent = verdictBad.title(bad); sub.textContent = verdictBad.sub; }
 
     list.innerHTML = checks.map((c, i) => `
       <div class="diag-item ${c.status}" style="animation-delay:${i * 60}ms">
@@ -4426,13 +4426,43 @@ async function runSystemDiagnostics(){
       </div>
     `).join('');
 
-    updateHomeScoreRing(100 - bad * 20 - warn * 8);
+    if (updateScore) updateHomeScoreRing(100 - bad * 20 - warn * 8);
   }catch(err){
     headIcon.className = 'diag-head-icon bad';
     headIcon.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${diagIconSvg('bad')}</svg>`;
     title.textContent = 'Não foi possível analisar';
     sub.textContent = String(err);
   }
+}
+
+async function runSystemDiagnostics(){
+  await runDiagnosticFlow({
+    loadingTitle: 'Analisando seu sistema...',
+    loadingSub: 'Checando disco, drivers, saúde e uso de recursos',
+    invokeCmd: 'run_diagnostics',
+    invokeArgs: undefined,
+    notFoundTitle: 'Disponível só no app instalado',
+    notFoundSub: 'Essa checagem roda comandos reais do Windows',
+    verdictOk: { title: 'Tudo certo por aqui', sub: 'Nenhum problema encontrado nas checagens' },
+    verdictWarn: { title: (n)=>`${n} alerta(s) encontrado(s)`, sub: 'Nada crítico, mas vale de olho' },
+    verdictBad: { title: (n)=>`${n} problema(s) encontrado(s)`, sub: 'Recomendamos resolver o quanto antes' },
+    updateScore: true,
+  });
+}
+
+async function runGameAnalysis(game){
+  await runDiagnosticFlow({
+    loadingTitle: `Analisando ${game.name}...`,
+    loadingSub: 'Checando prioridade, GPU, disco e apps abertos — sem estimar FPS, só dado real',
+    invokeCmd: 'analyze_game',
+    invokeArgs: { exePath: game.exe_path },
+    notFoundTitle: 'Disponível só no app instalado',
+    notFoundSub: 'Essa checagem roda comandos reais do Windows',
+    verdictOk: { title: `${game.name} está pronto pra jogar`, sub: 'Nenhum ajuste pendente e a máquina está com folga' },
+    verdictWarn: { title: (n)=>`${n} ponto(s) pra melhorar em ${game.name}`, sub: 'Nada grave, mas dá pra ganhar folga extra' },
+    verdictBad: { title: (n)=>`${n} problema(s) em ${game.name}`, sub: 'Isso tende a pesar na experiência — vale resolver' },
+    updateScore: false,
+  });
 }
 document.getElementById('diagClose')?.addEventListener('click', ()=>{
   document.getElementById('diagModal').hidden = true;
