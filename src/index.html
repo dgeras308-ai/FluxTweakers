@@ -18,8 +18,6 @@
     --accent:#ffffff;
     --accent2:#c9c9c9;
     --accent-dim:#ffffff1e;
-    --accent-dim2:#ffffff33;
-    --accent-glow:#ffffff14;
     --tab-accent:#ffffff;
     --tab-accent-dim:#ffffff17;
     --off:#f2555f;
@@ -85,16 +83,8 @@
   }
   #bg3d{position:fixed;inset:0;width:100vw;height:100vh;display:block;pointer-events:none;}
 
-  #appAmbientGlow{
-    position:fixed;inset:0;z-index:0;pointer-events:none;
-    background:
-      radial-gradient(900px 620px at 8% -8%, var(--accent-glow) 0%, transparent 55%),
-      radial-gradient(700px 560px at 108% 15%, var(--accent-glow) 0%, transparent 55%),
-      radial-gradient(800px 700px at 40% 115%, var(--accent-glow) 0%, transparent 55%);
-    transition:background .4s ease;
-  }
   .page{
-    position:relative;z-index:1;
+    position:relative;
     max-width:1600px;margin:0 auto;padding:30px 18px 24px;
   }
 
@@ -480,7 +470,7 @@
   }
   .home-hero::before{
     content:"";position:absolute;inset:0;pointer-events:none;
-    background:radial-gradient(460px 300px at 12% -10%, var(--accent-dim2) 0%, transparent 65%);
+    background:radial-gradient(420px 260px at 12% -10%, var(--accent-dim) 0%, transparent 65%);
   }
   .home-hero-left{position:relative;z-index:1;max-width:420px;}
   .home-hero-tag{
@@ -1584,7 +1574,6 @@
 </div>
 
 <div id="appContent" hidden>
-<div id="appAmbientGlow"></div>
 <div class="page">
   <div class="top-strip">
     <div class="top-strip-brand">
@@ -3734,15 +3723,6 @@ function applyTheme(colorKey){
   if(activeCat) setTabAccent(activeCat.dataset.cat);
   document.documentElement.style.setProperty('--accent', color);
   document.documentElement.style.setProperty('--accent-dim', color + '22');
-  document.documentElement.style.setProperty('--accent-dim2', color + '40');
-  document.documentElement.style.setProperty('--accent-glow', color + (colorKey==='mono' ? '10' : '1f'));
-  if(colorKey === 'mono'){
-    document.documentElement.style.setProperty('--border', 'rgba(255,255,255,.12)');
-    document.documentElement.style.setProperty('--item-border', 'rgba(255,255,255,.12)');
-  } else {
-    document.documentElement.style.setProperty('--border', color + '3d');
-    document.documentElement.style.setProperty('--item-border', color + '38');
-  }
   safeLocalSet2('dgeras_theme', colorKey);
   document.querySelectorAll('.theme-swatch').forEach(s=> s.classList.toggle('active', s.dataset.color===colorKey));
 }
