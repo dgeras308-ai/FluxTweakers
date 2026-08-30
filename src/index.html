@@ -446,6 +446,8 @@
   .game-detected-info b{font-size:13px;color:var(--text);}
   .game-detected-src{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--accent);font-weight:700;}
   .game-detected-path{font-size:10.5px;color:var(--muted);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:360px;}
+  .game-graphics-note{font-size:10.5px;color:var(--tab-accent);margin-top:2px;display:block;max-width:420px;line-height:1.4;}
+  .game-graphics-note:empty{display:none;}
   .game-detected-actions{display:flex;gap:6px;flex-shrink:0;}
   .game-preset-btn{
     padding:7px 12px;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;
@@ -4238,18 +4240,33 @@ const PRESET_LABELS = {
   balanced: { label:'Equilibrado', title:'Restaura tudo pro padrão do Windows decidir sozinho' },
   quality: { label:'Qualidade', title:'Usa a GPU mais eficiente (menos calor/consumo) e prioridade normal de CPU' },
 };
-async function applyGamePreset(exePath, preset, btn){
+async function applyGamePreset(exePath, preset, btn, gameName){
   const original = btn.textContent;
   btn.disabled = true;
   btn.textContent = '...';
   const script = gamePresetScript(exePath, preset);
   const ok = await saveOrRunScript(script, 'otimizar-jogo-dgeras.bat');
+
+  let graphicsMsg = '';
+  if (window.__TAURI__ && gameName){
+    try{
+      const { invoke } = window.__TAURI__.core;
+      const result = await invoke('apply_game_graphics_preset', { gameName, preset });
+      graphicsMsg = result.message;
+      if (result.applied) showToast('Gráfico do jogo ajustado (Unreal Engine)');
+    }catch(err){
+      console.log('Ajuste gráfico interno indisponível:', err);
+    }
+  }
+
   btn.disabled = false;
   btn.textContent = original;
   if (ok) {
     const card = btn.closest('.game-detected-card');
     card?.querySelectorAll('.game-preset-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+    const note = card?.querySelector('.game-graphics-note');
+    if (note && graphicsMsg) note.textContent = graphicsMsg;
   }
 }
 async function loadDetectedGames(){
@@ -4273,6 +4290,7 @@ async function loadDetectedGames(){
           <b>${g.name}</b>
           <span class="game-detected-src">${({steam:'Steam', epic:'Epic Games', ubisoft:'Ubisoft Connect', rockstar:'Rockstar Games'})[g.source] || g.source}</span>
           <span class="game-detected-path" title="${g.exe_path}">${g.exe_path}</span>
+          <span class="game-graphics-note"></span>
         </div>
         <div class="game-detected-actions">
           <button class="game-preset-btn analyze" data-exe-analyze="${i}" title="Roda um diagnóstico real: prioridade, GPU, espaço em disco, apps pesados abertos">🔍 Analisar</button>
@@ -4291,7 +4309,7 @@ async function loadDetectedGames(){
     list.querySelectorAll('.game-preset-btn[data-preset]').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         const g = games[+btn.dataset.exe];
-        applyGamePreset(g.exe_path, btn.dataset.preset, btn);
+        applyGamePreset(g.exe_path, btn.dataset.preset, btn, g.name);
       });
     });
   }catch(err){

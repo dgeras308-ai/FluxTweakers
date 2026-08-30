@@ -92,6 +92,136 @@ struct InstalledGame {
     source: String, // "steam" | "epic"
 }
 
+#[derive(Serialize)]
+struct GraphicsPresetResult {
+    applied: bool,
+    message: String,
+}
+
+/// Normaliza um nome de jogo/pasta pra comparação solta: só letras/números minúsculas.
+fn normalize_name(s: &str) -> String {
+    s.chars().filter(|c| c.is_ascii_alphanumeric()).map(|c| c.to_ascii_lowercase()).collect()
+}
+
+/// Procura o GameUserSettings.ini (padrão usado pela imensa maioria dos jogos feitos
+/// em Unreal Engine 4/5 — Fortnite, Ark, PUBG e centenas de outros) tentando casar
+/// o nome do jogo com as pastas dentro de %LOCALAPPDATA%. Não existe um jeito
+/// universal de editar gráfico de QUALQUER jogo (cada engine guarda diferente),
+/// então isso só funciona pra jogos Unreal Engine — é avisado com clareza quando
+/// não encontra nada, em vez de fingir que ajustou.
+#[cfg(target_os = "windows")]
+fn find_unreal_config(game_name: &str) -> Option<PathBuf> {
+    let local_appdata = std::env::var("LOCALAPPDATA").ok()?;
+    let base = PathBuf::from(local_appdata);
+    let target = normalize_name(game_name);
+    let entries = fs::read_dir(&base).ok()?;
+    let mut best: Option<PathBuf> = None;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_dir() { continue; }
+        let folder_name = path.file_name()?.to_string_lossy().to_string();
+        let norm_folder = normalize_name(&folder_name);
+        if norm_folder.is_empty() { continue; }
+        let matches = norm_folder.contains(&target) || target.contains(&norm_folder);
+        if !matches { continue; }
+        let ini_path = path.join("Saved").join("Config").join("WindowsNoEditor").join("GameUserSettings.ini");
+        if ini_path.exists() {
+            best = Some(ini_path);
+            break;
+        }
+    }
+    best
+}
+
+/// Ajusta as chaves de qualidade gráfica (sg.*Quality) dentro da seção
+/// [ScalabilityGroups] do GameUserSettings.ini, preservando todo o resto do
+/// arquivo. Cria a chave se não existir, substitui o valor se já existir.
+#[cfg(target_os = "windows")]
+fn set_scalability_keys(content: &str, values: &[(&str, &str)]) -> String {
+    let mut lines: Vec<String> = content.lines().map(|l| l.to_string()).collect();
+    let section_name = "[ScalabilityGroups]";
+    let mut section_start: Option<usize> = None;
+    let mut section_end: usize = lines.len();
+    for (i, line) in lines.iter().enumerate() {
+        let trimmed = line.trim();
+        if trimmed.eq_ignore_ascii_case(section_name) {
+            section_start = Some(i);
+        } else if section_start.is_some() && i > section_start.unwrap() && trimmed.starts_with('[') && trimmed.ends_with(']') {
+            section_end = i;
+            break;
+        }
+    }
+    let mut remaining: Vec<(&str, &str)> = values.to_vec();
+    if let Some(start) = section_start {
+        for i in (start + 1)..section_end {
+            for (key, val) in values {
+                let prefix = format!("{key}=");
+                if lines[i].to_ascii_lowercase().starts_with(&prefix.to_ascii_lowercase()) {
+                    lines[i] = format!("{key}={val}");
+                    remaining.retain(|(k, _)| k != key);
+                }
+            }
+        }
+        // insere as chaves que não existiam ainda, logo após o cabeçalho da seção
+        let insert_at = start + 1;
+        let new_lines: Vec<String> = remaining.iter().map(|(k, v)| format!("{k}={v}")).collect();
+        for (offset, l) in new_lines.into_iter().enumerate() {
+            lines.insert(insert_at + offset, l);
+        }
+    } else {
+        // seção não existe: cria no fim do arquivo
+        lines.push(String::new());
+        lines.push(section_name.to_string());
+        for (k, v) in remaining {
+            lines.push(format!("{k}={v}"));
+        }
+    }
+    lines.join("\n")
+}
+
+#[cfg(target_os = "windows")]
+#[tauri::command]
+fn apply_game_graphics_preset(game_name: String, preset: String) -> GraphicsPresetResult {
+    let ini_path = match find_unreal_config(&game_name) {
+        Some(p) => p,
+        None => return GraphicsPresetResult{
+            applied: false,
+            message: "Não encontrei um arquivo de configuração gráfica reconhecido pra esse jogo. Isso funciona pra jogos feitos em Unreal Engine — se o jogo usa outro motor, não dá pra editar o gráfico dele com segurança daqui.".into(),
+        },
+    };
+    let content = match fs::read_to_string(&ini_path) {
+        Ok(c) => c,
+        Err(e) => return GraphicsPresetResult{ applied: false, message: format!("Achei o arquivo mas não consegui ler: {e}") },
+    };
+    let quality = match preset.as_str() {
+        "performance" => "0",
+        "quality" => "3",
+        _ => "2",
+    };
+    let keys = [
+        ("sg.ViewDistanceQuality", quality),
+        ("sg.AntiAliasingQuality", quality),
+        ("sg.ShadowQuality", quality),
+        ("sg.PostProcessQuality", quality),
+        ("sg.TextureQuality", quality),
+        ("sg.EffectsQuality", quality),
+        ("sg.FoliageQuality", quality),
+        ("sg.ShadingQuality", quality),
+    ];
+    let new_content = set_scalability_keys(&content, &keys);
+    match fs::write(&ini_path, new_content) {
+        Ok(_) => GraphicsPresetResult{ applied: true, message: format!("Configuração gráfica do jogo (Unreal Engine) ajustada em: {}", ini_path.display()) },
+        Err(e) => GraphicsPresetResult{ applied: false, message: format!("Achei e li o arquivo, mas não consegui salvar (talvez o jogo esteja aberto): {e}") },
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+#[tauri::command]
+fn apply_game_graphics_preset(game_name: String, preset: String) -> GraphicsPresetResult {
+    let _ = (game_name, preset);
+    GraphicsPresetResult{ applied: false, message: "Disponível só no Windows".into() }
+}
+
 /// Detecta jogos realmente instalados na máquina (sem precisar de admin, só leitura):
 /// olha as bibliotecas da Steam (libraryfolders.vdf + appmanifest_*.acf), os
 /// manifestos da Epic Games, as chaves de instalação da Ubisoft Connect no registro,
@@ -1146,7 +1276,7 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(SysState(Mutex::new(System::new_all())))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset])
         .setup(|_app| {
             #[cfg(target_os = "windows")]
             {
