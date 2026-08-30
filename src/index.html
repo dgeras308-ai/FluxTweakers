@@ -63,6 +63,7 @@
   }
   .titlebar-brand{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--muted);}
   .titlebar-brand svg{width:15px;height:15px;color:var(--accent);}
+  .titlebar-logo-img{width:16px;height:16px;border-radius:4px;object-fit:cover;flex-shrink:0;}
   .titlebar-controls{display:flex;gap:2px;-webkit-app-region:no-drag;}
   .titlebar-controls button{
     width:32px;height:28px;display:flex;align-items:center;justify-content:center;
@@ -368,6 +369,7 @@
     animation:badgeBreathe 3.6s ease-in-out infinite;
   }
   .sidebar-brand-badge svg{width:20px;height:20px;animation:flameFlicker 2.8s ease-in-out infinite;transform-origin:center bottom;}
+  .sidebar-logo-img{width:100%;height:100%;border-radius:50%;object-fit:cover;}
   @keyframes badgeBreathe{
     0%,100%{box-shadow:0 0 0 0 var(--accent-dim);}
     50%{box-shadow:0 0 12px 2px var(--accent-dim);}
@@ -1108,6 +1110,7 @@
     display:flex;align-items:center;justify-content:center;
   }
   .login-logo svg{width:26px;height:26px;color:var(--accent);transform-origin:50% 85%;}
+  .login-logo-img{width:100%;height:100%;border-radius:50%;object-fit:cover;}
   @keyframes flameFlicker{
     0%,100%{transform:scale(1) rotate(0deg);}
     30%{transform:scale(1.08) rotate(-3deg);}
@@ -1439,9 +1442,7 @@
 <body>
 <div id="customTitlebar" data-tauri-drag-region>
   <div class="titlebar-brand" data-tauri-drag-region>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M13 3 6 14h4.5L10 21l8-11h-4.5L13 3Z"/>
-    </svg>
+    <img src="assets/logo-mark.png" alt="" class="titlebar-logo-img" data-tauri-drag-region>
     <span data-tauri-drag-region>FluxTweakers</span>
   </div>
   <div class="titlebar-controls">
@@ -1459,7 +1460,7 @@
   <div class="login-grid"></div>
   <div class="login-card">
     <div class="brand-badge login-logo">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+      <img src="assets/logo-mark.png" alt="FluxTweakers" class="login-logo-img">
     </div>
     <div class="brand login-brand">By Dgeras</div>
     <p class="login-sub">Entre pra acessar o painel de otimização</p>
@@ -1520,7 +1521,7 @@
 <div id="restoreScreen" hidden>
   <div class="login-card">
     <div class="brand-badge login-logo">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+      <img src="assets/logo-mark.png" alt="FluxTweakers" class="login-logo-img">
     </div>
     <div class="brand login-brand" style="font-size:18px;">Ponto de Restauração</div>
     <p class="login-sub">Antes de aplicar qualquer ajuste, recomendamos criar um ponto de restauração do Windows. Assim, se algo der errado, dá pra voltar atrás.</p>
@@ -1659,7 +1660,7 @@
     <aside class="sidebar sidebar-compact">
       <div class="sidebar-brand">
         <div class="sidebar-brand-badge">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+          <img src="assets/logo-mark.png" alt="" class="sidebar-logo-img">
         </div>
         <div class="sidebar-brand-name">By Dgeras</div>
         <div class="sidebar-brand-tag">Optimizer</div>
