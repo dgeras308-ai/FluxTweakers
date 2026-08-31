@@ -1352,21 +1352,145 @@ fn apply_native_rounded_corners(hwnd_raw: isize) {
     }
 }
 
+/// Guarda em memória se o app deve minimizar pra bandeja (em vez de fechar de
+/// verdade) quando o usuário clica no X. Carregado do disco na inicialização.
+struct CloseBehaviorState(Mutex<bool>);
+
+fn config_file_path(app: &tauri::AppHandle) -> Option<PathBuf> {
+    let dir = app.path().app_config_dir().ok()?;
+    let _ = fs::create_dir_all(&dir);
+    Some(dir.join("settings.json"))
+}
+
+fn load_close_behavior(app: &tauri::AppHandle) -> bool {
+    if let Some(path) = config_file_path(app) {
+        if let Ok(content) = fs::read_to_string(&path) {
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                if let Some(v) = json.get("close_to_tray").and_then(|v| v.as_bool()) {
+                    return v;
+                }
+            }
+        }
+    }
+    false // padrão: fechar o X fecha o app de verdade, igual sempre foi — só muda se o usuário ligar
+}
+
+/// Diz se o app está configurado pra minimizar pra bandeja ao fechar (em vez de sair).
+#[tauri::command]
+fn get_close_behavior(state: State<CloseBehaviorState>) -> bool {
+    *state.0.lock().unwrap()
+}
+
+/// Liga/desliga "minimizar pra bandeja ao fechar" e salva a escolha no disco,
+/// pra lembrar na próxima vez que o app abrir.
+#[tauri::command]
+fn set_close_behavior(app: tauri::AppHandle, state: State<CloseBehaviorState>, enabled: bool) -> Result<(), String> {
+    *state.0.lock().unwrap() = enabled;
+    if let Some(path) = config_file_path(&app) {
+        let json = serde_json::json!({ "close_to_tray": enabled });
+        fs::write(&path, json.to_string()).map_err(|e| format!("Não consegui salvar a preferência: {e}"))?;
+    }
+    Ok(())
+}
+
+/// Diz se o FluxTweakers está configurado pra abrir sozinho quando o Windows inicia.
+#[tauri::command]
+fn get_autostart_enabled(app: tauri::AppHandle) -> Result<bool, String> {
+    use tauri_plugin_autostart::ManagerExt;
+    app.autolaunch().is_enabled().map_err(|e| format!("Não consegui checar: {e}"))
+}
+
+/// Liga/desliga o app abrir sozinho com o Windows (usa a tarefa de inicialização
+/// oficial do Windows, o mesmo mecanismo que outros programas usam).
+#[tauri::command]
+fn set_autostart_enabled(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
+    use tauri_plugin_autostart::ManagerExt;
+    let mgr = app.autolaunch();
+    if enabled {
+        mgr.enable().map_err(|e| format!("Não consegui ativar: {e}"))
+    } else {
+        mgr.disable().map_err(|e| format!("Não consegui desativar: {e}"))
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan])
-        .setup(|_app| {
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled])
+        .setup(|app| {
+            let close_to_tray = load_close_behavior(&app.handle());
+            app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));
+
             #[cfg(target_os = "windows")]
             {
-                if let Some(window) = _app.get_webview_window("main") {
+                if let Some(window) = app.get_webview_window("main") {
                     if let Ok(hwnd) = window.hwnd() {
                         apply_native_rounded_corners(hwnd.0 as isize);
                     }
                 }
             }
+
+            // Ícone na bandeja do sistema com menu (Mostrar / Sair) — permite
+            // reabrir o app quando ele estiver minimizado em segundo plano.
+            use tauri::menu::{Menu, MenuItem};
+            use tauri::tray::TrayIconBuilder;
+            let show_item = MenuItem::with_id(app, "show", "Mostrar FluxTweakers", true, None::<&str>)?;
+            let quit_item = MenuItem::with_id(app, "quit", "Sair", true, None::<&str>)?;
+            let tray_menu = Menu::with_items(app, &[&show_item, &quit_item])?;
+            let default_icon = app.default_window_icon().cloned();
+            let mut tray_builder = TrayIconBuilder::new()
+                .menu(&tray_menu)
+                .tooltip("FluxTweakers")
+                .on_menu_event(|app, event| {
+                    match event.id.as_ref() {
+                        "show" => {
+                            if let Some(w) = app.get_webview_window("main") {
+                                let _ = w.show();
+                                let _ = w.set_focus();
+                            }
+                        }
+                        "quit" => { app.exit(0); }
+                        _ => {}
+                    }
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let tauri::tray::TrayIconEvent::Click {
+                        button: tauri::tray::MouseButton::Left,
+                        button_state: tauri::tray::MouseButtonState::Up, ..
+                    } = event {
+                        let app = tray.app_handle();
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.show();
+                            let _ = w.set_focus();
+                        }
+                    }
+                });
+            if let Some(icon) = default_icon {
+                tray_builder = tray_builder.icon(icon);
+            }
+            let _tray = tray_builder.build(app)?;
+
+            // Intercepta o clique no X: se "minimizar pra bandeja" estiver ligado,
+            // só esconde a janela em vez de fechar o app de verdade.
+            if let Some(window) = app.get_webview_window("main") {
+                let app_handle = app.handle().clone();
+                window.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        let state = app_handle.state::<CloseBehaviorState>();
+                        let should_hide = *state.0.lock().unwrap();
+                        if should_hide {
+                            api.prevent_close();
+                            if let Some(w) = app_handle.get_webview_window("main") {
+                                let _ = w.hide();
+                            }
+                        }
+                    }
+                });
+            }
+
             Ok(())
         })
         .run(tauri::generate_context!())

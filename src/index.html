@@ -862,6 +862,7 @@
   .setting-title{font-size:13.3px;font-weight:700;margin:0 0 3px;color:var(--item-text);cursor:pointer;line-height:1.35;transition:color .12s;}
   .setting-row:hover .setting-title{color:var(--tab-accent);}
   .setting-desc{font-size:11.8px;color:var(--item-muted);margin:0;line-height:1.5;}
+  .settings-note{margin:14px 0 0;font-size:12px;color:var(--muted);background:var(--item-bg);border:1px solid var(--item-border);border-radius:9px;padding:12px 14px;}
   .setting-row select{
     margin-top:8px;background:var(--panel);color:var(--item-text);border:1px solid var(--item-border);
     border-radius:6px;padding:5px 9px;font-size:12px;font-family:var(--sans);cursor:pointer;
@@ -4196,6 +4197,104 @@ document.getElementById('pfGenerateBtn')?.addEventListener('click', ()=>{
 
   showToast('Perfil analisado — ' + basePreset.length + ' ajustes selecionados');
 });
+
+// ===== Aba Configurações: iniciar com o Windows + minimizar pra bandeja ao fechar =====
+const settingsTabBtn = document.createElement('button');
+settingsTabBtn.innerHTML = `${lineIcon('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.96 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.96a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1.04H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04Z"/>')}<span class="label">Configurações</span>`;
+settingsTabBtn.dataset.cat = 'settings';
+settingsTabBtn.onclick = ()=>switchTab('settings');
+tabsEl.appendChild(settingsTabBtn);
+
+const settingsTabPanel = document.createElement('div');
+settingsTabPanel.className = 'panel';
+settingsTabPanel.id = 'panel-settings';
+settingsTabPanel.innerHTML = `
+  <div class="panel-head">
+    <div class="panel-head-left">
+      <div class="panel-icon-badge">${lineIcon('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.96 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.96a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1.04H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04Z"/>')}</div>
+      <div><h2>Configurações</h2><p class="panel-desc">Como o FluxTweakers se comporta no seu Windows.</p></div>
+    </div>
+  </div>
+
+  <div class="setting-row" id="settingsAutostartRow">
+    <div class="setting-row-top">
+      <div class="setting-icon">${lineIcon('<path d="M5 12h14M13 6l6 6-6 6"/>')}</div>
+      <label class="switch">
+        <input type="checkbox" id="settingsAutostartToggle">
+        <span class="track"></span>
+        <span class="thumb"></span>
+      </label>
+    </div>
+    <div class="setting-text">
+      <label class="setting-title" for="settingsAutostartToggle">Abrir com o Windows</label>
+      <p class="setting-desc">O FluxTweakers inicia sozinho quando você liga o PC, sem precisar abrir manualmente.</p>
+    </div>
+  </div>
+
+  <div class="setting-row" id="settingsTrayRow">
+    <div class="setting-row-top">
+      <div class="setting-icon">${lineIcon('<rect x="3" y="8" width="18" height="12" rx="2"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/>')}</div>
+      <label class="switch">
+        <input type="checkbox" id="settingsTrayToggle">
+        <span class="track"></span>
+        <span class="thumb"></span>
+      </label>
+    </div>
+    <div class="setting-text">
+      <label class="setting-title" for="settingsTrayToggle">Manter em segundo plano ao fechar</label>
+      <p class="setting-desc">Ao clicar no X, o app minimiza pra bandeja do sistema (perto do relógio) em vez de fechar de vez. Pra sair de verdade, clique com o botão direito no ícone da bandeja e escolha "Sair".</p>
+    </div>
+  </div>
+
+  <p class="settings-note" id="settingsUnavailableNote" hidden>Essas configurações só funcionam no app instalado (não no navegador).</p>
+`;
+panelsEl.appendChild(settingsTabPanel);
+
+async function loadSettingsPanel(){
+  const autostartToggle = document.getElementById('settingsAutostartToggle');
+  const trayToggle = document.getElementById('settingsTrayToggle');
+  const note = document.getElementById('settingsUnavailableNote');
+  if (!window.__TAURI__){
+    if (note) note.hidden = false;
+    if (autostartToggle) autostartToggle.disabled = true;
+    if (trayToggle) trayToggle.disabled = true;
+    return;
+  }
+  try{
+    const { invoke } = window.__TAURI__.core;
+    const [autostart, tray] = await Promise.all([
+      invoke('get_autostart_enabled'),
+      invoke('get_close_behavior'),
+    ]);
+    if (autostartToggle) autostartToggle.checked = !!autostart;
+    if (trayToggle) trayToggle.checked = !!tray;
+  }catch(err){
+    console.log('Configurações indisponíveis:', err);
+  }
+}
+document.getElementById('settingsAutostartToggle')?.addEventListener('change', async (e)=>{
+  if (!window.__TAURI__) return;
+  const { invoke } = window.__TAURI__.core;
+  try{
+    await invoke('set_autostart_enabled', { enabled: e.target.checked });
+    showToast(e.target.checked ? 'Vai abrir sozinho com o Windows' : 'Não abre mais sozinho com o Windows');
+  }catch(err){
+    e.target.checked = !e.target.checked;
+    showToast('Não foi possível salvar: ' + err);
+  }
+});
+document.getElementById('settingsTrayToggle')?.addEventListener('change', async (e)=>{
+  if (!window.__TAURI__) return;
+  const { invoke } = window.__TAURI__.core;
+  try{
+    await invoke('set_close_behavior', { enabled: e.target.checked });
+    showToast(e.target.checked ? 'Agora o X minimiza pra bandeja' : 'Agora o X fecha o app de verdade');
+  }catch(err){
+    e.target.checked = !e.target.checked;
+    showToast('Não foi possível salvar: ' + err);
+  }
+});
+loadSettingsPanel();
 
 // preenche os atalhos de navegação rápida reaproveitando os ícones das categorias
 (function buildHomeNav(){
