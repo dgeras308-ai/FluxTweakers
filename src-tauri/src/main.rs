@@ -937,6 +937,87 @@ fn read_cache_bytes_windows() -> f64 {
     0.0
 }
 
+#[derive(Serialize)]
+struct DeepScanResult {
+    status: String,  // "ok" | "fixed" | "unfixable" | "error"
+    summary: String,
+    raw_tail: String,
+}
+
+/// Roda sfc /scannow + DISM /ScanHealth de verdade, elevado (pede UAC), e espera
+/// terminar pra ler o resultado real de um arquivo temporário — diferente do
+/// run_bat_script (que é fire-and-forget), aqui a gente PRECISA do resultado.
+/// Isso demora vários minutos de propósito (é o Windows verificando arquivo por
+/// arquivo do sistema), então só deve ser chamado quando o usuário pedir
+/// explicitamente uma verificação profunda, não no "Analisar Sistema" rápido.
+#[cfg(target_os = "windows")]
+#[tauri::command]
+async fn run_deep_scan() -> Result<DeepScanResult, String> {
+    let temp_dir = std::env::temp_dir();
+    let out_path = temp_dir.join(format!("dgeras-scan-{}.log", uuid_like()));
+    let bat_path = temp_dir.join(format!("dgeras-scan-{}.bat", uuid_like()));
+
+    let script = format!(
+        "@echo off\r\nchcp 65001 >nul\r\necho ===SFC=== > \"{out}\"\r\nsfc /scannow >> \"{out}\" 2>&1\r\necho ===DISM=== >> \"{out}\"\r\nDISM /Online /Cleanup-Image /ScanHealth >> \"{out}\" 2>&1\r\necho ===FIM===>> \"{out}\"\r\n",
+        out = out_path.to_string_lossy()
+    );
+    fs::write(&bat_path, script).map_err(|e| format!("Falha ao preparar a verificação: {e}"))?;
+
+    let ps_launcher = format!(
+        "Start-Process -FilePath 'cmd.exe' -ArgumentList '/c \"{path}\"' -Verb RunAs -WindowStyle Hidden -Wait",
+        path = bat_path.to_string_lossy().replace('\'', "''")
+    );
+
+    let status = Command::new("powershell")
+        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps_launcher])
+        .creation_flags(CREATE_NO_WINDOW)
+        .status();
+
+    let _ = fs::remove_file(&bat_path);
+
+    match status {
+        Ok(_) => {
+            let content = fs::read_to_string(&out_path).unwrap_or_default();
+            let _ = fs::remove_file(&out_path);
+            if content.trim().is_empty() {
+                return Ok(DeepScanResult{
+                    status: "error".into(),
+                    summary: "Não consegui ler o resultado — provavelmente a janela de permissão de administrador foi cancelada.".into(),
+                    raw_tail: String::new(),
+                });
+            }
+            Ok(parse_sfc_result(&content))
+        }
+        Err(e) => Err(format!("Falha ao rodar a verificação: {e}")),
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn parse_sfc_result(content: &str) -> DeepScanResult {
+    let lower = content.to_lowercase();
+    let (status, summary) = if lower.contains("não encontrou nenhuma violação") || lower.contains("did not find any integrity violations") {
+        ("ok", "Nenhum arquivo de sistema corrompido encontrado. Tudo íntegro.")
+    } else if lower.contains("encontrou arquivos corrompidos e") && (lower.contains("reparou") || lower.contains("êxito")) || lower.contains("successfully repaired") {
+        ("fixed", "Encontrou arquivos de sistema corrompidos e conseguiu reparar todos automaticamente.")
+    } else if lower.contains("não foi possível corrigir") || lower.contains("unable to fix") {
+        ("unfixable", "Encontrou arquivos corrompidos mas não conseguiu corrigir todos — pode indicar um problema mais sério no disco ou instalação do Windows.")
+    } else if lower.contains("não pôde executar") || lower.contains("could not perform") {
+        ("error", "O Windows não conseguiu completar a verificação (geralmente precisa rodar em Modo de Segurança ou verificar o disco antes).")
+    } else {
+        ("error", "Verificação concluída, mas não consegui interpretar automaticamente o resultado — veja o texto bruto abaixo.")
+    };
+    // guarda as últimas linhas não-vazias como evidência bruta, sem exagerar no tamanho
+    let tail: Vec<&str> = content.lines().filter(|l| !l.trim().is_empty()).collect();
+    let raw_tail = tail.iter().rev().take(12).rev().cloned().collect::<Vec<_>>().join("\n");
+    DeepScanResult{ status: status.to_string(), summary: summary.to_string(), raw_tail }
+}
+
+#[cfg(not(target_os = "windows"))]
+#[tauri::command]
+async fn run_deep_scan() -> Result<DeepScanResult, String> {
+    Ok(DeepScanResult{ status: "error".into(), summary: "Disponível só no Windows".into(), raw_tail: String::new() })
+}
+
 /// Recebe o texto do .bat gerado pelo painel, salva num arquivo temporário
 /// e executa TOTALMENTE ESCONDIDO (sem console piscando, sem downloads).
 /// O único aviso que aparece pro usuário é o próprio UAC do Windows pedindo
@@ -1276,7 +1357,7 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(SysState(Mutex::new(System::new_all())))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan])
         .setup(|_app| {
             #[cfg(target_os = "windows")]
             {

@@ -1068,6 +1068,19 @@
   .diag-item.bad .diag-item-icon{color:#ef5a6f;}
   .diag-item-text b{display:block;font-size:12.5px;color:var(--text);margin-bottom:2px;}
   .diag-item-text span{font-size:11.5px;color:var(--muted);line-height:1.5;}
+  .diag-deepscan{
+    margin-top:6px;padding-top:14px;border-top:1px solid var(--border);
+  }
+  .diag-deepscan-head{display:flex;flex-direction:column;gap:3px;margin-bottom:10px;}
+  .diag-deepscan-head b{font-size:12.5px;color:var(--text);}
+  .diag-deepscan-head span{font-size:11.3px;color:var(--muted);line-height:1.5;}
+  .diag-deepscan-waiting{font-size:11.5px;color:var(--muted);margin:10px 0 0;line-height:1.6;padding:10px;background:var(--item-bg);border-radius:8px;}
+  .diag-deepscan-raw{margin-top:8px;}
+  .diag-deepscan-raw summary{font-size:11px;color:var(--tab-accent);cursor:pointer;user-select:none;}
+  .diag-deepscan-raw pre{
+    margin:8px 0 0;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:8px;
+    font-size:10.5px;color:var(--muted);white-space:pre-wrap;word-break:break-word;max-height:180px;overflow-y:auto;
+  }
   .login-btn-secondary{
     background:transparent;color:var(--muted);border:1px solid var(--border);
     margin-top:10px;
@@ -4397,7 +4410,7 @@ function diagIconSvg(status){
   if (status === 'warn') return '<path d="M12 9v4M12 17h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L14.7 3.86a2 2 0 0 0-3.4 0Z"/>';
   return '<circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/>';
 }
-async function runDiagnosticFlow({ loadingTitle, loadingSub, invokeCmd, invokeArgs, notFoundTitle, notFoundSub, verdictOk, verdictWarn, verdictBad, updateScore }){
+async function runDiagnosticFlow({ loadingTitle, loadingSub, invokeCmd, invokeArgs, notFoundTitle, notFoundSub, verdictOk, verdictWarn, verdictBad, updateScore, showDeepScan }){
   const modal = document.getElementById('diagModal');
   const list = document.getElementById('diagList');
   const headIcon = document.getElementById('diagHeadIcon');
@@ -4445,12 +4458,53 @@ async function runDiagnosticFlow({ loadingTitle, loadingSub, invokeCmd, invokeAr
     `).join('');
 
     if (updateScore) updateHomeScoreRing(100 - bad * 20 - warn * 8);
+
+    if (showDeepScan){
+      list.insertAdjacentHTML('beforeend', `
+        <div class="diag-deepscan" id="diagDeepScanBox">
+          <div class="diag-deepscan-head">
+            <b>Verificação profissional (SFC + DISM)</b>
+            <span>Procura arquivos de sistema corrompidos de verdade. Leva de 5 a 15 minutos e pede permissão de administrador.</span>
+          </div>
+          <button class="preset-btn preset-btn-highlight" id="diagDeepScanBtn">Rodar verificação profissional</button>
+          <div id="diagDeepScanResult"></div>
+        </div>
+      `);
+      document.getElementById('diagDeepScanBtn')?.addEventListener('click', runDeepScanUI);
+    }
   }catch(err){
     headIcon.className = 'diag-head-icon bad';
     headIcon.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${diagIconSvg('bad')}</svg>`;
     title.textContent = 'Não foi possível analisar';
     sub.textContent = String(err);
   }
+}
+
+async function runDeepScanUI(){
+  const btn = document.getElementById('diagDeepScanBtn');
+  const resultBox = document.getElementById('diagDeepScanResult');
+  if (!btn || !resultBox) return;
+  btn.disabled = true;
+  btn.textContent = 'Verificando... (isso demora, pode deixar em segundo plano)';
+  resultBox.innerHTML = `<p class="diag-deepscan-waiting">Uma janela de permissão de administrador (UAC) deve aparecer. Depois disso o Windows vai vasculhar os arquivos de sistema — não feche o app.</p>`;
+  try{
+    const { invoke } = window.__TAURI__.core;
+    const result = await invoke('run_deep_scan');
+    const icon = diagIconSvg(result.status === 'ok' ? 'ok' : (result.status === 'fixed' ? 'ok' : (result.status === 'unfixable' ? 'bad' : 'warn')));
+    const cls = result.status === 'ok' || result.status === 'fixed' ? 'ok' : (result.status === 'unfixable' ? 'bad' : 'warn');
+    resultBox.innerHTML = `
+      <div class="diag-item ${cls}">
+        <div class="diag-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${icon}</svg></div>
+        <div class="diag-item-text"><b>Resultado do SFC/DISM</b><span>${result.summary}</span></div>
+      </div>
+      ${result.raw_tail ? `<details class="diag-deepscan-raw"><summary>Ver saída bruta</summary><pre>${result.raw_tail.replace(/</g,'&lt;')}</pre></details>` : ''}
+    `;
+    if (cls === 'ok') showToast('Verificação profissional concluída — tudo certo');
+    else showToast('Verificação profissional concluída');
+  }catch(err){
+    resultBox.innerHTML = `<div class="diag-item bad"><div class="diag-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${diagIconSvg('bad')}</svg></div><div class="diag-item-text"><b>Não foi possível concluir</b><span>${err}</span></div></div>`;
+  }
+  btn.remove();
 }
 
 async function runSystemDiagnostics(){
@@ -4465,6 +4519,7 @@ async function runSystemDiagnostics(){
     verdictWarn: { title: (n)=>`${n} alerta(s) encontrado(s)`, sub: 'Nada crítico, mas vale de olho' },
     verdictBad: { title: (n)=>`${n} problema(s) encontrado(s)`, sub: 'Recomendamos resolver o quanto antes' },
     updateScore: true,
+    showDeepScan: true,
   });
 }
 
