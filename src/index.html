@@ -900,6 +900,41 @@
   .setting-row:hover .setting-title{color:var(--tab-accent);}
   .setting-desc{font-size:11.8px;color:var(--item-muted);margin:0;line-height:1.5;}
   .settings-note{margin:14px 0 0;font-size:12px;color:var(--muted);background:var(--item-bg);border:1px solid var(--item-border);border-radius:9px;padding:12px 14px;}
+
+  /* ===== Assistente (busca local, chat) ===== */
+  .assistant-box{
+    display:flex;flex-direction:column;
+    background:var(--item-bg);border:1px solid var(--item-border);border-radius:12px;
+    height:min(560px, 60vh);overflow:hidden;
+  }
+  .assistant-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;}
+  .assistant-msg{display:flex;}
+  .assistant-msg.user{justify-content:flex-end;}
+  .assistant-msg.bot{justify-content:flex-start;}
+  .assistant-bubble{
+    max-width:78%;padding:10px 14px;border-radius:13px;font-size:13px;line-height:1.55;
+    animation:cardIn .25s ease both;
+  }
+  .assistant-msg.bot .assistant-bubble{background:var(--card);border:1px solid var(--border);color:var(--text);border-bottom-left-radius:4px;}
+  .assistant-msg.user .assistant-bubble{background:var(--accent);color:#08151a;font-weight:600;border-bottom-right-radius:4px;}
+  .assistant-goto-btn{
+    display:block;margin-top:8px;background:transparent;border:1px solid currentColor;color:inherit;
+    padding:6px 10px;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;opacity:.9;
+  }
+  .assistant-goto-btn:hover{opacity:1;background:rgba(255,255,255,.08);}
+  .assistant-suggestions{display:flex;gap:7px;flex-wrap:wrap;padding:0 16px 12px;}
+  .assistant-chip{
+    background:var(--card);border:1px solid var(--border);color:var(--muted);
+    padding:7px 12px;border-radius:20px;font-size:11.5px;font-weight:600;cursor:pointer;
+    font-family:var(--sans);transition:.15s;
+  }
+  .assistant-chip:hover{color:var(--text);border-color:var(--tab-accent);}
+  .assistant-input-row{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--border);background:var(--panel);}
+  .assistant-input-row input{
+    flex:1;background:var(--card);border:1px solid var(--border);color:var(--text);
+    padding:10px 12px;border-radius:9px;font-size:13px;font-family:var(--sans);outline:none;
+  }
+  .assistant-input-row input:focus{border-color:var(--accent);}
   .setting-row select{
     margin-top:8px;background:var(--panel);color:var(--item-text);border:1px solid var(--item-border);
     border-radius:6px;padding:5px 9px;font-size:12px;font-family:var(--sans);cursor:pointer;
@@ -3732,6 +3767,7 @@ function showToast(message){
       row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash');
     });
   }
+  window.goToSetting = goToSetting;
 
   input.addEventListener('input', ()=> renderResults(input.value));
   input.addEventListener('keydown', (e)=>{
@@ -4343,6 +4379,151 @@ document.getElementById('settingsTrayToggle')?.addEventListener('change', async 
   }
 });
 loadSettingsPanel();
+
+// ===== Aba Assistente: responde perguntas sobre o painel e os ajustes =====
+// IMPORTANTE: isso NÃO é uma IA generativa (não é Claude/GPT). É uma busca local
+// nos textos dos ajustes + um conjunto de perguntas frequentes prontas. Roda 100%
+// offline, sem custo e sem risco de vazamento de chave de API.
+const ASSISTANT_FAQ = [
+  { q:"qual preset devo usar recomendado performance ultra performance diferença", a:"<b>Recomendado</b> é o mais seguro — equilíbrio geral, bom pra qualquer PC. <b>Performance</b> foca em jogos, com ajustes um pouco mais agressivos. <b>Ultra Performance</b> é o mais extremo — libera o máximo do hardware, mas pode esquentar mais e não é recomendado pra notebook na bateria. Se tiver dúvida, comece pelo Recomendado." },
+  { q:"é seguro perigoso vai formatar quebrar meu pc estragar windows", a:"Os ajustes mexem em configurações reais do Windows (registro, energia, serviços), então sempre existe algum risco — por isso o app recomenda criar um <b>ponto de restauração</b> antes de aplicar qualquer coisa. Se algo der errado, dá pra voltar atrás pelo Windows (Restaurar Sistema)." },
+  { q:"ponto de restauração restore point o que é como criar", a:"É uma 'foto' do estado atual do Windows. Se algum ajuste causar problema, você consegue voltar exatamente pro que estava antes. Tem um botão 'Criar ponto agora' na tela inicial — recomendado fazer isso antes de aplicar qualquer otimização." },
+  { q:"quanto tempo demora aplicar otimização", a:"A maioria dos ajustes é aplicada em segundos. A única exceção é a Verificação Profissional (SFC + DISM), que pode levar de 5 a 15 minutos porque o Windows verifica arquivo por arquivo do sistema." },
+  { q:"precisa de internet funciona offline", a:"A maior parte do app funciona 100% offline — os ajustes mexem direto no seu Windows. Só precisa de internet pra: baixar atualizações do app, e a detecção de jogos instalados (Steam/Epic/etc)." },
+  { q:"como desfazer reverter ajuste desativar tweak", a:"É só desmarcar (desligar) o ajuste na lista e aplicar de novo — a maioria dos ajustes tem um 'desfazer' automático. Pra garantia total em qualquer situação, use o ponto de restauração criado antes." },
+  { q:"o que é uac permissão administrador pedindo senha", a:"É o próprio Windows pedindo confirmação porque os ajustes mexem em áreas protegidas do sistema (registro, serviços). É normal e esperado — sem essa permissão o Windows não deixa aplicar os tweaks de verdade." },
+  { q:"analisar sistema o que faz diagnóstico", a:"Roda uma checagem real da sua máquina: espaço em disco, saúde física dos discos, dispositivos com erro de driver, erros críticos recentes do Windows, e uso atual de CPU/RAM. Tem também uma opção de 'Verificação Profissional' que roda o SFC/DISM de verdade pra achar arquivo de sistema corrompido." },
+  { q:"meus jogos detecção como funciona presets desempenho qualidade", a:"O app procura jogos instalados de verdade (Steam, Epic, Ubisoft Connect, Rockstar) e deixa aplicar um preset por jogo: <b>Desempenho</b> (prioridade alta de CPU + GPU dedicada), <b>Equilibrado</b> (padrão do Windows), ou <b>Qualidade</b> (GPU mais eficiente/econômica). Pra jogos Unreal Engine, também ajusta o gráfico interno do jogo." },
+  { q:"tema cor mudar aparência visual", a:"Na aba de Configurações (ou no seletor de cor da tela inicial) dá pra trocar entre vários temas, incluindo um tema claro (Branco & Laranja)." },
+  { q:"iniciar com windows abrir sozinho bandeja fundo segundo plano", a:"Na aba <b>Configurações</b> tem dois interruptores: 'Abrir com o Windows' (inicia sozinho ao ligar o PC) e 'Manter em segundo plano ao fechar' (o X minimiza pra bandeja em vez de fechar)." },
+  { q:"scaling fsr dlsx upscale mais fps", a:"Isso (FSR/DLSS/upscaling) é configurado dentro de cada jogo ou no painel da fabricante da GPU (NVIDIA/AMD/Intel) — não existe um jeito automatizado universal pra isso funcionar em qualquer jogo, então o app não mexe nisso diretamente." },
+];
+
+function normalizeText(s){
+  return (s || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/).filter(w => w.length > 2);
+}
+function scoreWords(queryWords, text){
+  const words = normalizeText(text);
+  let score = 0;
+  queryWords.forEach(qw=>{
+    if(words.includes(qw)) score += 1;
+    else if(words.some(w => w.includes(qw) || qw.includes(w))) score += 0.4;
+  });
+  return score;
+}
+function answerAssistantQuestion(question){
+  const queryWords = normalizeText(question);
+  if(!queryWords.length){
+    return { text:"Pode perguntar algo tipo \"qual preset devo usar\" ou \"o que faz o Turbo Boost\"?", tweak:null };
+  }
+
+  // 1) tenta achar nas perguntas frequentes
+  let bestFaq = null, bestFaqScore = 0;
+  ASSISTANT_FAQ.forEach(faq=>{
+    const s = scoreWords(queryWords, faq.q);
+    if(s > bestFaqScore){ bestFaqScore = s; bestFaq = faq; }
+  });
+
+  // 2) tenta achar um ajuste específico (título pesa mais que descrição)
+  let bestTweak = null, bestTweakScore = 0;
+  SEARCH_INDEX.forEach(item=>{
+    const s = scoreWords(queryWords, item.title) * 2.2 + scoreWords(queryWords, item.desc) + scoreWords(queryWords, item.group) * 0.6;
+    if(s > bestTweakScore){ bestTweakScore = s; bestTweak = item; }
+  });
+
+  const faqGood = bestFaqScore >= 1.2;
+  const tweakGood = bestTweakScore >= 2;
+
+  if(faqGood && (!tweakGood || bestFaqScore * 1.3 >= bestTweakScore)){
+    return { text: bestFaq.a, tweak:null };
+  }
+  if(tweakGood){
+    return {
+      text: `Achei o ajuste <b>"${bestTweak.title}"</b> (aba ${bestTweak.catLabel} → ${bestTweak.group}):<br>${bestTweak.desc}`,
+      tweak: bestTweak,
+    };
+  }
+  return {
+    text: "Não achei nada bem específico sobre isso nos ajustes do painel. Tenta reformular, ou usa a busca (Ctrl+K) dentro de cada aba pra procurar por um ajuste específico.",
+    tweak:null,
+  };
+}
+
+const assistantTabBtn = document.createElement('button');
+assistantTabBtn.innerHTML = `${lineIcon('<path d="M8 10h.01M12 10h.01M16 10h.01"/><path d="M21 12c0 4.4-4 8-9 8-1.2 0-2.4-.2-3.4-.6L3 21l1.8-4.4A7.9 7.9 0 0 1 3 12c0-4.4 4-8 9-8s9 3.6 9 8Z"/>')}<span class="label">Assistente</span>`;
+assistantTabBtn.dataset.cat = 'assistant';
+assistantTabBtn.onclick = ()=>switchTab('assistant');
+tabsEl.appendChild(assistantTabBtn);
+
+const assistantTabPanel = document.createElement('div');
+assistantTabPanel.className = 'panel';
+assistantTabPanel.id = 'panel-assistant';
+assistantTabPanel.innerHTML = `
+  <div class="panel-head">
+    <div class="panel-head-left">
+      <div class="panel-icon-badge">${lineIcon('<path d="M8 10h.01M12 10h.01M16 10h.01"/><path d="M21 12c0 4.4-4 8-9 8-1.2 0-2.4-.2-3.4-.6L3 21l1.8-4.4A7.9 7.9 0 0 1 3 12c0-4.4 4-8 9-8s9 3.6 9 8Z"/>')}</div>
+      <div><h2>Assistente</h2><p class="panel-desc">Tire dúvidas sobre o painel e os ajustes. Busca local nos textos do app — não é uma IA generativa, então pode não entender tudo.</p></div>
+    </div>
+  </div>
+
+  <div class="assistant-box">
+    <div class="assistant-messages" id="assistantMessages"></div>
+    <div class="assistant-suggestions" id="assistantSuggestions">
+      <button class="assistant-chip" data-q="Qual preset devo usar?">Qual preset devo usar?</button>
+      <button class="assistant-chip" data-q="Isso é seguro?">Isso é seguro?</button>
+      <button class="assistant-chip" data-q="O que é ponto de restauração?">O que é ponto de restauração?</button>
+      <button class="assistant-chip" data-q="Como funciona Meus Jogos?">Como funciona Meus Jogos?</button>
+    </div>
+    <div class="assistant-input-row">
+      <input type="text" id="assistantInput" placeholder="Pergunte algo sobre o painel ou um ajuste..." autocomplete="off">
+      <button id="assistantSendBtn" class="login-btn admin-btn-solid" style="margin:0;width:auto;padding:10px 18px;">Enviar</button>
+    </div>
+  </div>
+`;
+panelsEl.appendChild(assistantTabPanel);
+
+function assistantAddMessage(role, html, tweak){
+  const list = document.getElementById('assistantMessages');
+  if(!list) return;
+  const msg = document.createElement('div');
+  msg.className = `assistant-msg ${role}`;
+  msg.innerHTML = `<div class="assistant-bubble">${html}${tweak ? `<button class="assistant-goto-btn" data-goto-id="${tweak.id}">Ir para esse ajuste →</button>` : ''}</div>`;
+  list.appendChild(msg);
+  list.scrollTop = list.scrollHeight;
+  const gotoBtn = msg.querySelector('.assistant-goto-btn');
+  if(gotoBtn){
+    gotoBtn.addEventListener('click', ()=> window.goToSetting(tweak));
+  }
+}
+function assistantAsk(question){
+  question = question.trim();
+  if(!question) return;
+  assistantAddMessage('user', question.replace(/</g,'&lt;'));
+  const suggestions = document.getElementById('assistantSuggestions');
+  if(suggestions) suggestions.hidden = true;
+  setTimeout(()=>{
+    const { text, tweak } = answerAssistantQuestion(question);
+    assistantAddMessage('bot', text, tweak);
+  }, 260);
+}
+document.getElementById('assistantSendBtn')?.addEventListener('click', ()=>{
+  const input = document.getElementById('assistantInput');
+  assistantAsk(input.value);
+  input.value = '';
+});
+document.getElementById('assistantInput')?.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){
+    assistantAsk(e.target.value);
+    e.target.value = '';
+  }
+});
+document.querySelectorAll('.assistant-chip').forEach(chip=>{
+  chip.addEventListener('click', ()=> assistantAsk(chip.dataset.q));
+});
+assistantAddMessage('bot', 'Oi! Pode perguntar sobre qualquer ajuste do painel (ex: "o que faz o Turbo Boost") ou sobre como o app funciona (ex: "qual preset devo usar"). Lembrando: eu busco nos textos do app, não sou uma IA generativa — se eu não souber, é melhor usar a busca (Ctrl+K).');
 
 // preenche os atalhos de navegação rápida reaproveitando os ícones das categorias
 (function buildHomeNav(){
