@@ -964,27 +964,41 @@ async fn run_deep_scan() -> Result<DeepScanResult, String> {
     fs::write(&bat_path, script).map_err(|e| format!("Falha ao preparar a verificação: {e}"))?;
 
     let ps_launcher = format!(
-        "Start-Process -FilePath 'cmd.exe' -ArgumentList '/c \"{path}\"' -Verb RunAs -WindowStyle Hidden -Wait",
+        "$p = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c \"{path}\"' -Verb RunAs -WindowStyle Hidden -Wait -PassThru; exit $p.ExitCode",
         path = bat_path.to_string_lossy().replace('\'', "''")
     );
 
-    let status = Command::new("powershell")
-        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps_launcher])
-        .creation_flags(CREATE_NO_WINDOW)
-        .status();
+    // sfc/DISM podem levar minutos — isso BLOQUEIA a thread até terminar, então roda
+    // numa thread dedicada (spawn_blocking) pra não travar o runtime assíncrono do
+    // Tauri, que é o mesmo canal usado pra entregar a resposta de volta pro app.
+    // Sem isso, o app fica preso em "Verificando..." pra sempre mesmo quando o
+    // Windows já terminou (a resposta nunca consegue "voltar" pra tela).
+    let ps_launcher_owned = ps_launcher.clone();
+    let output = tokio::task::spawn_blocking(move || {
+        Command::new("powershell")
+            .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps_launcher_owned])
+            .creation_flags(CREATE_NO_WINDOW)
+            .output()
+    })
+    .await
+    .map_err(|e| format!("Falha interna ao rodar a verificação: {e}"))?;
 
     let _ = fs::remove_file(&bat_path);
 
-    match status {
-        Ok(_) => {
+    match output {
+        Ok(out) => {
             let content = fs::read_to_string(&out_path).unwrap_or_default();
             let _ = fs::remove_file(&out_path);
             if content.trim().is_empty() {
-                return Ok(DeepScanResult{
-                    status: "error".into(),
-                    summary: "Não consegui ler o resultado — provavelmente a janela de permissão de administrador foi cancelada.".into(),
-                    raw_tail: String::new(),
-                });
+                // código 1223 = "operação cancelada pelo usuário" (UAC negado/fechado)
+                let stderr = String::from_utf8_lossy(&out.stderr);
+                let cancelled = out.status.code() == Some(1223) || stderr.contains("1223") || stderr.to_lowercase().contains("cancel");
+                let msg = if cancelled {
+                    "A janela de permissão de administrador (UAC) foi cancelada ou fechada, então a verificação não rodou. Clique em 'Rodar verificação profissional' de novo e aceite a permissão."
+                } else {
+                    "Não consegui ler o resultado da verificação. Pode tentar de novo — se continuar assim, algum antivírus pode estar bloqueando."
+                };
+                return Ok(DeepScanResult{ status: "error".into(), summary: msg.into(), raw_tail: stderr.trim().to_string() });
             }
             Ok(parse_sfc_result(&content))
         }

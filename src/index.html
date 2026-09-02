@@ -4831,7 +4831,7 @@ async function runDeepScanUI(){
   if (!btn || !resultBox) return;
   btn.disabled = true;
   btn.textContent = 'Verificando... (isso demora, pode deixar em segundo plano)';
-  resultBox.innerHTML = `<p class="diag-deepscan-waiting">Uma janela de permissão de administrador (UAC) deve aparecer. Depois disso o Windows vai vasculhar os arquivos de sistema — não feche o app.</p>`;
+  resultBox.innerHTML = `<p class="diag-deepscan-waiting">Uma janela de permissão de administrador (UAC) deve aparecer — se não vir na hora, dá uma olhada na barra de tarefas, às vezes ela abre atrás do app. Depois disso o Windows vai vasculhar os arquivos de sistema por vários minutos — não feche o app, mas pode minimizar e usar o PC normalmente enquanto isso.</p>`;
   try{
     const { invoke } = window.__TAURI__.core;
     const result = await invoke('run_deep_scan');
