@@ -4385,34 +4385,44 @@ loadSettingsPanel();
 // nos textos dos ajustes + um conjunto de perguntas frequentes prontas. Roda 100%
 // offline, sem custo e sem risco de vazamento de chave de API.
 const ASSISTANT_FAQ = [
-  { q:"qual preset devo usar recomendado performance ultra performance diferença", a:"<b>Recomendado</b> é o mais seguro — equilíbrio geral, bom pra qualquer PC. <b>Performance</b> foca em jogos, com ajustes um pouco mais agressivos. <b>Ultra Performance</b> é o mais extremo — libera o máximo do hardware, mas pode esquentar mais e não é recomendado pra notebook na bateria. Se tiver dúvida, comece pelo Recomendado." },
-  { q:"é seguro perigoso vai formatar quebrar meu pc estragar windows", a:"Os ajustes mexem em configurações reais do Windows (registro, energia, serviços), então sempre existe algum risco — por isso o app recomenda criar um <b>ponto de restauração</b> antes de aplicar qualquer coisa. Se algo der errado, dá pra voltar atrás pelo Windows (Restaurar Sistema)." },
-  { q:"ponto de restauração restore point o que é como criar", a:"É uma 'foto' do estado atual do Windows. Se algum ajuste causar problema, você consegue voltar exatamente pro que estava antes. Tem um botão 'Criar ponto agora' na tela inicial — recomendado fazer isso antes de aplicar qualquer otimização." },
-  { q:"quanto tempo demora aplicar otimização", a:"A maioria dos ajustes é aplicada em segundos. A única exceção é a Verificação Profissional (SFC + DISM), que pode levar de 5 a 15 minutos porque o Windows verifica arquivo por arquivo do sistema." },
-  { q:"precisa de internet funciona offline", a:"A maior parte do app funciona 100% offline — os ajustes mexem direto no seu Windows. Só precisa de internet pra: baixar atualizações do app, e a detecção de jogos instalados (Steam/Epic/etc)." },
-  { q:"como desfazer reverter ajuste desativar tweak", a:"É só desmarcar (desligar) o ajuste na lista e aplicar de novo — a maioria dos ajustes tem um 'desfazer' automático. Pra garantia total em qualquer situação, use o ponto de restauração criado antes." },
-  { q:"o que é uac permissão administrador pedindo senha", a:"É o próprio Windows pedindo confirmação porque os ajustes mexem em áreas protegidas do sistema (registro, serviços). É normal e esperado — sem essa permissão o Windows não deixa aplicar os tweaks de verdade." },
-  { q:"analisar sistema o que faz diagnóstico", a:"Roda uma checagem real da sua máquina: espaço em disco, saúde física dos discos, dispositivos com erro de driver, erros críticos recentes do Windows, e uso atual de CPU/RAM. Tem também uma opção de 'Verificação Profissional' que roda o SFC/DISM de verdade pra achar arquivo de sistema corrompido." },
-  { q:"meus jogos detecção como funciona presets desempenho qualidade", a:"O app procura jogos instalados de verdade (Steam, Epic, Ubisoft Connect, Rockstar) e deixa aplicar um preset por jogo: <b>Desempenho</b> (prioridade alta de CPU + GPU dedicada), <b>Equilibrado</b> (padrão do Windows), ou <b>Qualidade</b> (GPU mais eficiente/econômica). Pra jogos Unreal Engine, também ajusta o gráfico interno do jogo." },
-  { q:"tema cor mudar aparência visual", a:"Na aba de Configurações (ou no seletor de cor da tela inicial) dá pra trocar entre vários temas, incluindo um tema claro (Branco & Laranja)." },
-  { q:"iniciar com windows abrir sozinho bandeja fundo segundo plano", a:"Na aba <b>Configurações</b> tem dois interruptores: 'Abrir com o Windows' (inicia sozinho ao ligar o PC) e 'Manter em segundo plano ao fechar' (o X minimiza pra bandeja em vez de fechar)." },
-  { q:"scaling fsr dlsx upscale mais fps", a:"Isso (FSR/DLSS/upscaling) é configurado dentro de cada jogo ou no painel da fabricante da GPU (NVIDIA/AMD/Intel) — não existe um jeito automatizado universal pra isso funcionar em qualquer jogo, então o app não mexe nisso diretamente." },
+  { q:"qual preset devo usar recomendado performance ultra performance diferença melhor escolher", a:"<b>Recomendado</b> é o mais seguro — equilíbrio geral, bom pra qualquer PC. <b>Performance</b> foca em jogos, com ajustes um pouco mais agressivos. <b>Ultra Performance</b> é o mais extremo — libera o máximo do hardware, mas pode esquentar mais e não é recomendado pra notebook na bateria. Se tiver dúvida, comece pelo Recomendado." },
+  { q:"aumentar fps mais desempenho jogos rodar melhor travando lag gaguejando", a:"Pra ganhar FPS: 1) use o preset <b>Performance</b> ou <b>Ultra Performance</b>; 2) na aba <b>Meus Jogos</b>, aplique o preset 'Desempenho' no jogo específico (prioridade de CPU + GPU dedicada); 3) pra jogos Unreal Engine, isso também ajusta o gráfico interno do jogo. Upscaling tipo FSR/DLSS é configurado dentro do próprio jogo, não dá pra automatizar isso." },
+  { q:"é seguro perigoso vai formatar quebrar estragar meu computador micro danifica risco", a:"Os ajustes mexem em configurações reais do Windows (registro, energia, serviços), então sempre existe algum risco — por isso o app recomenda criar um <b>ponto de restauração</b> antes de aplicar qualquer coisa. Se algo der errado, dá pra voltar atrás pelo Windows (Restaurar Sistema)." },
+  { q:"ponto de restauração restore point o que é como criar pra que serve", a:"É uma 'foto' do estado atual do Windows. Se algum ajuste causar problema, você consegue voltar exatamente pro que estava antes. Tem um botão 'Criar ponto agora' na tela inicial — recomendado fazer isso antes de aplicar qualquer otimização." },
+  { q:"quanto tempo demora aplicar otimização ajustes leva", a:"A maioria dos ajustes é aplicada em segundos. A única exceção é a Verificação Profissional (SFC + DISM), que pode levar de 5 a 15 minutos porque o Windows verifica arquivo por arquivo do sistema." },
+  { q:"precisa de internet funciona offline sem conexão", a:"A maior parte do app funciona 100% offline — os ajustes mexem direto no seu Windows. Só precisa de internet pra: baixar atualizações do app, e a detecção de jogos instalados (Steam/Epic/etc)." },
+  { q:"como desfazer reverter ajuste desativar tweak cancelar", a:"É só desmarcar (desligar) o ajuste na lista e aplicar de novo — a maioria dos ajustes tem um 'desfazer' automático. Pra garantia total em qualquer situação, use o ponto de restauração criado antes." },
+  { q:"o que é uac permissão administrador pedindo janela azul senha aparece", a:"É o próprio Windows pedindo confirmação porque os ajustes mexem em áreas protegidas do sistema (registro, serviços). É normal e esperado — sem essa permissão o Windows não deixa aplicar os tweaks de verdade." },
+  { q:"analisar sistema botão o que faz diagnóstico checagem verificação", a:"Roda uma checagem real da sua máquina: espaço em disco, saúde física dos discos, dispositivos com erro de driver, erros críticos recentes do Windows, e uso atual de CPU/RAM. Tem também uma opção de 'Verificação Profissional' que roda o SFC/DISM de verdade pra achar arquivo de sistema corrompido." },
+  { q:"meus jogos detecção como funciona presets desempenho qualidade steam epic ubisoft rockstar", a:"O app procura jogos instalados de verdade (Steam, Epic, Ubisoft Connect, Rockstar) e deixa aplicar um preset por jogo: <b>Desempenho</b> (prioridade alta de CPU + GPU dedicada), <b>Equilibrado</b> (padrão do Windows), ou <b>Qualidade</b> (GPU mais eficiente/econômica). Pra jogos Unreal Engine, também ajusta o gráfico interno do jogo." },
+  { q:"tema cor mudar aparência visual claro escuro branco laranja personalizar", a:"Na aba de <b>Configurações</b> (ou no seletor de cor da tela inicial) dá pra trocar entre vários temas, incluindo um tema claro (Branco & Laranja)." },
+  { q:"iniciar com windows abrir sozinho ligar pc bandeja fundo segundo plano minimizar", a:"Na aba <b>Configurações</b> tem dois interruptores: 'Abrir com o Windows' (inicia sozinho ao ligar o PC) e 'Manter em segundo plano ao fechar' (o X minimiza pra bandeja em vez de fechar)." },
+  { q:"limpar ram limpeza memória cache liberar", a:"Tem um botão <b>'Limpar RAM agora'</b> na tela inicial (Início) que libera memória em cache do Windows na hora. Também dá pra deixar isso automático — procure por 'limpeza automática' na aba RAM." },
+  { q:"aplicar otimizações botão como usar marcar tweaks ligar", a:"Marca (liga) os ajustes que quer usar em qualquer aba — ou escolhe um preset pronto (Recomendado/Performance/Ultra Performance) — e clica no botão roxo 'Aplicar otimizações' lá embaixo. O Windows vai pedir permissão de administrador (UAC), é normal." },
 ];
-
+const ASSISTANT_STOPWORDS = new Set([
+  "que","como","para","pra","isso","essa","esse","esta","este","estas","estes","uma","umas","uns","dos",
+  "das","com","sem","tem","seu","sua","seus","suas","vou","meu","minha","meus","minhas","faço","faz","fazer",
+  "devo","deveria","posso","pode","podem","não","nao","são","sao","ser","será","sera","tem","têm","tém",
+  "mais","muito","muita","muito","aqui","onde","quando","quero","quer","preciso","precisa","você","voce",
+  "vc","tá","ta","tô","to","ele","ela","eles","elas","num","numa","alguma","algum","alguns","algumas",
+]);
 function normalizeText(s){
   return (s || '').toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9\s]/g, ' ')
-    .split(/\s+/).filter(w => w.length > 2);
+    .split(/\s+/).filter(w => w.length > 2 && !ASSISTANT_STOPWORDS.has(w));
 }
 function scoreWords(queryWords, text){
+  if(!queryWords.length) return { ratio:0, hits:0 };
   const words = normalizeText(text);
-  let score = 0;
+  if(!words.length) return { ratio:0, hits:0 };
+  let hits = 0;
   queryWords.forEach(qw=>{
-    if(words.includes(qw)) score += 1;
-    else if(words.some(w => w.includes(qw) || qw.includes(w))) score += 0.4;
+    if(words.includes(qw)){ hits += 1; return; }
+    if(qw.length >= 5 && words.some(w => w.length >= 5 && (w.includes(qw) || qw.includes(w)))){ hits += 0.55; }
   });
-  return score;
+  return { ratio: hits / queryWords.length, hits };
 }
 function answerAssistantQuestion(question){
   const queryWords = normalizeText(question);
@@ -4423,21 +4433,28 @@ function answerAssistantQuestion(question){
   // 1) tenta achar nas perguntas frequentes
   let bestFaq = null, bestFaqScore = 0;
   ASSISTANT_FAQ.forEach(faq=>{
-    const s = scoreWords(queryWords, faq.q);
+    const s = scoreWords(queryWords, faq.q).ratio;
     if(s > bestFaqScore){ bestFaqScore = s; bestFaq = faq; }
   });
 
   // 2) tenta achar um ajuste específico (título pesa mais que descrição)
-  let bestTweak = null, bestTweakScore = 0;
+  let bestTweak = null, bestTweakScore = 0, bestTweakHits = 0, bestTweakTitleRatio = 0;
   SEARCH_INDEX.forEach(item=>{
-    const s = scoreWords(queryWords, item.title) * 2.2 + scoreWords(queryWords, item.desc) + scoreWords(queryWords, item.group) * 0.6;
-    if(s > bestTweakScore){ bestTweakScore = s; bestTweak = item; }
+    const t = scoreWords(queryWords, item.title);
+    const d = scoreWords(queryWords, item.desc);
+    const g = scoreWords(queryWords, item.group);
+    const s = t.ratio * 1.6 + d.ratio * 0.7 + g.ratio * 0.3;
+    if(s > bestTweakScore){ bestTweakScore = s; bestTweak = item; bestTweakHits = t.hits; bestTweakTitleRatio = t.ratio; }
   });
 
-  const faqGood = bestFaqScore >= 1.2;
-  const tweakGood = bestTweakScore >= 2;
+  // limiares: FAQ usa proporção (a lista de gatilhos é longa, então 1 palavra isolada não passa fácil).
+  // Tweak só é "confiável" se VÁRIAS palavras baterem no TÍTULO (curto e focado), ou se o título
+  // bater quase inteiro — a descrição (longa) não conta pra essa confiança, só ajuda a desempatar
+  // o ranking, porque nela é fácil uma palavra solta aparecer por coincidência sem relação real.
+  const faqGood = bestFaqScore >= 0.4;
+  const tweakGood = bestTweakScore >= 0.55 && (bestTweakHits >= 2 || bestTweakTitleRatio >= 0.95);
 
-  if(faqGood && (!tweakGood || bestFaqScore * 1.3 >= bestTweakScore)){
+  if(faqGood && (!tweakGood || bestFaqScore >= bestTweakScore * 0.6)){
     return { text: bestFaq.a, tweak:null };
   }
   if(tweakGood){
