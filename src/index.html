@@ -4385,56 +4385,105 @@ loadSettingsPanel();
 // nos textos dos ajustes + um conjunto de perguntas frequentes prontas. Roda 100%
 // offline, sem custo e sem risco de vazamento de chave de API.
 const ASSISTANT_FAQ = [
-  { q:"qual preset devo usar recomendado performance ultra performance diferença melhor escolher", a:"<b>Recomendado</b> é o mais seguro — equilíbrio geral, bom pra qualquer PC. <b>Performance</b> foca em jogos, com ajustes um pouco mais agressivos. <b>Ultra Performance</b> é o mais extremo — libera o máximo do hardware, mas pode esquentar mais e não é recomendado pra notebook na bateria. Se tiver dúvida, comece pelo Recomendado." },
-  { q:"aumentar fps mais desempenho jogos rodar melhor travando lag gaguejando", a:"Pra ganhar FPS: 1) use o preset <b>Performance</b> ou <b>Ultra Performance</b>; 2) na aba <b>Meus Jogos</b>, aplique o preset 'Desempenho' no jogo específico (prioridade de CPU + GPU dedicada); 3) pra jogos Unreal Engine, isso também ajusta o gráfico interno do jogo. Upscaling tipo FSR/DLSS é configurado dentro do próprio jogo, não dá pra automatizar isso." },
-  { q:"é seguro perigoso vai formatar quebrar estragar meu computador micro danifica risco", a:"Os ajustes mexem em configurações reais do Windows (registro, energia, serviços), então sempre existe algum risco — por isso o app recomenda criar um <b>ponto de restauração</b> antes de aplicar qualquer coisa. Se algo der errado, dá pra voltar atrás pelo Windows (Restaurar Sistema)." },
-  { q:"ponto de restauração restore point o que é como criar pra que serve", a:"É uma 'foto' do estado atual do Windows. Se algum ajuste causar problema, você consegue voltar exatamente pro que estava antes. Tem um botão 'Criar ponto agora' na tela inicial — recomendado fazer isso antes de aplicar qualquer otimização." },
-  { q:"quanto tempo demora aplicar otimização ajustes leva", a:"A maioria dos ajustes é aplicada em segundos. A única exceção é a Verificação Profissional (SFC + DISM), que pode levar de 5 a 15 minutos porque o Windows verifica arquivo por arquivo do sistema." },
-  { q:"precisa de internet funciona offline sem conexão", a:"A maior parte do app funciona 100% offline — os ajustes mexem direto no seu Windows. Só precisa de internet pra: baixar atualizações do app, e a detecção de jogos instalados (Steam/Epic/etc)." },
-  { q:"como desfazer reverter ajuste desativar tweak cancelar", a:"É só desmarcar (desligar) o ajuste na lista e aplicar de novo — a maioria dos ajustes tem um 'desfazer' automático. Pra garantia total em qualquer situação, use o ponto de restauração criado antes." },
-  { q:"o que é uac permissão administrador pedindo janela azul senha aparece", a:"É o próprio Windows pedindo confirmação porque os ajustes mexem em áreas protegidas do sistema (registro, serviços). É normal e esperado — sem essa permissão o Windows não deixa aplicar os tweaks de verdade." },
-  { q:"analisar sistema botão o que faz diagnóstico checagem verificação", a:"Roda uma checagem real da sua máquina: espaço em disco, saúde física dos discos, dispositivos com erro de driver, erros críticos recentes do Windows, e uso atual de CPU/RAM. Tem também uma opção de 'Verificação Profissional' que roda o SFC/DISM de verdade pra achar arquivo de sistema corrompido." },
-  { q:"meus jogos detecção como funciona presets desempenho qualidade steam epic ubisoft rockstar", a:"O app procura jogos instalados de verdade (Steam, Epic, Ubisoft Connect, Rockstar) e deixa aplicar um preset por jogo: <b>Desempenho</b> (prioridade alta de CPU + GPU dedicada), <b>Equilibrado</b> (padrão do Windows), ou <b>Qualidade</b> (GPU mais eficiente/econômica). Pra jogos Unreal Engine, também ajusta o gráfico interno do jogo." },
-  { q:"tema cor mudar aparência visual claro escuro branco laranja personalizar", a:"Na aba de <b>Configurações</b> (ou no seletor de cor da tela inicial) dá pra trocar entre vários temas, incluindo um tema claro (Branco & Laranja)." },
-  { q:"iniciar com windows abrir sozinho ligar pc bandeja fundo segundo plano minimizar", a:"Na aba <b>Configurações</b> tem dois interruptores: 'Abrir com o Windows' (inicia sozinho ao ligar o PC) e 'Manter em segundo plano ao fechar' (o X minimiza pra bandeja em vez de fechar)." },
-  { q:"limpar ram limpeza memória cache liberar", a:"Tem um botão <b>'Limpar RAM agora'</b> na tela inicial (Início) que libera memória em cache do Windows na hora. Também dá pra deixar isso automático — procure por 'limpeza automática' na aba RAM." },
-  { q:"aplicar otimizações botão como usar marcar tweaks ligar", a:"Marca (liga) os ajustes que quer usar em qualquer aba — ou escolhe um preset pronto (Recomendado/Performance/Ultra Performance) — e clica no botão roxo 'Aplicar otimizações' lá embaixo. O Windows vai pedir permissão de administrador (UAC), é normal." },
+  { q:"qual preset devo usar recomendado performance ultra performance diferença melhor escolher qual melhor opcao", a:"<b>Recomendado</b> é o mais seguro — equilíbrio geral, bom pra qualquer PC. <b>Performance</b> foca em jogos, com ajustes um pouco mais agressivos. <b>Ultra Performance</b> é o mais extremo — libera o máximo do hardware, mas pode esquentar mais e não é recomendado pra notebook na bateria. Se tiver dúvida, comece pelo Recomendado." },
+  { q:"aumentar fps mais desempenho jogos rodar melhor travando lag gaguejando engasgando picotando baixo ruim lento devagar performance jogo", a:"Pra ganhar FPS: 1) use o preset <b>Performance</b> ou <b>Ultra Performance</b>; 2) na aba <b>Meus Jogos</b>, aplique o preset 'Desempenho' no jogo específico (prioridade de CPU + GPU dedicada); 3) pra jogos Unreal Engine, isso também ajusta o gráfico interno do jogo. Upscaling tipo FSR/DLSS é configurado dentro do próprio jogo, não dá pra automatizar isso." },
+  { q:"é seguro perigoso vai formatar quebrar estragar meu computador micro danifica risco confiavel confiar", a:"Os ajustes mexem em configurações reais do Windows (registro, energia, serviços), então sempre existe algum risco — por isso o app recomenda criar um <b>ponto de restauração</b> antes de aplicar qualquer coisa. Se algo der errado, dá pra voltar atrás pelo Windows (Restaurar Sistema)." },
+  { q:"ponto de restauração restore point o que é como criar pra que serve backup salvar antes", a:"É uma 'foto' do estado atual do Windows. Se algum ajuste causar problema, você consegue voltar exatamente pro que estava antes. Tem um botão 'Criar ponto agora' na tela inicial — recomendado fazer isso antes de aplicar qualquer otimização." },
+  { q:"quanto tempo demora aplicar otimização ajustes leva rapido devagar", a:"A maioria dos ajustes é aplicada em segundos. A única exceção é a Verificação Profissional (SFC + DISM), que pode levar de 5 a 15 minutos porque o Windows verifica arquivo por arquivo do sistema." },
+  { q:"precisa de internet offline sem conexão wifi rede", a:"A maior parte do app funciona 100% offline — os ajustes mexem direto no seu Windows. Só precisa de internet pra: baixar atualizações do app, e a detecção de jogos instalados (Steam/Epic/etc)." },
+  { q:"como desfazer reverter ajuste desativar tweak cancelar voltar atras tirar remover desmarcar", a:"É só desmarcar (desligar) o ajuste na lista e aplicar de novo — a maioria dos ajustes tem um 'desfazer' automático. Pra garantia total em qualquer situação, use o ponto de restauração criado antes." },
+  { q:"o que é uac permissão administrador pedindo janela azul senha aparece pop up autorizar", a:"É o próprio Windows pedindo confirmação porque os ajustes mexem em áreas protegidas do sistema (registro, serviços). É normal e esperado — sem essa permissão o Windows não deixa aplicar os tweaks de verdade." },
+  { q:"analisar sistema botão o que faz diagnóstico checagem verificação problema saude", a:"Roda uma checagem real da sua máquina: espaço em disco, saúde física dos discos, dispositivos com erro de driver, erros críticos recentes do Windows, e uso atual de CPU/RAM. Tem também uma opção de 'Verificação Profissional' que roda o SFC/DISM de verdade pra achar arquivo de sistema corrompido." },
+  { q:"sfc dism scannow arquivo corrompido verificação profissional demora trava", a:"A Verificação Profissional roda o comando real <b>sfc /scannow</b> + <b>DISM</b> do Windows pra achar arquivo de sistema corrompido. Ela pede permissão de administrador (UAC) e demora de 5 a 15 minutos DE VERDADE — o Windows checa arquivo por arquivo. Não é bug ficar 'Verificando...' por vários minutos, é o esperado. Não feche o app durante." },
+  { q:"meus jogos detecção como funciona presets desempenho qualidade steam epic ubisoft rockstar jogo instalado", a:"O app procura jogos instalados de verdade (Steam, Epic, Ubisoft Connect, Rockstar) e deixa aplicar um preset por jogo: <b>Desempenho</b> (prioridade alta de CPU + GPU dedicada), <b>Equilibrado</b> (padrão do Windows), ou <b>Qualidade</b> (GPU mais eficiente/econômica). Pra jogos Unreal Engine, também ajusta o gráfico interno do jogo." },
+  { q:"tema cor mudar aparência visual claro escuro branco laranja azul personalizar trocar", a:"Na aba de <b>Configurações</b> (ou no seletor de cor da tela inicial) dá pra trocar entre vários temas, incluindo um tema claro (Branco & Laranja)." },
+  { q:"iniciar com windows abrir sozinho ligar pc bandeja fundo segundo plano minimizar fechar x", a:"Na aba <b>Configurações</b> tem dois interruptores: 'Abrir com o Windows' (inicia sozinho ao ligar o PC) e 'Manter em segundo plano ao fechar' (o X minimiza pra bandeja em vez de fechar)." },
+  { q:"limpar ram limpeza memória cache liberar cheia lotada travada", a:"Tem um botão <b>'Limpar RAM agora'</b> na tela inicial (Início) que libera memória em cache do Windows na hora. Também dá pra deixar isso automático — procure por 'limpeza automática' na aba RAM." },
+  { q:"aplicar otimizações botão como usar marcar tweaks ligar funciona ativar", a:"Marca (liga) os ajustes que quer usar em qualquer aba — ou escolhe um preset pronto (Recomendado/Performance/Ultra Performance) — e clica no botão roxo 'Aplicar otimizações' lá embaixo. O Windows vai pedir permissão de administrador (UAC), é normal." },
+  { q:"quem é você o que é essa ia assistente robo bot", a:"Sou um assistente local do próprio FluxTweakers — não sou uma inteligência artificial generativa (não sou Claude, ChatGPT etc). Eu só busco nos textos dos ajustes do painel e num conjunto de perguntas frequentes, então posso não entender tudo. Pra dúvidas mais complexas, fala direto com o suporte." },
+  { q:"windows debloat privacidade bloatware remover apps lixo telemetria propaganda anuncio", a:"A aba <b>Windows</b> tem ajustes de Debloat (remove apps/anúncios do sistema), Privacidade (telemetria, rastreamento), Elementos Gráficos (efeitos visuais) e Explorador/Personalização — tudo separado do resto pra ficar organizado." },
+  { q:"gpu placa de video nvidia amd intel driver escolher fabricante", a:"Na aba <b>GPU</b>, escolha o fabricante (NVIDIA, AMD ou Intel) no topo pra ver os ajustes específicos da sua placa de vídeo. Cada fabricante tem otimizações diferentes." },
+  { q:"cpu processador intel amd prioridade agendamento boost turbo", a:"Na aba <b>CPU</b>, escolha o fabricante (Intel ou AMD) pra ver ajustes específicos de energia, agendamento e prioridade do processador." },
+  { q:"tela cheia fullscreen maximizar janela tamanho", a:"O botão do meio na barra de título (entre minimizar e fechar) coloca o app em tela cheia de verdade, cobrindo a tela toda sem sobrar espaço da barra de tarefas. Dá duplo clique na barra de título pra alternar também." },
+  { q:"app aplicativo programa não abre abrir não funciona travou parou de responder erro bug problema fechou sozinho crashou", a:"Se o app não abrir ou travar: tenta fechar pelo Gerenciador de Tarefas e abrir de novo. Se continuar, verifica se tem uma versão mais nova pra baixar, ou fala com o suporte descrevendo o que aconteceu." },
+  { q:"key licença chave ativar conta login usuario senha comprar assinatura plano pago gratis", a:"Se você comprou o app, deve ter recebido uma <b>key</b> (código de ativação) — usa ela na tela de criar conta. Se tiver dúvida sobre sua licença, fala direto com quem vendeu o app pra você." },
+  { q:"windows update atualização driver desatualizado", a:"O FluxTweakers não mexe com o Windows Update diretamente — ele foca em otimização de desempenho, privacidade e configurações. Pra drivers, o mais seguro é atualizar direto pelo site do fabricante da peça (NVIDIA, AMD, Intel etc)." },
+  { q:"exportar importar perfil salvar configuração backup levar outro pc", a:"Nos botões 'Exportar' e 'Importar' (perto da busca, dentro de cada aba) dá pra salvar sua seleção de ajustes num arquivo e levar pra outro PC, ou guardar de backup." },
+  { q:"notebook laptop bateria economia energia esquentando calor", a:"Em notebook, tome cuidado com o preset <b>Ultra Performance</b> — ele pode esquentar mais e gastar bateria rápido. O <b>Recomendado</b> é mais equilibrado pra notebook." },
 ];
 const ASSISTANT_STOPWORDS = new Set([
   "que","como","para","pra","isso","essa","esse","esta","este","estas","estes","uma","umas","uns","dos",
   "das","com","sem","tem","seu","sua","seus","suas","vou","meu","minha","meus","minhas","faço","faz","fazer",
-  "devo","deveria","posso","pode","podem","não","nao","são","sao","ser","será","sera","tem","têm","tém",
-  "mais","muito","muita","muito","aqui","onde","quando","quero","quer","preciso","precisa","você","voce",
+  "devo","deveria","posso","pode","podem","não","nao","são","sao","ser","será","sera","têm","tém",
+  "mais","muito","muita","aqui","onde","quando","quero","quer","preciso","precisa","você","voce",
   "vc","tá","ta","tô","to","ele","ela","eles","elas","num","numa","alguma","algum","alguns","algumas",
+  "tipo","cara","mano","poxa","entao","então","bem","bom","boa","olha","olhe","hein","ai","aí","dai","daí",
+  "vai","vou","vamos","fica","ficou","tava","estava","desse","dessa","nesse","nessa","pelo","pela","pelos",
+  "pelas","gente","cade","cadê","por","favor","obrigado","obrigada","valeu","oi","ola","olá","bom","dia",
+  "funciona","funcionamento","usar","uso","usando",
 ]);
+// pequeno "stemmer" seguro: remove só sufixos gramaticais comuns do português
+// (plural, verbos, substantivos abstratos) — bem mais seguro que cortar um prefixo
+// fixo, que já causou falso positivo antes (ex: "internet" batendo com "interrupção").
+const ASSISTANT_SUFFIXES = ["ções","ção","mente","ando","endo","indo","ados","adas","ador","adora",
+  "ismo","idade","agem","oso","osa","osos","osas","izar","ização","eiro","eira","inho","inha",
+  "ares","ável","ível","es","as","os"];
+function stem(w){
+  for(const suf of ASSISTANT_SUFFIXES){
+    if(w.length > suf.length + 3 && w.endsWith(suf)) return w.slice(0, -suf.length);
+  }
+  return w;
+}
+// sinônimos/gírias comuns que o usuário pode digitar, mapeados pro termo "oficial"
+// usado nos textos do app — isso é controlado à mão, não é adivinhação genérica.
+const ASSISTANT_SYNONYMS = {
+  "pc":"computador", "micro":"computador", "maquina":"computador", "note":"notebook",
+  "trava":"travando", "travou":"travando", "trancando":"travando", "engasga":"travando",
+  "engasgando":"travando", "picota":"travando", "picotando":"travando", "gaguejando":"travando",
+  "ruim":"lento", "devagar":"lento", "lerdo":"lento", "lerdao":"lento",
+  "bugado":"problema", "zoado":"problema", "zuado":"problema", "estranho":"problema",
+  "video":"gpu", "placa":"gpu", "processador":"cpu", "memoria":"ram",
+  "otimizacoes":"otimização", "ajustes":"tweak", "config":"configuração", "configuracoes":"configuração",
+  "iniciar":"abrir", "abre":"abrir", "fechar":"fechar", "fecha":"fechar",
+};
+function applySynonyms(words){
+  return words.map(w => ASSISTANT_SYNONYMS[w] ? normalizeText(ASSISTANT_SYNONYMS[w])[0] || w : w);
+}
+const ASSISTANT_SHORT_ALLOW = new Set(["ia","x1","fps"]);
 function normalizeText(s){
   return (s || '').toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9\s]/g, ' ')
-    .split(/\s+/).filter(w => w.length > 2 && !ASSISTANT_STOPWORDS.has(w));
+    .split(/\s+/).filter(w => (w.length > 2 || ASSISTANT_SHORT_ALLOW.has(w)) && !ASSISTANT_STOPWORDS.has(w));
 }
 function scoreWords(queryWords, text){
   if(!queryWords.length) return { ratio:0, hits:0 };
   const words = normalizeText(text);
   if(!words.length) return { ratio:0, hits:0 };
+  const wordStems = words.map(stem);
   let hits = 0;
   queryWords.forEach(qw=>{
     if(words.includes(qw)){ hits += 1; return; }
-    if(qw.length >= 5 && words.some(w => w.length >= 5 && (w.includes(qw) || qw.includes(w)))){ hits += 0.55; }
+    const qwStem = stem(qw);
+    if(qwStem.length >= 4 && wordStems.includes(qwStem)){ hits += 0.9; return; }
+    if(qw.length >= 5 && words.some(w => w.length >= 5 && (w.includes(qw) || qw.includes(w)))){ hits += 0.5; }
   });
   return { ratio: hits / queryWords.length, hits };
 }
 function answerAssistantQuestion(question){
-  const queryWords = normalizeText(question);
+  let queryWords = normalizeText(question);
+  queryWords = applySynonyms(queryWords);
   if(!queryWords.length){
     return { text:"Pode perguntar algo tipo \"qual preset devo usar\" ou \"o que faz o Turbo Boost\"?", tweak:null };
   }
 
-  // 1) tenta achar nas perguntas frequentes
-  let bestFaq = null, bestFaqScore = 0;
+  // 1) tenta achar nas perguntas frequentes (em empate de proporção, ganha quem tem mais palavras batendo)
+  let bestFaq = null, bestFaqScore = 0, bestFaqHits = 0;
   ASSISTANT_FAQ.forEach(faq=>{
-    const s = scoreWords(queryWords, faq.q).ratio;
-    if(s > bestFaqScore){ bestFaqScore = s; bestFaq = faq; }
+    const { ratio, hits } = scoreWords(queryWords, faq.q);
+    if(ratio > bestFaqScore || (ratio === bestFaqScore && hits > bestFaqHits)){
+      bestFaqScore = ratio; bestFaqHits = hits; bestFaq = faq;
+    }
   });
 
   // 2) tenta achar um ajuste específico (título pesa mais que descrição)
@@ -4451,8 +4500,8 @@ function answerAssistantQuestion(question){
   // Tweak só é "confiável" se VÁRIAS palavras baterem no TÍTULO (curto e focado), ou se o título
   // bater quase inteiro — a descrição (longa) não conta pra essa confiança, só ajuda a desempatar
   // o ranking, porque nela é fácil uma palavra solta aparecer por coincidência sem relação real.
-  const faqGood = bestFaqScore >= 0.4;
-  const tweakGood = bestTweakScore >= 0.55 && (bestTweakHits >= 2 || bestTweakTitleRatio >= 0.95);
+  const faqGood = bestFaqScore >= 0.32;
+  const tweakGood = bestTweakScore >= 0.5 && (bestTweakHits >= 2 || bestTweakTitleRatio >= 0.9);
 
   if(faqGood && (!tweakGood || bestFaqScore >= bestTweakScore * 0.6)){
     return { text: bestFaq.a, tweak:null };
