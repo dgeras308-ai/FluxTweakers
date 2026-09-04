@@ -500,6 +500,19 @@
   .power-plan-unlock{border-style:dashed;color:var(--muted);}
   .power-plan-unlock .power-plan-name{color:var(--muted);font-weight:600;}
   .power-plan-unlock:hover{color:var(--text);border-color:var(--muted2);}
+  .power-plan-flux-btn{
+    display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+    background:linear-gradient(135deg, var(--accent), var(--accent2) 130%);color:#08151a;
+    border:none;border-radius:10px;padding:13px 16px;margin-bottom:12px;cursor:pointer;
+    font-family:var(--sans);transition:filter .15s ease, transform .15s ease;
+    box-shadow:0 6px 18px -8px var(--accent-dim);
+  }
+  .power-plan-flux-btn:hover{filter:brightness(1.06);transform:translateY(-1px);}
+  .power-plan-flux-btn:disabled{opacity:.7;cursor:default;transform:none;}
+  .power-plan-flux-btn svg{width:20px;height:20px;flex-shrink:0;}
+  .power-plan-flux-btn span{display:flex;flex-direction:column;gap:1px;}
+  .power-plan-flux-btn b{font-size:13.5px;}
+  .power-plan-flux-btn em{font-size:11px;font-style:normal;opacity:.85;}
   .game-detected-card{
     display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
     background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;
@@ -4750,6 +4763,32 @@ async function activatePowerPlan(guid, btn){
   showToast('Plano de energia ativado');
   setTimeout(loadPowerPlans, 700);
 }
+async function activateFluxPowerPlan(btn){
+  if (!window.__TAURI__){ showToast('Só funciona no app instalado'); return; }
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.querySelector('em').textContent = 'Ativando...';
+  try{
+    const { invoke } = window.__TAURI__.core;
+    // se o plano já foi importado antes nessa máquina, só ativa de novo (sem duplicar)
+    const plans = await invoke('list_power_plans');
+    const existing = plans.find(p => p.name.trim().toLowerCase() === 'fluxtweakers');
+    let script;
+    if (existing){
+      script = `powercfg /setactive ${existing.guid}`;
+    } else {
+      const filePath = await invoke('extract_fluxtweakers_plan_file');
+      script = `powercfg -import "${filePath}"\nfor /f "tokens=4 delims= " %%i in ('powercfg /list ^| findstr /I "FLUXTWEAKERS"') do powercfg /setactive %%i`;
+    }
+    await saveOrRunScript(script, 'ativar-plano-fluxtweakers-dgeras.bat');
+    showToast('Plano FluxTweakers ativado');
+  }catch(err){
+    showToast('Não foi possível ativar: ' + err);
+  }
+  btn.disabled = false;
+  btn.innerHTML = original;
+  setTimeout(loadPowerPlans, 900);
+}
 
 async function loadDetectedGames(){
   const list = document.getElementById('detectedGamesList');
@@ -5542,6 +5581,13 @@ function renderPanel(catId){
         </div>
         <button id="rescanPowerPlansBtn" class="preset-btn">↻ Atualizar</button>
       </div>
+      <button id="activateFluxPlanBtn" class="power-plan-flux-btn">
+        ${lineIcon(homeLine())}
+        <span>
+          <b>Ativar plano FluxTweakers</b>
+          <em>Configuração de energia própria do painel, pronta pra usar</em>
+        </span>
+      </button>
       <div id="powerPlanList" class="power-plan-list">
         <p class="power-plan-empty">Carregando planos de energia...</p>
       </div>
@@ -5796,6 +5842,7 @@ function gameTileIcon(title, group){
 
   if(catId === 'power'){
     panel.querySelector('#rescanPowerPlansBtn')?.addEventListener('click', ()=> loadPowerPlans());
+    panel.querySelector('#activateFluxPlanBtn')?.addEventListener('click', (e)=> activateFluxPowerPlan(e.currentTarget));
     loadPowerPlans();
   }
 

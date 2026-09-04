@@ -271,6 +271,21 @@ fn list_power_plans() -> Result<Vec<PowerPlan>, String> {
     Ok(Vec::new())
 }
 
+/// O plano de energia "FLUXTWEAKERS" (ajustado à mão pelo Marcos) vem embutido
+/// dentro do próprio .exe — não é um arquivo solto que pode se perder ou faltar
+/// na instalação. Isso só escreve o arquivo num local temporário; a importação
+/// de verdade (que precisa de admin) é feita depois, via o mesmo mecanismo
+/// elevado que já roda os outros ajustes do painel.
+static FLUXTWEAKERS_POWER_PLAN: &[u8] = include_bytes!("../resources/fluxtweakers-plan.pow");
+
+#[tauri::command]
+fn extract_fluxtweakers_plan_file() -> Result<String, String> {
+    let path = std::env::temp_dir().join("fluxtweakers-plan.pow");
+    fs::write(&path, FLUXTWEAKERS_POWER_PLAN)
+        .map_err(|e| format!("Não consegui preparar o plano de energia: {e}"))?;
+    Ok(path.to_string_lossy().to_string())
+}
+
 /// Detecta jogos realmente instalados na máquina (sem precisar de admin, só leitura):
 /// olha as bibliotecas da Steam (libraryfolders.vdf + appmanifest_*.acf), os
 /// manifestos da Epic Games, as chaves de instalação da Ubisoft Connect no registro,
@@ -1482,7 +1497,7 @@ fn main() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));
