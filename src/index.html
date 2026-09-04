@@ -475,6 +475,31 @@
   .detected-games-head p{margin:0;font-size:11.8px;color:var(--item-muted);line-height:1.5;max-width:440px;}
   .detected-games-list{display:flex;flex-direction:column;gap:8px;}
   .detected-games-empty{margin:8px 0;font-size:12.5px;color:var(--muted);text-align:center;padding:10px;}
+
+  /* ===== Plano de energia (aba Energia) ===== */
+  .power-plan-box{
+    background:var(--item-bg);border:1px solid var(--item-border);border-radius:12px;
+    padding:16px;margin-bottom:14px;
+  }
+  .power-plan-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px;}
+  .power-plan-head h3{margin:0 0 4px;font-size:14px;color:var(--item-text);}
+  .power-plan-head p{margin:0;font-size:11.8px;color:var(--item-muted);line-height:1.5;max-width:440px;}
+  .power-plan-list{display:flex;flex-direction:column;gap:8px;}
+  .power-plan-empty{margin:8px 0;font-size:12.5px;color:var(--muted);text-align:center;padding:10px;}
+  .power-plan-item{
+    display:flex;align-items:center;gap:10px;text-align:left;width:100%;
+    background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 14px;
+    cursor:pointer;transition:.15s;font-family:var(--sans);
+  }
+  .power-plan-item:hover{border-color:var(--tab-accent);transform:translateY(-1px);}
+  .power-plan-item.active{border-color:var(--accent);background:var(--accent-dim);}
+  .power-plan-dot{width:8px;height:8px;border-radius:50%;background:var(--muted2);flex-shrink:0;}
+  .power-plan-item.active .power-plan-dot{background:var(--accent);box-shadow:0 0 6px var(--accent);}
+  .power-plan-name{flex:1;font-size:13px;font-weight:600;color:var(--text);}
+  .power-plan-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--accent);background:var(--accent-dim);padding:3px 8px;border-radius:20px;}
+  .power-plan-unlock{border-style:dashed;color:var(--muted);}
+  .power-plan-unlock .power-plan-name{color:var(--muted);font-weight:600;}
+  .power-plan-unlock:hover{color:var(--text);border-color:var(--muted2);}
   .game-detected-card{
     display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
     background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;
@@ -4676,6 +4701,56 @@ async function applyGamePreset(exePath, preset, btn, gameName){
     if (note && graphicsMsg) note.textContent = graphicsMsg;
   }
 }
+// ---------- Plano de energia: lista real do Windows (powercfg) + trocar/desbloquear ----------
+const ULTIMATE_PERFORMANCE_GUID = 'e9a42b02-d5df-448d-aa00-03f14749eb61';
+async function loadPowerPlans(){
+  const list = document.getElementById('powerPlanList');
+  if (!list) return;
+  if (!window.__TAURI__){
+    list.innerHTML = `<p class="power-plan-empty">Só funciona no app instalado.</p>`;
+    return;
+  }
+  list.innerHTML = `<p class="power-plan-empty">Procurando planos de energia...</p>`;
+  try{
+    const { invoke } = window.__TAURI__.core;
+    const plans = await invoke('list_power_plans');
+    const hasUltimate = plans.some(p => p.guid.toLowerCase() === ULTIMATE_PERFORMANCE_GUID);
+    let html = plans.map(p => `
+      <button class="power-plan-item ${p.active ? 'active' : ''}" data-guid="${p.guid}">
+        <span class="power-plan-dot"></span>
+        <span class="power-plan-name">${p.name}</span>
+        ${p.active ? '<span class="power-plan-tag">Ativo</span>' : ''}
+      </button>
+    `).join('');
+    if(!hasUltimate){
+      html += `<button class="power-plan-item power-plan-unlock" id="unlockUltimateBtn">
+        <span class="power-plan-dot"></span>
+        <span class="power-plan-name">Desbloquear "Desempenho Máximo" (oculto)</span>
+      </button>`;
+    }
+    list.innerHTML = html || `<p class="power-plan-empty">Nenhum plano encontrado.</p>`;
+    list.querySelectorAll('.power-plan-item[data-guid]').forEach(btn=>{
+      btn.addEventListener('click', ()=> activatePowerPlan(btn.dataset.guid, btn));
+    });
+    document.getElementById('unlockUltimateBtn')?.addEventListener('click', async (e)=>{
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      btn.querySelector('.power-plan-name').textContent = 'Desbloqueando...';
+      await saveOrRunScript(`powercfg -duplicatescheme ${ULTIMATE_PERFORMANCE_GUID}`, 'desbloquear-desempenho-maximo-dgeras.bat');
+      setTimeout(loadPowerPlans, 800);
+    });
+  }catch(err){
+    list.innerHTML = `<p class="power-plan-empty">Não consegui listar: ${err}</p>`;
+  }
+}
+async function activatePowerPlan(guid, btn){
+  const original = btn.innerHTML;
+  btn.innerHTML = '<span class="power-plan-name">Ativando...</span>';
+  await saveOrRunScript(`powercfg /setactive ${guid}`, 'ativar-plano-energia-dgeras.bat');
+  showToast('Plano de energia ativado');
+  setTimeout(loadPowerPlans, 700);
+}
+
 async function loadDetectedGames(){
   const list = document.getElementById('detectedGamesList');
   if (!list) return;
@@ -5458,6 +5533,21 @@ function renderPanel(catId){
     <div class="info-card">${VENDOR_INFO[cat.special][cur]}</div>`;
   }
 
+  if(catId === 'power'){
+    html += `<div class="power-plan-box">
+      <div class="power-plan-head">
+        <div>
+          <h3>Plano de energia ativo</h3>
+          <p>O Windows usa isso pra decidir entre economizar bateria ou dar prioridade a desempenho. Clique num plano pra ativá-lo na hora.</p>
+        </div>
+        <button id="rescanPowerPlansBtn" class="preset-btn">↻ Atualizar</button>
+      </div>
+      <div id="powerPlanList" class="power-plan-list">
+        <p class="power-plan-empty">Carregando planos de energia...</p>
+      </div>
+    </div>`;
+  }
+
   if(cat.special === 'ram'){
     html += `<div class="ram-dashboard" id="ramDashboard">
       <div class="ram-metrics-row" id="ramMetricsRow"></div>
@@ -5702,6 +5792,11 @@ function gameTileIcon(title, group){
 
     panel.querySelector('#rescanGamesBtn')?.addEventListener('click', ()=> loadDetectedGames());
     loadDetectedGames();
+  }
+
+  if(catId === 'power'){
+    panel.querySelector('#rescanPowerPlansBtn')?.addEventListener('click', ()=> loadPowerPlans());
+    loadPowerPlans();
   }
 
   panel.querySelectorAll('input[type=checkbox]').forEach(c=>{

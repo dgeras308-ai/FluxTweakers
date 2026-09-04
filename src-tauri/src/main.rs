@@ -222,6 +222,55 @@ fn apply_game_graphics_preset(game_name: String, preset: String) -> GraphicsPres
     GraphicsPresetResult{ applied: false, message: "Disponível só no Windows".into() }
 }
 
+#[derive(Serialize, Clone)]
+struct PowerPlan {
+    name: String,
+    guid: String,
+    active: bool,
+}
+
+/// Lista os planos de energia reais do Windows (powercfg /list) — não precisa de
+/// admin só pra ler. O plano "Desempenho Máximo" só aparece aqui depois de
+/// desbloqueado (ele vem oculto por padrão em quase todo Windows).
+#[cfg(target_os = "windows")]
+#[tauri::command]
+fn list_power_plans() -> Result<Vec<PowerPlan>, String> {
+    let output = Command::new("powercfg")
+        .args(["/list"])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output()
+        .map_err(|e| format!("Não consegui listar os planos: {e}"))?;
+    let text = String::from_utf8_lossy(&output.stdout);
+    let mut plans = Vec::new();
+    for line in text.lines() {
+        let line = line.trim();
+        if !line.to_lowercase().starts_with("power scheme guid:") { continue; }
+        // formato: Power Scheme GUID: <guid>  (Nome do plano) [*]
+        let after_guid = &line[line.find(':').map(|i| i + 1).unwrap_or(0)..].trim();
+        let guid_end = after_guid.find(char::is_whitespace).unwrap_or(after_guid.len());
+        let guid = after_guid[..guid_end].trim().to_string();
+        let name = after_guid.get(guid_end..)
+            .unwrap_or("")
+            .trim()
+            .trim_start_matches('(')
+            .trim_end_matches('*')
+            .trim_end_matches(')')
+            .trim()
+            .to_string();
+        let active = line.trim_end().ends_with('*');
+        if !guid.is_empty() {
+            plans.push(PowerPlan { name: if name.is_empty() { "Plano sem nome".into() } else { name }, guid, active });
+        }
+    }
+    Ok(plans)
+}
+
+#[cfg(not(target_os = "windows"))]
+#[tauri::command]
+fn list_power_plans() -> Result<Vec<PowerPlan>, String> {
+    Ok(Vec::new())
+}
+
 /// Detecta jogos realmente instalados na máquina (sem precisar de admin, só leitura):
 /// olha as bibliotecas da Steam (libraryfolders.vdf + appmanifest_*.acf), os
 /// manifestos da Epic Games, as chaves de instalação da Ubisoft Connect no registro,
@@ -1433,7 +1482,7 @@ fn main() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));
