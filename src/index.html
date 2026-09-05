@@ -103,10 +103,14 @@
   #bgFallback{
     position:fixed;inset:0;pointer-events:none;
     background:
+      radial-gradient(1.2px 1.2px at 20px 20px, rgba(255,255,255,.045) 0, transparent 100%),
+      radial-gradient(1.2px 1.2px at 65px 55px, rgba(255,255,255,.035) 0, transparent 100%),
+      radial-gradient(1px 1px at 110px 15px, rgba(255,255,255,.03) 0, transparent 100%),
       radial-gradient(ellipse 1100px 700px at 20% 0%, rgba(255,255,255,.05), transparent 60%),
       radial-gradient(ellipse 900px 800px at 85% 15%, rgba(255,255,255,.03), transparent 55%),
       radial-gradient(ellipse 1000px 900px at 50% 105%, rgba(255,255,255,.035), transparent 60%),
       linear-gradient(180deg, #0f0f12 0%, #08080a 100%);
+    background-size:140px 140px, 140px 140px, 140px 140px, auto, auto, auto, auto;
   }
   #bg3d{position:fixed;inset:0;width:100vw;height:100vh;display:block;pointer-events:none;}
 
@@ -427,7 +431,14 @@
     background:transparent;border:1px solid transparent;color:var(--muted);
     padding:9px 10px 9px 13px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;
     font-family:var(--sans);transition:background .16s ease,color .16s ease,transform .12s ease;width:100%;
+    overflow:hidden;
   }
+  aside#tabs button::before{
+    content:"";position:absolute;left:0;top:50%;width:3px;height:0;border-radius:0 3px 3px 0;
+    background:var(--accent);transform:translateY(-50%);
+    transition:height .22s cubic-bezier(.2,.8,.2,1);
+  }
+  aside#tabs button.active::before{height:60%;}
   aside#tabs button svg{width:20px;height:20px;flex-shrink:0;transition:transform .15s;}
   aside#tabs button:active{transform:scale(.965);}
   aside#tabs button.active svg{animation:tabIconPop .4s cubic-bezier(.34,1.56,.64,1);}
@@ -443,7 +454,8 @@
   .icon-tile img{width:76%;height:76%;object-fit:contain;display:block;}
   aside#tabs button:hover{color:var(--text);background:var(--card);}
 
-  aside#tabs button.active{background:var(--tab-accent);color:#08151a;}
+  aside#tabs button.active{background:var(--tab-accent);color:#08151a;box-shadow:0 4px 14px -6px var(--tab-accent-dim);}
+  aside#tabs button.active::before{background:#08151a;opacity:.35;}
   aside#tabs button.active .label{color:#08151a;}
   aside#tabs button .label{white-space:nowrap;flex:1;text-transform:uppercase;font-size:11.5px;letter-spacing:.045em;font-weight:700;}
   aside#tabs button .count{
@@ -610,12 +622,18 @@
   .home-stat-dot.ram{background:#b48cff;}
   .home-stat-dot.disk{background:#4ade80;}
   .home-stat-dot.gpu{background:#ff9f5a;}
-  .home-stat-bar{height:6px;border-radius:4px;background:var(--border-soft);overflow:hidden;}
-  .home-stat-bar-fill{height:100%;border-radius:4px;width:0%;transition:width .6s ease;}
-  .home-stat-bar-fill.cpu{background:#5ab8ff;}
-  .home-stat-bar-fill.ram{background:#b48cff;}
-  .home-stat-bar-fill.disk{background:#4ade80;}
-  .home-stat-bar-fill.gpu{background:#ff9f5a;}
+  .home-stat-bar{height:7px;border-radius:4px;background:var(--border-soft);overflow:hidden;position:relative;}
+  .home-stat-bar-fill{height:100%;border-radius:4px;width:0%;transition:width .8s cubic-bezier(.2,.8,.2,1);position:relative;}
+  .home-stat-bar-fill::after{
+    content:"";position:absolute;inset:0;
+    background:linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent);
+    animation:statShine 2.6s ease-in-out infinite;
+  }
+  @keyframes statShine{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}
+  .home-stat-bar-fill.cpu{background:linear-gradient(90deg, #2f8fd6, #5ab8ff);box-shadow:0 0 8px -1px #5ab8ff;}
+  .home-stat-bar-fill.ram{background:linear-gradient(90deg, #8a5cf0, #b48cff);box-shadow:0 0 8px -1px #b48cff;}
+  .home-stat-bar-fill.disk{background:linear-gradient(90deg, #2fb867, #4ade80);box-shadow:0 0 8px -1px #4ade80;}
+  .home-stat-bar-fill.gpu{background:linear-gradient(90deg, #e8792f, #ff9f5a);box-shadow:0 0 8px -1px #ff9f5a;}
 
   .home-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
   @media (max-width:820px){.home-grid{grid-template-columns:1fr;}}
