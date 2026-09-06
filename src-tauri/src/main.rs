@@ -1351,8 +1351,16 @@ async fn run_ram_clean(mode: Option<String>) -> Result<String, String> {
         .map(|o| o.status.success())
         .unwrap_or(false);
 
+    // IMPORTANTE: setup_ram_cleaner() faz uma espera BLOQUEANTE (a criação da tarefa
+    // elevada usa .wait()). Chamar isso direto aqui prenderia a mesma thread async
+    // que o Tauri usa pra devolver a resposta pro app — é a mesma causa do bug que
+    // travava a Verificação Profissional em "Verificando..." pra sempre. Por isso
+    // roda em spawn_blocking, numa thread própria, só na primeiríssima vez (quando
+    // a tarefa agendada ainda não existe).
     if !task_exists {
-        setup_ram_cleaner()?;
+        tokio::task::spawn_blocking(setup_ram_cleaner)
+            .await
+            .map_err(|e| format!("Falha interna ao preparar a limpeza: {e}"))??;
     }
 
     #[cfg(target_os = "windows")]
