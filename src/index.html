@@ -6465,8 +6465,10 @@ function buildScript(){
       } else if(item.dynamic === 'pagefile'){
         const initial = Math.round(ramGB*1.5*1024);
         const max = Math.round(ramGB*2*1024);
-        lines.push(`wmic computersystem where name="%computername%" set AutomaticManagedPagefile=False`);
-        lines.push(`wmic pagefileset where name="C:\\pagefile.sys" set InitialSize=${initial},MaximumSize=${max}`);
+        // wmic foi REMOVIDO do Windows 11 24H2+ pela Microsoft — usar PowerShell/CIM
+        // no lugar, que funciona em qualquer versão do Windows (10, 11, com ou sem wmic).
+        const pagefilePs = `$cs = Get-CimInstance Win32_ComputerSystem; Set-CimInstance -InputObject $cs -Property @{AutomaticManagedPagefile=$false} -ErrorAction Stop; $pf = Get-CimInstance Win32_PageFileSetting -Filter "Name='C:\\\\pagefile.sys'" -ErrorAction SilentlyContinue; if ($pf) { Set-CimInstance -InputObject $pf -Property @{InitialSize=${initial}; MaximumSize=${max}} } else { New-CimInstance -ClassName Win32_PageFileSetting -Property @{Name='C:\\pagefile.sys'; InitialSize=${initial}; MaximumSize=${max}} | Out-Null }`;
+        lines.push(`powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand ${toEncodedCommand(pagefilePs)}`);
       } else if(item.variants){
         const sel = document.getElementById('var_'+item.id);
         const val = sel ? sel.value : item.variants[0].value;
