@@ -1203,6 +1203,14 @@ public class FluxRam {
 Add-Type -TypeDefinition $sig -ErrorAction SilentlyContinue
 
 $before = (Get-Counter '\Memory\Available MBytes').CounterSamples[0].CookedValue
+function Get-StandbyMB {
+    try {
+        $c = Get-Counter -Counter '\Memory\Standby Cache Core Bytes','\Memory\Standby Cache Normal Priority Bytes','\Memory\Standby Cache Reserve Bytes' -ErrorAction Stop
+        $sum = ($c.CounterSamples | Measure-Object -Property CookedValue -Sum).Sum
+        return [math]::Round($sum / 1MB, 0)
+    } catch { return -1 }
+}
+$standbyBefore = Get-StandbyMB
 
 function Enable-Priv($name) {
     $TOKEN_ADJUST_PRIVILEGES = 0x20
@@ -1229,20 +1237,26 @@ Enable-Priv "SeDebugPrivilege"
 $modeFile = "$env:TEMP\FluxTweakers\ram_action_mode.txt"
 $mode = if (Test-Path $modeFile) { (Get-Content $modeFile -Raw).Trim() } else { "standby" }
 
+$trimmedCount = 0
 if ($mode -eq "workingset") {
     # Técnica real de redução agressiva de RAM (mesma do Mem Reduct/RAMMap):
     # força cada processo a devolver pro Windows a memória "working set" que
     # não está sendo usada ativamente agora — é isso que derruba o número
     # de "em uso" de verdade, não só o cache.
+    # IMPORTANTE: EmptyWorkingSet exige PROCESS_QUERY_INFORMATION +
+    # PROCESS_VM_OPERATION — faltando o PROCESS_VM_OPERATION, a chamada falha
+    # (Acesso Negado) silenciosamente pra TODO processo, sem soltar nada.
+    $PROCESS_QUERY_INFORMATION = 0x0400
     $PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+    $PROCESS_VM_OPERATION = 0x0008
     $PROCESS_SET_QUOTA = 0x0100
-    $access = $PROCESS_QUERY_LIMITED_INFORMATION -bor $PROCESS_SET_QUOTA
+    $access = $PROCESS_QUERY_INFORMATION -bor $PROCESS_QUERY_LIMITED_INFORMATION -bor $PROCESS_VM_OPERATION -bor $PROCESS_SET_QUOTA
 
     Get-Process | ForEach-Object {
         try {
             $h = [FluxRam]::OpenProcess($access, $false, $_.Id)
             if ($h -ne [IntPtr]::Zero) {
-                [FluxRam]::EmptyWorkingSet($h) | Out-Null
+                if ([FluxRam]::EmptyWorkingSet($h)) { $trimmedCount++ }
                 [FluxRam]::CloseHandle($h) | Out-Null
             }
         } catch {}
@@ -1258,14 +1272,22 @@ $ptr = [System.Runtime.InteropServices.Marshal]::AllocHGlobal(4)
 $status = [FluxRam]::NtSetSystemInformation($SystemMemoryListInformation, $ptr, 4)
 [System.Runtime.InteropServices.Marshal]::FreeHGlobal($ptr)
 
-Start-Sleep -Milliseconds 500
+Start-Sleep -Milliseconds 700
 $after = (Get-Counter '\Memory\Available MBytes').CounterSamples[0].CookedValue
+$standbyAfter = Get-StandbyMB
+
+# "Available MBytes" já CONTA a standby list como "disponível" antes mesmo de
+# limpar — por isso, no modo "standby", essa métrica quase não se move mesmo
+# quando a limpeza funciona de verdade. O número que realmente mostra o efeito
+# é o tamanho da própria standby list caindo, então usamos ele quando disponível.
 $freed = [math]::Round($after - $before, 0)
+$standbyFreed = if ($standbyBefore -ge 0 -and $standbyAfter -ge 0) { $standbyBefore - $standbyAfter } else { -1 }
+$reportedFreed = if ($mode -eq "standby" -and $standbyFreed -ge 0) { [math]::Max($freed, $standbyFreed) } else { $freed }
 
 $resultDir = "$env:TEMP\FluxTweakers"
 New-Item -ItemType Directory -Force -Path $resultDir | Out-Null
 if ($status -eq 0) {
-    "OK|$freed" | Out-File -FilePath "$resultDir\ram_clean_result.txt" -Encoding utf8
+    "OK|$reportedFreed|trimmed=$trimmedCount" | Out-File -FilePath "$resultDir\ram_clean_result.txt" -Encoding utf8
 } else {
     "ERRO|status=$status" | Out-File -FilePath "$resultDir\ram_clean_result.txt" -Encoding utf8
 }
@@ -1391,8 +1413,9 @@ async fn run_ram_clean(mode: Option<String>) -> Result<String, String> {
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
         if let Ok(content) = fs::read_to_string(&result_path) {
             let content = content.trim();
-            if let Some(freed) = content.strip_prefix("OK|") {
-                let freed_mb: i64 = freed.parse().unwrap_or(0);
+            if let Some(rest) = content.strip_prefix("OK|") {
+                let freed_part = rest.split('|').next().unwrap_or("0");
+                let freed_mb: i64 = freed_part.parse().unwrap_or(0);
                 return Ok(if freed_mb > 0 {
                     format!("RAM limpa — cerca de {freed_mb} MB liberados")
                 } else {
