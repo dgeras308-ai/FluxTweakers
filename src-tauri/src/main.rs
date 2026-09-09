@@ -1297,14 +1297,23 @@ if ($status -eq 0) {
 /// Prepara tudo pra limpeza automática funcionar: grava o script de limpeza
 /// num local fixo e registra a Tarefa Agendada elevada. Só precisa rodar
 /// uma vez (pede UAC essa única vez); chamadas seguintes são silenciosas.
-#[tauri::command]
-fn setup_ram_cleaner() -> Result<String, String> {
+/// Prepara tudo pra limpeza automática funcionar: grava o script de limpeza
+/// num local fixo (SEMPRE, mesmo que a tarefa já exista — assim uma
+/// atualização do app corrige o script de quem já usava antes, sem precisar
+/// recriar a tarefa) e registra a Tarefa Agendada elevada só na primeira vez
+/// (pede UAC essa única vez); chamadas seguintes são silenciosas.
+fn write_ram_clean_script() -> Result<std::path::PathBuf, String> {
     let dir = std::env::temp_dir().join("FluxTweakers");
     fs::create_dir_all(&dir).map_err(|e| format!("Falha ao criar pasta: {e}"))?;
     let ps1_path = dir.join("ram_clean.ps1");
     fs::write(&ps1_path, ram_clean_ps1_content())
         .map_err(|e| format!("Falha ao gravar script de limpeza: {e}"))?;
+    Ok(ps1_path)
+}
 
+#[tauri::command]
+fn setup_ram_cleaner() -> Result<String, String> {
+    let ps1_path = write_ram_clean_script()?;
     let ps1_str = ps1_path.to_string_lossy().to_string();
 
     // Cria (ou substitui) a tarefa agendada, rodando como o usuário atual
@@ -1350,6 +1359,12 @@ async fn run_ram_clean(mode: Option<String>) -> Result<String, String> {
     let _ = fs::create_dir_all(&dir);
     let mode_str = mode.unwrap_or_else(|| "standby".to_string());
     let _ = fs::write(dir.join("ram_action_mode.txt"), &mode_str);
+
+    // Regrava o script SEMPRE (não precisa de admin pra isso — só escrever um
+    // arquivo de texto). Isso garante que quem já usava uma versão antiga do
+    // app (com a tarefa agendada já criada) também passa a rodar a versão
+    // corrigida do script, sem precisar recriar a tarefa nem pedir UAC de novo.
+    write_ram_clean_script()?;
 
     let result_path = dir.join("ram_clean_result.txt");
     let _ = fs::remove_file(&result_path); // limpa resultado antigo antes de rodar de novo
