@@ -736,6 +736,7 @@
   }
   .ram-action-card h4{margin:0;font-size:13px;color:var(--text);}
   .ram-action-card p{margin:0;font-size:11.5px;color:var(--muted);line-height:1.5;flex:1;}
+  .ram-act-result{margin:0 !important;font-size:11.5px !important;font-weight:700;color:var(--accent) !important;flex:none !important;min-height:14px;}
 
   .ram-processes-card{
     background:var(--item-bg);border:1px solid var(--item-border);border-radius:var(--radius);
@@ -5302,16 +5303,21 @@ async function enableRamCleaner(){
   }
 }
 
-async function triggerRamClean(silent, mode){
+async function triggerRamClean(silent, mode, inlineStatusId){
   if (!window.__TAURI__) return;
   const { invoke } = window.__TAURI__.core;
+  const inlineEl = inlineStatusId ? document.getElementById(inlineStatusId) : null;
   try{
     if(!silent) setRamCleanerStatus('Limpando...');
+    if(inlineEl) inlineEl.textContent = 'Limpando...';
     const msg = await invoke('run_ram_clean', { mode: mode || 'standby' });
-    setRamCleanerStatus(msg + ' — ' + new Date().toLocaleTimeString('pt-BR'));
+    const stamped = msg + ' — ' + new Date().toLocaleTimeString('pt-BR');
+    setRamCleanerStatus(stamped);
+    if(inlineEl) inlineEl.textContent = msg;
     return msg;
   }catch(err){
     setRamCleanerStatus('Erro: ' + err);
+    if(inlineEl) inlineEl.textContent = 'Erro: ' + err;
     throw err;
   }
 }
@@ -5473,11 +5479,11 @@ async function loadRamDashboard(){
 document.addEventListener('click', (e)=>{
   if(e.target?.id === 'ramActWorkingset'){
     e.target.textContent = 'Reduzindo...';
-    triggerRamClean(false, 'workingset').finally(()=>{ e.target.textContent = 'Reduzir em uso'; loadRamDashboard(); });
+    triggerRamClean(false, 'workingset', 'ramActWorkingsetResult').finally(()=>{ e.target.textContent = 'Reduzir em uso'; loadRamDashboard(); });
   }
   if(e.target?.id === 'ramActStandby'){
     e.target.textContent = 'Limpando...';
-    triggerRamClean(false, 'standby').finally(()=>{ e.target.textContent = 'Limpar cache'; loadRamDashboard(); });
+    triggerRamClean(false, 'standby', 'ramActStandbyResult').finally(()=>{ e.target.textContent = 'Limpar cache'; loadRamDashboard(); });
   }
 });
 
@@ -5626,11 +5632,13 @@ function renderPanel(catId){
           <h4>Reduzir memória em uso</h4>
           <p>Força cada processo a devolver memória que não está usando agora — a limpeza mais forte, igual ferramentas como Mem Reduct fazem.</p>
           <button class="preset-btn" id="ramActWorkingset">Reduzir em uso</button>
+          <p class="ram-act-result" id="ramActWorkingsetResult"></p>
         </div>
         <div class="ram-action-card">
           <h4>Limpar cache do sistema</h4>
           <p>Libera memória "presa" em cache (Standby List) — mesma técnica do ISLC/RAMMap.</p>
           <button class="preset-btn" id="ramActStandby">Limpar cache</button>
+          <p class="ram-act-result" id="ramActStandbyResult"></p>
         </div>
       </div>
       <div class="ram-processes-card">

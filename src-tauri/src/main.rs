@@ -980,7 +980,13 @@ fn read_gpu_usage_windows() -> f64 {
 fn read_cache_bytes_windows() -> f64 {
     // Mesmo contador que o Gerenciador de Tarefas usa pra mostrar "Em cache" —
     // é isso que realmente cai quando a limpeza de Standby List roda de verdade.
-    let ps_cmd = "(Get-Counter '\\Memory\\Cache Bytes' -ErrorAction SilentlyContinue).CounterSamples[0].CookedValue";
+    // IMPORTANTE: usa WMI (Win32_PerfFormattedData_PerfOS_Memory) em vez de
+    // Get-Counter com nome em inglês — o Get-Counter só reconhece o nome
+    // LOCALIZADO do contador (em Windows em português, "\Memory\Cache Bytes"
+    // não existe com esse nome) e falhava silenciosamente, sempre voltando
+    // zero. As propriedades WMI são sempre em inglês, não importa o idioma
+    // do Windows instalado.
+    let ps_cmd = "(Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory -ErrorAction SilentlyContinue).CacheBytes";
 
     let output = Command::new("powershell")
         .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps_cmd])
@@ -1202,11 +1208,12 @@ public class FluxRam {
 "@
 Add-Type -TypeDefinition $sig -ErrorAction SilentlyContinue
 
-$before = (Get-Counter '\Memory\Available MBytes').CounterSamples[0].CookedValue
+function Get-MemPerf { Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory -ErrorAction SilentlyContinue }
+$before = (Get-MemPerf).AvailableMBytes
 function Get-StandbyMB {
     try {
-        $c = Get-Counter -Counter '\Memory\Standby Cache Core Bytes','\Memory\Standby Cache Normal Priority Bytes','\Memory\Standby Cache Reserve Bytes' -ErrorAction Stop
-        $sum = ($c.CounterSamples | Measure-Object -Property CookedValue -Sum).Sum
+        $m = Get-MemPerf
+        $sum = [double]$m.StandbyCacheCoreBytes + [double]$m.StandbyCacheNormalPriorityBytes + [double]$m.StandbyCacheReserveBytes
         return [math]::Round($sum / 1MB, 0)
     } catch { return -1 }
 }
@@ -1273,7 +1280,7 @@ $status = [FluxRam]::NtSetSystemInformation($SystemMemoryListInformation, $ptr, 
 [System.Runtime.InteropServices.Marshal]::FreeHGlobal($ptr)
 
 Start-Sleep -Milliseconds 700
-$after = (Get-Counter '\Memory\Available MBytes').CounterSamples[0].CookedValue
+$after = (Get-MemPerf).AvailableMBytes
 $standbyAfter = Get-StandbyMB
 
 # "Available MBytes" já CONTA a standby list como "disponível" antes mesmo de
