@@ -1209,15 +1209,17 @@ public class FluxRam {
 Add-Type -TypeDefinition $sig -ErrorAction SilentlyContinue
 
 function Get-MemPerf { Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory -ErrorAction SilentlyContinue }
-$before = (Get-MemPerf).AvailableMBytes
-function Get-StandbyMB {
+function Get-StandbyMBFrom($m) {
     try {
-        $m = Get-MemPerf
         $sum = [double]$m.StandbyCacheCoreBytes + [double]$m.StandbyCacheNormalPriorityBytes + [double]$m.StandbyCacheReserveBytes
         return [math]::Round($sum / 1MB, 0)
     } catch { return -1 }
 }
-$standbyBefore = Get-StandbyMB
+# Uma consulta WMI só antes, outra só depois — "disponível" e "cache" vêm do
+# mesmo objeto, não precisa perguntar duas vezes pra cada momento.
+$memBefore = Get-MemPerf
+$before = $memBefore.AvailableMBytes
+$standbyBefore = Get-StandbyMBFrom $memBefore
 
 function Enable-Priv($name) {
     $TOKEN_ADJUST_PRIVILEGES = 0x20
@@ -1280,8 +1282,9 @@ $status = [FluxRam]::NtSetSystemInformation($SystemMemoryListInformation, $ptr, 
 [System.Runtime.InteropServices.Marshal]::FreeHGlobal($ptr)
 
 Start-Sleep -Milliseconds 700
-$after = (Get-MemPerf).AvailableMBytes
-$standbyAfter = Get-StandbyMB
+$memAfter = Get-MemPerf
+$after = $memAfter.AvailableMBytes
+$standbyAfter = Get-StandbyMBFrom $memAfter
 
 # "Available MBytes" já CONTA a standby list como "disponível" antes mesmo de
 # limpar — por isso, no modo "standby", essa métrica quase não se move mesmo
@@ -1429,9 +1432,12 @@ async fn run_ram_clean(mode: Option<String>) -> Result<String, String> {
         _ => {}
     }
 
-    // Espera até 6 segundos pelo resultado (o script leva menos de 1s normalmente,
-    // mas dá uma folga pra máquinas mais lentas ou o Agendador demorar a iniciar).
-    for _ in 0..30 {
+    // Espera até 20 segundos pelo resultado. O script agora compila código C#
+    // (Add-Type) e faz várias consultas WMI — isso pode levar mais que os 6s
+    // que dávamos antes, principalmente em PCs mais lentos ou com antivírus
+    // pesado. Rodando em segundo plano (o app não trava esperando), então dar
+    // mais tempo aqui é só mais confiável, sem custo real de experiência.
+    for _ in 0..100 {
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
         if let Ok(content) = fs::read_to_string(&result_path) {
             let content = content.trim();
