@@ -1170,143 +1170,108 @@ const RAM_CLEAN_TASK_NAME: &str = "FluxTweakersRamClean";
 
 fn ram_clean_ps1_content() -> &'static str {
     r#"
-$sig = @"
+$ErrorActionPreference = 'Stop'
+$resultDir = "$env:TEMP\FluxTweakers"
+New-Item -ItemType Directory -Force -Path $resultDir | Out-Null
+$resultPath = "$resultDir\ram_clean_result.txt"
+
+try {
+    function Get-MemPerf { Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory -ErrorAction Stop }
+    function Get-StandbyMBFrom($m) {
+        $sum = [double]$m.StandbyCacheCoreBytes + [double]$m.StandbyCacheNormalPriorityBytes + [double]$m.StandbyCacheReserveBytes
+        return [math]::Round($sum / 1MB, 0)
+    }
+
+    $modeFile = "$env:TEMP\FluxTweakers\ram_action_mode.txt"
+    $mode = if (Test-Path $modeFile) { (Get-Content $modeFile -Raw).Trim() } else { "standby" }
+
+    $memBefore = Get-MemPerf
+    $before = $memBefore.AvailableMBytes
+    $standbyBefore = Get-StandbyMBFrom $memBefore
+
+    $trimmedCount = 0
+    if ($mode -eq "workingset") {
+        # Truque real e leve (sem precisar compilar nada): o próprio .NET, ao
+        # setar MinWorkingSet de um processo, chama por baixo dos panos a mesma
+        # API do Windows (SetProcessWorkingSetSize) que EmptyWorkingSet usa —
+        # só que sem precisar de Add-Type/compilar C# na hora, o que é lento e
+        # depende do compilador do .NET estar disponível/rápido na máquina.
+        Get-Process | ForEach-Object {
+            try {
+                $_.MinWorkingSet = $_.MinWorkingSet
+                $trimmedCount++
+            } catch {}
+        }
+    } else {
+        # Purgar a standby list (cache "solto") exige uma API não documentada
+        # do Windows (NtSetSystemInformation), que só dá pra chamar via P/Invoke
+        # — por isso só compila esse código C# quando é realmente essa a ação
+        # pedida, e não sempre, deixando "Reduzir em uso" bem mais rápido.
+        $sig = @"
 using System;
 using System.Runtime.InteropServices;
 public class FluxRam {
     [DllImport("ntdll.dll")]
     public static extern int NtSetSystemInformation(int InfoClass, IntPtr Info, int Length);
-
     [DllImport("advapi32.dll", SetLastError = true)]
     public static extern bool OpenProcessToken(IntPtr ProcessHandle, uint DesiredAccess, out IntPtr TokenHandle);
-
     [DllImport("advapi32.dll", SetLastError = true)]
     public static extern bool LookupPrivilegeValue(string lpSystemName, string lpName, out long lpLuid);
-
     [StructLayout(LayoutKind.Sequential)]
     public struct LUID_AND_ATTRIBUTES { public long Luid; public uint Attributes; }
-
     [StructLayout(LayoutKind.Sequential)]
     public struct TOKEN_PRIVILEGES { public uint PrivilegeCount; public LUID_AND_ATTRIBUTES Privileges; }
-
     [DllImport("advapi32.dll", SetLastError = true)]
     public static extern bool AdjustTokenPrivileges(IntPtr TokenHandle, bool DisableAllPrivileges,
         ref TOKEN_PRIVILEGES NewState, uint BufferLength, IntPtr PreviousState, IntPtr ReturnLength);
-
     [DllImport("kernel32.dll")]
     public static extern IntPtr GetCurrentProcess();
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern IntPtr OpenProcess(uint processAccess, bool bInheritHandle, int processId);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern bool CloseHandle(IntPtr hObject);
-
-    [DllImport("psapi.dll", SetLastError = true)]
-    public static extern bool EmptyWorkingSet(IntPtr hProcess);
 }
 "@
-Add-Type -TypeDefinition $sig -ErrorAction SilentlyContinue
+        Add-Type -TypeDefinition $sig -ErrorAction Stop
 
-function Get-MemPerf { Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory -ErrorAction SilentlyContinue }
-function Get-StandbyMBFrom($m) {
-    try {
-        $sum = [double]$m.StandbyCacheCoreBytes + [double]$m.StandbyCacheNormalPriorityBytes + [double]$m.StandbyCacheReserveBytes
-        return [math]::Round($sum / 1MB, 0)
-    } catch { return -1 }
-}
-# Uma consulta WMI só antes, outra só depois — "disponível" e "cache" vêm do
-# mesmo objeto, não precisa perguntar duas vezes pra cada momento.
-$memBefore = Get-MemPerf
-$before = $memBefore.AvailableMBytes
-$standbyBefore = Get-StandbyMBFrom $memBefore
+        $TOKEN_ADJUST_PRIVILEGES = 0x20
+        $TOKEN_QUERY = 0x8
+        $hToken = [IntPtr]::Zero
+        [FluxRam]::OpenProcessToken([FluxRam]::GetCurrentProcess(), ($TOKEN_ADJUST_PRIVILEGES -bor $TOKEN_QUERY), [ref]$hToken) | Out-Null
+        $luid = 0
+        [FluxRam]::LookupPrivilegeValue($null, "SeProfileSingleProcessPrivilege", [ref]$luid) | Out-Null
+        $priv = New-Object FluxRam+TOKEN_PRIVILEGES
+        $priv.PrivilegeCount = 1
+        $priv.Privileges = New-Object FluxRam+LUID_AND_ATTRIBUTES
+        $priv.Privileges.Luid = $luid
+        $priv.Privileges.Attributes = 0x2
+        [FluxRam]::AdjustTokenPrivileges($hToken, $false, [ref]$priv, 0, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
 
-function Enable-Priv($name) {
-    $TOKEN_ADJUST_PRIVILEGES = 0x20
-    $TOKEN_QUERY = 0x8
-    $hToken = [IntPtr]::Zero
-    [FluxRam]::OpenProcessToken([FluxRam]::GetCurrentProcess(), ($TOKEN_ADJUST_PRIVILEGES -bor $TOKEN_QUERY), [ref]$hToken) | Out-Null
-    $luid = 0
-    [FluxRam]::LookupPrivilegeValue($null, $name, [ref]$luid) | Out-Null
-    $priv = New-Object FluxRam+TOKEN_PRIVILEGES
-    $priv.PrivilegeCount = 1
-    $priv.Privileges = New-Object FluxRam+LUID_AND_ATTRIBUTES
-    $priv.Privileges.Luid = $luid
-    $priv.Privileges.Attributes = 0x2  # SE_PRIVILEGE_ENABLED
-    [FluxRam]::AdjustTokenPrivileges($hToken, $false, [ref]$priv, 0, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
-}
-
-# Habilita os dois privilégios que a limpeza de verdade precisa:
-# - SeProfileSingleProcessPrivilege: pra purgar a standby list
-# - SeDebugPrivilege: pra conseguir "tocar" em processos de outros usuários/sistema
-#   e forçar eles a soltarem memória que não estão usando de verdade agora
-Enable-Priv "SeProfileSingleProcessPrivilege"
-Enable-Priv "SeDebugPrivilege"
-
-$modeFile = "$env:TEMP\FluxTweakers\ram_action_mode.txt"
-$mode = if (Test-Path $modeFile) { (Get-Content $modeFile -Raw).Trim() } else { "standby" }
-
-$trimmedCount = 0
-if ($mode -eq "workingset") {
-    # Técnica real de redução agressiva de RAM (mesma do Mem Reduct/RAMMap):
-    # força cada processo a devolver pro Windows a memória "working set" que
-    # não está sendo usada ativamente agora — é isso que derruba o número
-    # de "em uso" de verdade, não só o cache.
-    # IMPORTANTE: EmptyWorkingSet exige PROCESS_QUERY_INFORMATION +
-    # PROCESS_VM_OPERATION — faltando o PROCESS_VM_OPERATION, a chamada falha
-    # (Acesso Negado) silenciosamente pra TODO processo, sem soltar nada.
-    $PROCESS_QUERY_INFORMATION = 0x0400
-    $PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
-    $PROCESS_VM_OPERATION = 0x0008
-    $PROCESS_SET_QUOTA = 0x0100
-    $access = $PROCESS_QUERY_INFORMATION -bor $PROCESS_QUERY_LIMITED_INFORMATION -bor $PROCESS_VM_OPERATION -bor $PROCESS_SET_QUOTA
-
-    Get-Process | ForEach-Object {
-        try {
-            $h = [FluxRam]::OpenProcess($access, $false, $_.Id)
-            if ($h -ne [IntPtr]::Zero) {
-                if ([FluxRam]::EmptyWorkingSet($h)) { $trimmedCount++ }
-                [FluxRam]::CloseHandle($h) | Out-Null
-            }
-        } catch {}
+        $SystemMemoryListInformation = 80
+        $MemoryPurgeStandbyList = 4
+        $ptr = [System.Runtime.InteropServices.Marshal]::AllocHGlobal(4)
+        [System.Runtime.InteropServices.Marshal]::WriteInt32($ptr, $MemoryPurgeStandbyList)
+        $status = [FluxRam]::NtSetSystemInformation($SystemMemoryListInformation, $ptr, 4)
+        [System.Runtime.InteropServices.Marshal]::FreeHGlobal($ptr)
+        if ($status -ne 0) { throw "NtSetSystemInformation retornou status=$status (privilégio não concedido ou chamada recusada)" }
     }
-}
 
-# Sempre purga a standby list também (cache "solto" que o Windows guarda),
-# combinando os dois efeitos pro resultado mais completo possível.
-$SystemMemoryListInformation = 80
-$MemoryPurgeStandbyList = 4
-$ptr = [System.Runtime.InteropServices.Marshal]::AllocHGlobal(4)
-[System.Runtime.InteropServices.Marshal]::WriteInt32($ptr, $MemoryPurgeStandbyList)
-$status = [FluxRam]::NtSetSystemInformation($SystemMemoryListInformation, $ptr, 4)
-[System.Runtime.InteropServices.Marshal]::FreeHGlobal($ptr)
+    Start-Sleep -Milliseconds 500
+    $memAfter = Get-MemPerf
+    $after = $memAfter.AvailableMBytes
+    $standbyAfter = Get-StandbyMBFrom $memAfter
 
-Start-Sleep -Milliseconds 700
-$memAfter = Get-MemPerf
-$after = $memAfter.AvailableMBytes
-$standbyAfter = Get-StandbyMBFrom $memAfter
+    # "Available MBytes" já CONTA a standby list como "disponível" antes mesmo
+    # de limpar — por isso, no modo "standby", essa métrica quase não se move
+    # mesmo quando a limpeza funciona de verdade. O número que realmente mostra
+    # o efeito é o tamanho da própria standby list caindo.
+    $freed = [math]::Round($after - $before, 0)
+    $standbyFreed = $standbyBefore - $standbyAfter
+    $reportedFreed = if ($mode -eq "standby") { [math]::Max($freed, $standbyFreed) } else { $freed }
 
-# "Available MBytes" já CONTA a standby list como "disponível" antes mesmo de
-# limpar — por isso, no modo "standby", essa métrica quase não se move mesmo
-# quando a limpeza funciona de verdade. O número que realmente mostra o efeito
-# é o tamanho da própria standby list caindo, então usamos ele quando disponível.
-$freed = [math]::Round($after - $before, 0)
-$standbyFreed = if ($standbyBefore -ge 0 -and $standbyAfter -ge 0) { $standbyBefore - $standbyAfter } else { -1 }
-$reportedFreed = if ($mode -eq "standby" -and $standbyFreed -ge 0) { [math]::Max($freed, $standbyFreed) } else { $freed }
-
-$resultDir = "$env:TEMP\FluxTweakers"
-New-Item -ItemType Directory -Force -Path $resultDir | Out-Null
-if ($status -eq 0) {
-    "OK|$reportedFreed|trimmed=$trimmedCount" | Out-File -FilePath "$resultDir\ram_clean_result.txt" -Encoding utf8
-} else {
-    "ERRO|status=$status" | Out-File -FilePath "$resultDir\ram_clean_result.txt" -Encoding utf8
+    "OK|$reportedFreed|trimmed=$trimmedCount" | Out-File -FilePath $resultPath -Encoding utf8
+} catch {
+    "ERRO|$($_.Exception.Message)" | Out-File -FilePath $resultPath -Encoding utf8
 }
 "#
 }
 
-/// Prepara tudo pra limpeza automática funcionar: grava o script de limpeza
-/// num local fixo e registra a Tarefa Agendada elevada. Só precisa rodar
-/// uma vez (pede UAC essa única vez); chamadas seguintes são silenciosas.
 /// Prepara tudo pra limpeza automática funcionar: grava o script de limpeza
 /// num local fixo (SEMPRE, mesmo que a tarefa já exista — assim uma
 /// atualização do app corrige o script de quem já usava antes, sem precisar
