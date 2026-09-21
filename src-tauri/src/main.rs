@@ -1397,12 +1397,14 @@ async fn run_ram_clean(mode: Option<String>) -> Result<String, String> {
         _ => {}
     }
 
-    // Espera até 20 segundos pelo resultado. O script agora compila código C#
-    // (Add-Type) e faz várias consultas WMI — isso pode levar mais que os 6s
-    // que dávamos antes, principalmente em PCs mais lentos ou com antivírus
-    // pesado. Rodando em segundo plano (o app não trava esperando), então dar
-    // mais tempo aqui é só mais confiável, sem custo real de experiência.
-    for _ in 0..100 {
+    // Espera até 45 segundos pelo resultado. Confirmado: o script em si já
+    // roda rápido agora — o atraso é o Agendador de Tarefas do Windows
+    // demorar pra REALMENTE disparar o processo depois do "schtasks /Run"
+    // (isso é assíncrono e o Windows não garante velocidade nenhuma aqui).
+    // Como o app já mostra "Limpando..." e não trava esperando, dar bastante
+    // margem aqui só evita um alarme falso de erro numa limpeza que só está
+    // demorando um pouco mais pra começar.
+    for _ in 0..225 {
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
         if let Ok(content) = fs::read_to_string(&result_path) {
             let content = content.trim();
