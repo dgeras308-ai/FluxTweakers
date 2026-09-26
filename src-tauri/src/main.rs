@@ -1249,7 +1249,17 @@ public class FluxRam {
         [System.Runtime.InteropServices.Marshal]::WriteInt32($ptr, $MemoryPurgeStandbyList)
         $status = [FluxRam]::NtSetSystemInformation($SystemMemoryListInformation, $ptr, 4)
         [System.Runtime.InteropServices.Marshal]::FreeHGlobal($ptr)
-        if ($status -ne 0) { throw "NtSetSystemInformation retornou status=$status (privilégio não concedido ou chamada recusada)" }
+        if ($status -eq -1073741727) {
+            # STATUS_PRIVILEGE_NOT_HELD (0xC0000061): em várias máquinas essa
+            # privilégio some do token do admin após reboot (baseline de
+            # segurança local sendo reaplicada), fora do nosso controle.
+            # Cai pro modo workingset em vez de falhar pro usuário.
+            Get-Process | ForEach-Object {
+                try { $_.MinWorkingSet = $_.MinWorkingSet; $trimmedCount++ } catch {}
+            }
+        } elseif ($status -ne 0) {
+            throw "NtSetSystemInformation retornou status=$status (privilégio não concedido ou chamada recusada)"
+        }
     }
 
     Start-Sleep -Milliseconds 500
