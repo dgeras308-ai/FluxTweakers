@@ -1151,204 +1151,295 @@ fn uuid_like() -> String {
     format!("{nanos:x}")
 }
 
-// ===== Limpeza de RAM (mesma técnica do ISLC / RAMMap) =====
+// ===== Limpeza de RAM (mesma técnica do ISLC / RAMMap) — REESCRITA DO ZERO =====
 //
 // O Windows guarda na "Standby List" partes de memória que já foram usadas
 // mas não estão mais ativas — ele mantém isso em cache achando que você pode
-// precisar de novo, só que às vezes isso deixa a RAM "presa" sem uso real.
-// A limpeza chama a mesma função interna do Windows (NtSetSystemInformation)
-// que o Gerenciador de Tarefas e ferramentas como RAMMap usam.
+// precisar de novo. A limpeza chama a mesma função interna do Windows
+// (NtSetSystemInformation) que o Gerenciador de Tarefas e ferramentas como
+// RAMMap usam.
 //
-// Isso PRECISA de admin. Pra não pedir senha toda hora (o objetivo é rodar
-// sozinho a cada 3 minutos), a gente cria uma Tarefa Agendada do Windows UMA
-// VEZ (pede UAC só nessa primeira vez), configurada como "privilégios mais
-// altos". Depois disso, o app só manda essa tarefa "rodar agora"
-// (schtasks /run), o que não pede senha de novo — o Windows já confia na
-// tarefa desde que ela foi criada com privilégio elevado.
+// Isso PRECISA de admin. Pra não pedir senha toda vez, a gente cria uma
+// Tarefa Agendada do Windows UMA VEZ (pede UAC só nessa primeira vez),
+// configurada com "privilégios mais altos", que roda o PRÓPRIO executável
+// do FluxTweakers num modo "worker" invisível (--ram-clean-worker) — SEM
+// PowerShell, SEM script gerado em disco, SEM Add-Type/compilação de C# em
+// tempo de execução. Isso elimina de vez as causas dos timeouts inconsistentes
+// (antivírus rescaneando um script que muda a cada clique, tempo de start do
+// PowerShell, compilação just-in-time do .NET).
 
 const RAM_CLEAN_TASK_NAME: &str = "FluxTweakersRamClean";
+const RAM_WORKER_FLAG: &str = "--ram-clean-worker";
 
-fn ram_clean_ps1_content() -> &'static str {
-    r#"
-$ErrorActionPreference = 'Stop'
-$resultDir = "$env:TEMP\FluxTweakers"
-New-Item -ItemType Directory -Force -Path $resultDir | Out-Null
-$resultPath = "$resultDir\ram_clean_result.txt"
-
-try {
-    function Get-MemPerf { Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory -ErrorAction Stop }
-    function Get-StandbyMBFrom($m) {
-        $sum = [double]$m.StandbyCacheCoreBytes + [double]$m.StandbyCacheNormalPriorityBytes + [double]$m.StandbyCacheReserveBytes
-        return [math]::Round($sum / 1MB, 0)
-    }
-
-    $modeFile = "$env:TEMP\FluxTweakers\ram_action_mode.txt"
-    $mode = if (Test-Path $modeFile) { (Get-Content $modeFile -Raw).Trim() } else { "standby" }
-
-    $memBefore = Get-MemPerf
-    $before = $memBefore.AvailableMBytes
-    $standbyBefore = Get-StandbyMBFrom $memBefore
-
-    $trimmedCount = 0
-    if ($mode -eq "workingset") {
-        # Truque real e leve (sem precisar compilar nada): o próprio .NET, ao
-        # setar MinWorkingSet de um processo, chama por baixo dos panos a mesma
-        # API do Windows (SetProcessWorkingSetSize) que EmptyWorkingSet usa —
-        # só que sem precisar de Add-Type/compilar C# na hora, o que é lento e
-        # depende do compilador do .NET estar disponível/rápido na máquina.
-        Get-Process | ForEach-Object {
-            try {
-                $_.MinWorkingSet = $_.MinWorkingSet
-                $trimmedCount++
-            } catch {}
-        }
-    } else {
-        # Purgar a standby list (cache "solto") exige uma API não documentada
-        # do Windows (NtSetSystemInformation), que só dá pra chamar via P/Invoke
-        # — por isso só compila esse código C# quando é realmente essa a ação
-        # pedida, e não sempre, deixando "Reduzir em uso" bem mais rápido.
-        $sig = @"
-using System;
-using System.Runtime.InteropServices;
-public class FluxRam {
-    [DllImport("ntdll.dll")]
-    public static extern int NtSetSystemInformation(int InfoClass, IntPtr Info, int Length);
-    [DllImport("advapi32.dll", SetLastError = true)]
-    public static extern bool OpenProcessToken(IntPtr ProcessHandle, uint DesiredAccess, out IntPtr TokenHandle);
-    [DllImport("advapi32.dll", SetLastError = true)]
-    public static extern bool LookupPrivilegeValue(string lpSystemName, string lpName, out long lpLuid);
-    [StructLayout(LayoutKind.Sequential)]
-    public struct LUID_AND_ATTRIBUTES { public long Luid; public uint Attributes; }
-    [StructLayout(LayoutKind.Sequential)]
-    public struct TOKEN_PRIVILEGES { public uint PrivilegeCount; public LUID_AND_ATTRIBUTES Privileges; }
-    [DllImport("advapi32.dll", SetLastError = true)]
-    public static extern bool AdjustTokenPrivileges(IntPtr TokenHandle, bool DisableAllPrivileges,
-        ref TOKEN_PRIVILEGES NewState, uint BufferLength, IntPtr PreviousState, IntPtr ReturnLength);
-    [DllImport("kernel32.dll")]
-    public static extern IntPtr GetCurrentProcess();
+#[cfg(target_os = "windows")]
+#[link(name = "kernel32")]
+extern "system" {
+    fn GetCurrentProcess() -> isize;
+    fn CloseHandle(h: isize) -> i32;
+    fn GlobalMemoryStatusEx(buf: *mut MemoryStatusEx) -> i32;
+    fn LoadLibraryW(name: *const u16) -> isize;
+    fn GetProcAddress(module: isize, name: *const u8) -> *const ();
+    fn K32EnumProcesses(pids: *mut u32, cb: u32, cb_needed: *mut u32) -> i32;
+    fn OpenProcess(access: u32, inherit: i32, pid: u32) -> isize;
+    fn K32EmptyWorkingSet(h: isize) -> i32;
 }
-"@
-        Add-Type -TypeDefinition $sig -ErrorAction Stop
 
-        $TOKEN_ADJUST_PRIVILEGES = 0x20
-        $TOKEN_QUERY = 0x8
-        $hToken = [IntPtr]::Zero
-        [FluxRam]::OpenProcessToken([FluxRam]::GetCurrentProcess(), ($TOKEN_ADJUST_PRIVILEGES -bor $TOKEN_QUERY), [ref]$hToken) | Out-Null
-        $luid = 0
-        [FluxRam]::LookupPrivilegeValue($null, "SeProfileSingleProcessPrivilege", [ref]$luid) | Out-Null
-        $priv = New-Object FluxRam+TOKEN_PRIVILEGES
-        $priv.PrivilegeCount = 1
-        $priv.Privileges = New-Object FluxRam+LUID_AND_ATTRIBUTES
-        $priv.Privileges.Luid = $luid
-        $priv.Privileges.Attributes = 0x2
-        [FluxRam]::AdjustTokenPrivileges($hToken, $false, [ref]$priv, 0, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+#[cfg(target_os = "windows")]
+#[link(name = "advapi32")]
+extern "system" {
+    fn OpenProcessToken(h: isize, access: u32, out_token: *mut isize) -> i32;
+    fn LookupPrivilegeValueW(system_name: *const u16, name: *const u16, luid: *mut Luid) -> i32;
+    fn AdjustTokenPrivileges(
+        token: isize,
+        disable_all: i32,
+        new_state: *mut TokenPrivileges,
+        buffer_len: u32,
+        prev_state: *mut (),
+        return_len: *mut u32,
+    ) -> i32;
+}
 
-        $SystemMemoryListInformation = 80
-        $MemoryPurgeStandbyList = 4
-        $ptr = [System.Runtime.InteropServices.Marshal]::AllocHGlobal(4)
-        [System.Runtime.InteropServices.Marshal]::WriteInt32($ptr, $MemoryPurgeStandbyList)
-        $status = [FluxRam]::NtSetSystemInformation($SystemMemoryListInformation, $ptr, 4)
-        [System.Runtime.InteropServices.Marshal]::FreeHGlobal($ptr)
-        if ($status -eq -1073741727) {
-            # STATUS_PRIVILEGE_NOT_HELD (0xC0000061): em várias máquinas essa
-            # privilégio some do token do admin após reboot (baseline de
-            # segurança local sendo reaplicada), fora do nosso controle.
-            # Cai pro modo workingset em vez de falhar pro usuário.
-            Get-Process | ForEach-Object {
-                try { $_.MinWorkingSet = $_.MinWorkingSet; $trimmedCount++ } catch {}
+#[cfg(target_os = "windows")]
+#[repr(C)]
+struct MemoryStatusEx {
+    dw_length: u32,
+    dw_memory_load: u32,
+    ull_total_phys: u64,
+    ull_avail_phys: u64,
+    ull_total_page_file: u64,
+    ull_avail_page_file: u64,
+    ull_total_virtual: u64,
+    ull_avail_virtual: u64,
+    ull_avail_extended_virtual: u64,
+}
+
+#[cfg(target_os = "windows")]
+#[repr(C)]
+struct Luid {
+    low_part: u32,
+    high_part: i32,
+}
+
+#[cfg(target_os = "windows")]
+#[repr(C)]
+struct LuidAndAttributes {
+    luid: Luid,
+    attributes: u32,
+}
+
+#[cfg(target_os = "windows")]
+#[repr(C)]
+struct TokenPrivileges {
+    privilege_count: u32,
+    privileges: LuidAndAttributes,
+}
+
+#[cfg(target_os = "windows")]
+fn available_phys_mb() -> u64 {
+    unsafe {
+        let mut mem = MemoryStatusEx {
+            dw_length: std::mem::size_of::<MemoryStatusEx>() as u32,
+            dw_memory_load: 0,
+            ull_total_phys: 0,
+            ull_avail_phys: 0,
+            ull_total_page_file: 0,
+            ull_avail_page_file: 0,
+            ull_total_virtual: 0,
+            ull_avail_virtual: 0,
+            ull_avail_extended_virtual: 0,
+        };
+        if GlobalMemoryStatusEx(&mut mem) != 0 {
+            mem.ull_avail_phys / 1024 / 1024
+        } else {
+            0
+        }
+    }
+}
+
+/// "Reduzir em uso": manda o Windows tirar da memória física tudo que cada
+/// processo não está usando ativamente agora (igual o Gerenciador de Tarefas
+/// faz internamente), sem matar nada — seguro e reversível na hora.
+#[cfg(target_os = "windows")]
+fn trim_all_working_sets() -> u32 {
+    let mut trimmed = 0u32;
+    unsafe {
+        let mut pids = vec![0u32; 4096];
+        let mut bytes_needed = 0u32;
+        if K32EnumProcesses(pids.as_mut_ptr(), (pids.len() * 4) as u32, &mut bytes_needed) == 0 {
+            return 0;
+        }
+        let count = ((bytes_needed as usize) / 4).min(pids.len());
+        const PROCESS_SET_QUOTA: u32 = 0x0100;
+        const PROCESS_QUERY_INFORMATION: u32 = 0x0400;
+        for pid in pids.iter().take(count).copied() {
+            if pid == 0 {
+                continue;
             }
-        } elseif ($status -ne 0) {
-            throw "NtSetSystemInformation retornou status=$status (privilégio não concedido ou chamada recusada)"
+            let h = OpenProcess(PROCESS_SET_QUOTA | PROCESS_QUERY_INFORMATION, 0, pid);
+            if h == 0 {
+                continue;
+            }
+            if K32EmptyWorkingSet(h) != 0 {
+                trimmed += 1;
+            }
+            CloseHandle(h);
         }
     }
-
-    Start-Sleep -Milliseconds 500
-    $memAfter = Get-MemPerf
-    $after = $memAfter.AvailableMBytes
-    $standbyAfter = Get-StandbyMBFrom $memAfter
-
-    # "Available MBytes" já CONTA a standby list como "disponível" antes mesmo
-    # de limpar — por isso, no modo "standby", essa métrica quase não se move
-    # mesmo quando a limpeza funciona de verdade. O número que realmente mostra
-    # o efeito é o tamanho da própria standby list caindo.
-    $freed = [math]::Round($after - $before, 0)
-    $standbyFreed = $standbyBefore - $standbyAfter
-    $reportedFreed = if ($mode -eq "standby") { [math]::Max($freed, $standbyFreed) } else { $freed }
-
-    "OK|$reportedFreed|trimmed=$trimmedCount" | Out-File -FilePath $resultPath -Encoding utf8
-} catch {
-    "ERRO|$($_.Exception.Message)" | Out-File -FilePath $resultPath -Encoding utf8
-}
-"#
+    trimmed
 }
 
-/// Prepara tudo pra limpeza automática funcionar: grava o script de limpeza
-/// num local fixo (SEMPRE, mesmo que a tarefa já exista — assim uma
-/// atualização do app corrige o script de quem já usava antes, sem precisar
-/// recriar a tarefa) e registra a Tarefa Agendada elevada só na primeira vez
-/// (pede UAC essa única vez); chamadas seguintes são silenciosas.
-fn write_ram_clean_script() -> Result<std::path::PathBuf, String> {
-    let dir = std::env::temp_dir().join("FluxTweakers");
-    fs::create_dir_all(&dir).map_err(|e| format!("Falha ao criar pasta: {e}"))?;
-    let ps1_path = dir.join("ram_clean.ps1");
-    let new_content = ram_clean_ps1_content();
-    // Só regrava se o conteúdo realmente mudou (ex: update do app). Reescrever
-    // toda vez que o usuário clica faz o Windows Defender rescanear o .ps1 do
-    // zero a cada clique, o que pode estourar o timeout de forma
-    // inconsistente — às vezes rápido, às vezes não.
-    let needs_write = match fs::read_to_string(&ps1_path) {
-        Ok(existing) => existing != new_content,
-        Err(_) => true,
-    };
-    if needs_write {
-        fs::write(&ps1_path, new_content)
-            .map_err(|e| format!("Falha ao gravar script de limpeza: {e}"))?;
+/// "Limpar cache": purga a Standby List inteira via uma API não documentada
+/// do Windows (NtSetSystemInformation). Precisa habilitar antes o privilégio
+/// SeProfileSingleProcessPrivilege no token do processo — se o Windows negar
+/// (STATUS_PRIVILEGE_NOT_HELD, algo que acontece em algumas máquinas mesmo
+/// sendo admin, fora do nosso controle), cai automático pro "Reduzir em uso"
+/// em vez de mostrar erro pro usuário.
+#[cfg(target_os = "windows")]
+fn purge_standby_list() -> Result<u32, String> {
+    unsafe {
+        const TOKEN_ADJUST_PRIVILEGES: u32 = 0x20;
+        const TOKEN_QUERY: u32 = 0x8;
+        let mut h_token: isize = 0;
+        if OpenProcessToken(
+            GetCurrentProcess(),
+            TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
+            &mut h_token,
+        ) == 0
+        {
+            return Err("Não consegui abrir o token do processo".to_string());
+        }
+
+        let name_wide: Vec<u16> = "SeProfileSingleProcessPrivilege\0".encode_utf16().collect();
+        let mut luid = Luid { low_part: 0, high_part: 0 };
+        LookupPrivilegeValueW(std::ptr::null(), name_wide.as_ptr(), &mut luid);
+
+        let mut priv_struct = TokenPrivileges {
+            privilege_count: 1,
+            privileges: LuidAndAttributes { luid, attributes: 0x2 },
+        };
+        AdjustTokenPrivileges(
+            h_token,
+            0,
+            &mut priv_struct,
+            0,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+        );
+        CloseHandle(h_token);
+
+        // NtSetSystemInformation não tem import-lib no SDK do Windows pra
+        // linkar estaticamente — carrega dinamicamente (LoadLibrary +
+        // GetProcAddress), o mesmo mecanismo que o P/Invoke do .NET usava
+        // por baixo dos panos.
+        let ntdll_name: Vec<u16> = "ntdll.dll\0".encode_utf16().collect();
+        let ntdll = LoadLibraryW(ntdll_name.as_ptr());
+        if ntdll == 0 {
+            return Err("Não consegui carregar ntdll.dll".to_string());
+        }
+        let proc_name = b"NtSetSystemInformation\0";
+        let proc_addr = GetProcAddress(ntdll, proc_name.as_ptr());
+        if proc_addr.is_null() {
+            return Err("NtSetSystemInformation não encontrado".to_string());
+        }
+        let nt_set_system_information: extern "system" fn(i32, *mut i32, u32) -> i32 =
+            std::mem::transmute(proc_addr);
+
+        const SYSTEM_MEMORY_LIST_INFORMATION: i32 = 80;
+        const MEMORY_PURGE_STANDBY_LIST: i32 = 4;
+        let mut command = MEMORY_PURGE_STANDBY_LIST;
+        let status = nt_set_system_information(SYSTEM_MEMORY_LIST_INFORMATION, &mut command, 4);
+
+        if status == -1073741727i32 {
+            // STATUS_PRIVILEGE_NOT_HELD: sem esse privilégio nessa máquina —
+            // cai pro modo working-set em vez de falhar pro usuário.
+            Ok(trim_all_working_sets())
+        } else if status != 0 {
+            Err(format!("NtSetSystemInformation retornou status={status}"))
+        } else {
+            Ok(0)
+        }
     }
-    Ok(ps1_path)
 }
 
+/// Roda de verdade a limpeza — chamado dentro do processo elevado disparado
+/// pela Tarefa Agendada (o próprio FluxTweakers.exe relançado com
+/// --ram-clean-worker) — e grava o resultado no arquivo que o app principal
+/// (não-elevado) está esperando. Não abre janela nenhuma.
+#[cfg(target_os = "windows")]
+fn ram_clean_worker_entrypoint() {
+    let dir = std::env::temp_dir().join("FluxTweakers");
+    let _ = fs::create_dir_all(&dir);
+    let result_path = dir.join("ram_clean_result.txt");
+    let mode = fs::read_to_string(dir.join("ram_action_mode.txt"))
+        .unwrap_or_else(|_| "standby".to_string());
+    let mode = mode.trim();
+
+    let before = available_phys_mb();
+    let trimmed_result: Result<u32, String> = if mode == "workingset" {
+        Ok(trim_all_working_sets())
+    } else {
+        purge_standby_list()
+    };
+
+    let content = match trimmed_result {
+        Ok(trimmed) => {
+            let after = available_phys_mb();
+            let freed = after.saturating_sub(before);
+            format!("OK|{freed}|trimmed={trimmed}")
+        }
+        Err(e) => format!("ERRO|{e}"),
+    };
+    let _ = fs::write(&result_path, content);
+}
+
+/// Registra a Tarefa Agendada elevada (dispara o próprio exe em modo worker)
+/// só na primeira vez que algum botão de RAM é usado — pede UAC essa única
+/// vez; chamadas seguintes são silenciosas.
 #[tauri::command]
 fn setup_ram_cleaner() -> Result<String, String> {
-    let ps1_path = write_ram_clean_script()?;
-    let ps1_str = ps1_path.to_string_lossy().to_string();
-
-    // Cria (ou substitui) a tarefa agendada, rodando como o usuário atual
-    // com privilégios mais altos. O /SC ONCE /ST 00:00 é só um gatilho
-    // "dummy" — na prática a gente sempre dispara manualmente via /run.
-    let create_cmd = format!(
-        "schtasks /Create /TN \"{name}\" /TR \"powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \\\"{script}\\\"\" /SC ONCE /ST 00:00 /RL HIGHEST /F",
-        name = RAM_CLEAN_TASK_NAME,
-        script = ps1_str
-    );
-
-    let ps_launcher = format!(
-        "Start-Process -FilePath 'cmd.exe' -ArgumentList '/c {cmd}' -Verb RunAs -WindowStyle Hidden -Wait",
-        cmd = create_cmd.replace('\'', "''")
-    );
-
     #[cfg(target_os = "windows")]
-    let result = Command::new("powershell")
-        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps_launcher])
-        .creation_flags(CREATE_NO_WINDOW)
-        .spawn()
-        .and_then(|mut c| c.wait());
+    {
+        let exe = std::env::current_exe()
+            .map_err(|e| format!("Falha ao localizar o executável: {e}"))?;
+        let exe_str = exe.to_string_lossy().to_string();
 
+        // Cria (ou substitui) a tarefa agendada, rodando como o usuário atual
+        // com privilégios mais altos, disparando o PRÓPRIO exe em modo worker.
+        // O /SC ONCE /ST 00:00 é só um gatilho "dummy" — na prática a gente
+        // sempre dispara via /run.
+        let create_cmd = format!(
+            "schtasks /Create /TN \"{name}\" /TR \"\\\"{exe}\\\" {flag}\" /SC ONCE /ST 00:00 /RL HIGHEST /F",
+            name = RAM_CLEAN_TASK_NAME,
+            exe = exe_str,
+            flag = RAM_WORKER_FLAG,
+        );
+
+        let ps_launcher = format!(
+            "Start-Process -FilePath 'cmd.exe' -ArgumentList '/c {cmd}' -Verb RunAs -WindowStyle Hidden -Wait",
+            cmd = create_cmd.replace('\'', "''")
+        );
+
+        let result = Command::new("powershell")
+            .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps_launcher])
+            .creation_flags(CREATE_NO_WINDOW)
+            .spawn()
+            .and_then(|mut c| c.wait());
+
+        match result {
+            Ok(_) => Ok("Limpeza automática de RAM configurada".to_string()),
+            Err(e) => Err(format!("Falha ao configurar: {e}")),
+        }
+    }
     #[cfg(not(target_os = "windows"))]
-    let result: std::io::Result<std::process::ExitStatus> = Command::new("powershell")
-        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps_launcher])
-        .spawn()
-        .and_then(|mut c| c.wait());
-
-    match result {
-        Ok(_) => Ok("Limpeza automática de RAM configurada".to_string()),
-        Err(e) => Err(format!("Falha ao configurar: {e}")),
+    {
+        Ok("N/A".to_string())
     }
 }
 
-/// Dispara a limpeza (roda a tarefa agendada já configurada). Não pede UAC
-/// de novo — a tarefa já "nasceu" elevada. Espera um pouco e lê o resultado
-/// real gravado pelo script (sucesso + quanto de RAM foi liberado, ou erro).
-/// `mode`: "standby" (cache padrão) ou "modified" (páginas modificadas pendentes).
+/// Dispara a limpeza (roda a tarefa agendada já configurada, que por sua vez
+/// relança o próprio exe em modo worker). Não pede UAC de novo — a tarefa já
+/// "nasceu" elevada. Espera o resultado real gravado pelo worker.
+/// `mode`: "standby" (cache padrão) ou "workingset" (reduzir em uso).
 #[tauri::command]
 async fn run_ram_clean(mode: Option<String>) -> Result<String, String> {
     let dir = std::env::temp_dir().join("FluxTweakers");
@@ -1356,19 +1447,9 @@ async fn run_ram_clean(mode: Option<String>) -> Result<String, String> {
     let mode_str = mode.unwrap_or_else(|| "standby".to_string());
     let _ = fs::write(dir.join("ram_action_mode.txt"), &mode_str);
 
-    // Regrava o script SEMPRE (não precisa de admin pra isso — só escrever um
-    // arquivo de texto). Isso garante que quem já usava uma versão antiga do
-    // app (com a tarefa agendada já criada) também passa a rodar a versão
-    // corrigida do script, sem precisar recriar a tarefa nem pedir UAC de novo.
-    write_ram_clean_script()?;
-
     let result_path = dir.join("ram_clean_result.txt");
     let _ = fs::remove_file(&result_path); // limpa resultado antigo antes de rodar de novo
 
-    // Confere se a tarefa agendada já existe (isso NÃO precisa de admin, só consulta).
-    // Se ainda não existir (primeira vez que qualquer botão de RAM é usado, sem
-    // ter passado pelo interruptor antes), configura ela agora mesmo — só nesse
-    // caso vai pedir UAC uma vez; nas próximas chamadas já está tudo pronto.
     #[cfg(target_os = "windows")]
     let task_exists = Command::new("schtasks")
         .args(["/Query", "/TN", RAM_CLEAN_TASK_NAME])
@@ -1378,18 +1459,12 @@ async fn run_ram_clean(mode: Option<String>) -> Result<String, String> {
         .unwrap_or(false);
 
     #[cfg(not(target_os = "windows"))]
-    let task_exists = Command::new("schtasks")
-        .args(["/Query", "/TN", RAM_CLEAN_TASK_NAME])
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
+    let task_exists = false;
 
-    // IMPORTANTE: setup_ram_cleaner() faz uma espera BLOQUEANTE (a criação da tarefa
-    // elevada usa .wait()). Chamar isso direto aqui prenderia a mesma thread async
-    // que o Tauri usa pra devolver a resposta pro app — é a mesma causa do bug que
-    // travava a Verificação Profissional em "Verificando..." pra sempre. Por isso
-    // roda em spawn_blocking, numa thread própria, só na primeiríssima vez (quando
-    // a tarefa agendada ainda não existe).
+    // IMPORTANTE: setup_ram_cleaner() faz uma espera BLOQUEANTE (Start-Process
+    // -Wait). Chamar isso direto aqui prenderia a mesma thread async que o
+    // Tauri usa pra devolver a resposta pro app. Por isso roda em
+    // spawn_blocking, só na primeiríssima vez (quando a tarefa ainda não existe).
     if !task_exists {
         tokio::task::spawn_blocking(setup_ram_cleaner)
             .await
@@ -1403,9 +1478,8 @@ async fn run_ram_clean(mode: Option<String>) -> Result<String, String> {
         .output();
 
     #[cfg(not(target_os = "windows"))]
-    let spawn_result = Command::new("schtasks")
-        .args(["/Run", "/TN", RAM_CLEAN_TASK_NAME])
-        .output();
+    let spawn_result: std::io::Result<std::process::Output> =
+        Err(std::io::Error::other("plataforma não suportada"));
 
     match spawn_result {
         Ok(o) if !o.status.success() => {
@@ -1418,14 +1492,12 @@ async fn run_ram_clean(mode: Option<String>) -> Result<String, String> {
         _ => {}
     }
 
-    // Espera até 45 segundos pelo resultado. Confirmado: o script em si já
-    // roda rápido agora — o atraso é o Agendador de Tarefas do Windows
-    // demorar pra REALMENTE disparar o processo depois do "schtasks /Run"
-    // (isso é assíncrono e o Windows não garante velocidade nenhuma aqui).
-    // Como o app já mostra "Limpando..." e não trava esperando, dar bastante
-    // margem aqui só evita um alarme falso de erro numa limpeza que só está
-    // demorando um pouco mais pra começar.
-    for _ in 0..450 {
+    // Agora o worker é um binário nativo compilado (sem PowerShell, sem
+    // Add-Type, sem rescan de antivírus) — termina rápido. Ainda damos uma
+    // margem generosa porque o Agendador de Tarefas do Windows não garante
+    // velocidade nenhuma pra REALMENTE disparar o processo depois do
+    // "schtasks /Run" (isso é assíncrono).
+    for _ in 0..150 {
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
         if let Ok(content) = fs::read_to_string(&result_path) {
             let content = content.trim();
@@ -1539,6 +1611,14 @@ fn set_autostart_enabled(app: tauri::AppHandle, enabled: bool) -> Result<(), Str
 }
 
 fn main() {
+    #[cfg(target_os = "windows")]
+    {
+        if std::env::args().any(|a| a == RAM_WORKER_FLAG) {
+            ram_clean_worker_entrypoint();
+            return;
+        }
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
