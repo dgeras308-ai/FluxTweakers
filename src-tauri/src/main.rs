@@ -1450,22 +1450,31 @@ async fn run_ram_clean(mode: Option<String>) -> Result<String, String> {
     let result_path = dir.join("ram_clean_result.txt");
     let _ = fs::remove_file(&result_path); // limpa resultado antigo antes de rodar de novo
 
+    // Confere não só se a tarefa existe, mas se ela já foi criada apontando
+    // pro modo worker novo (--ram-clean-worker). Quem já tinha usado uma
+    // versão antiga do app tem essa tarefa apontando pro PowerShell antigo —
+    // sem checar o conteúdo, ela nunca seria substituída pela versão nativa.
     #[cfg(target_os = "windows")]
-    let task_exists = Command::new("schtasks")
-        .args(["/Query", "/TN", RAM_CLEAN_TASK_NAME])
+    let task_needs_setup = match Command::new("schtasks")
+        .args(["/Query", "/TN", RAM_CLEAN_TASK_NAME, "/V", "/FO", "LIST"])
         .creation_flags(CREATE_NO_WINDOW)
         .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
+    {
+        Ok(o) if o.status.success() => {
+            let text = String::from_utf8_lossy(&o.stdout);
+            !text.contains(RAM_WORKER_FLAG)
+        }
+        _ => true,
+    };
 
     #[cfg(not(target_os = "windows"))]
-    let task_exists = false;
+    let task_needs_setup = false;
 
     // IMPORTANTE: setup_ram_cleaner() faz uma espera BLOQUEANTE (Start-Process
     // -Wait). Chamar isso direto aqui prenderia a mesma thread async que o
     // Tauri usa pra devolver a resposta pro app. Por isso roda em
-    // spawn_blocking, só na primeiríssima vez (quando a tarefa ainda não existe).
-    if !task_exists {
+    // spawn_blocking, só quando a tarefa precisa ser criada/atualizada.
+    if task_needs_setup {
         tokio::task::spawn_blocking(setup_ram_cleaner)
             .await
             .map_err(|e| format!("Falha interna ao preparar a limpeza: {e}"))??;
