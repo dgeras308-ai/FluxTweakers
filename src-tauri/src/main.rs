@@ -1293,6 +1293,80 @@ fn trim_all_working_sets() -> u32 {
 /// SeProfileSingleProcessPrivilege no token do processo — se o Windows negar
 /// (STATUS_PRIVILEGE_NOT_HELD, algo que acontece em algumas máquinas mesmo
 /// sendo admin, fora do nosso controle), cai automático pro "Reduzir em uso"
+#[cfg(target_os = "windows")]
+#[repr(C)]
+struct SystemMemoryListInfo {
+    zero_page_count: usize,
+    free_page_count: usize,
+    modified_page_count: usize,
+    modified_no_write_page_count: usize,
+    bad_page_count: usize,
+    page_count_by_priority: [usize; 8],
+    repurposed_pages_by_priority: [usize; 8],
+    modified_page_count_page_file: usize,
+}
+
+/// Carrega uma função da ntdll dinamicamente (LoadLibrary + GetProcAddress —
+/// ela não tem import-lib no SDK do Windows pra linkar estaticamente).
+#[cfg(target_os = "windows")]
+unsafe fn load_ntdll_proc(name: &[u8]) -> Option<*const ()> {
+    let ntdll_name: Vec<u16> = "ntdll.dll\0".encode_utf16().collect();
+    let ntdll = LoadLibraryW(ntdll_name.as_ptr());
+    if ntdll == 0 {
+        return None;
+    }
+    let addr = GetProcAddress(ntdll, name.as_ptr());
+    if addr.is_null() {
+        None
+    } else {
+        Some(addr)
+    }
+}
+
+/// Lê o tamanho REAL da Standby List agora (a mesma informação que o
+/// Gerenciador de Tarefas mostra como "Em cache" e o RAMMap mostra como
+/// "Standby") — usando NtQuerySystemInformation, sem WMI. É isso que
+/// permite reportar corretamente quantos GB foram liberados numa limpeza,
+/// já que "memória disponível" no Windows já conta a standby list como
+/// disponível mesmo ANTES de limpar (por isso aquele número quase não se
+/// move, mesmo numa limpeza real de vários GB).
+#[cfg(target_os = "windows")]
+fn standby_list_mb() -> Option<u64> {
+    unsafe {
+        let proc_addr = load_ntdll_proc(b"NtQuerySystemInformation\0")?;
+        let nt_query_system_information: extern "system" fn(
+            i32,
+            *mut SystemMemoryListInfo,
+            u32,
+            *mut u32,
+        ) -> i32 = std::mem::transmute(proc_addr);
+
+        const SYSTEM_MEMORY_LIST_INFORMATION: i32 = 80;
+        let mut info = SystemMemoryListInfo {
+            zero_page_count: 0,
+            free_page_count: 0,
+            modified_page_count: 0,
+            modified_no_write_page_count: 0,
+            bad_page_count: 0,
+            page_count_by_priority: [0; 8],
+            repurposed_pages_by_priority: [0; 8],
+            modified_page_count_page_file: 0,
+        };
+        let mut return_len: u32 = 0;
+        let status = nt_query_system_information(
+            SYSTEM_MEMORY_LIST_INFORMATION,
+            &mut info,
+            std::mem::size_of::<SystemMemoryListInfo>() as u32,
+            &mut return_len,
+        );
+        if status != 0 {
+            return None;
+        }
+        let standby_pages: u64 = info.page_count_by_priority.iter().map(|&p| p as u64).sum();
+        Some(standby_pages * 4096 / 1024 / 1024)
+    }
+}
+
 /// em vez de mostrar erro pro usuário.
 #[cfg(target_os = "windows")]
 fn purge_standby_list() -> Result<u32, String> {
@@ -1327,20 +1401,10 @@ fn purge_standby_list() -> Result<u32, String> {
         );
         CloseHandle(h_token);
 
-        // NtSetSystemInformation não tem import-lib no SDK do Windows pra
-        // linkar estaticamente — carrega dinamicamente (LoadLibrary +
-        // GetProcAddress), o mesmo mecanismo que o P/Invoke do .NET usava
-        // por baixo dos panos.
-        let ntdll_name: Vec<u16> = "ntdll.dll\0".encode_utf16().collect();
-        let ntdll = LoadLibraryW(ntdll_name.as_ptr());
-        if ntdll == 0 {
-            return Err("Não consegui carregar ntdll.dll".to_string());
-        }
-        let proc_name = b"NtSetSystemInformation\0";
-        let proc_addr = GetProcAddress(ntdll, proc_name.as_ptr());
-        if proc_addr.is_null() {
-            return Err("NtSetSystemInformation não encontrado".to_string());
-        }
+        let proc_addr = match load_ntdll_proc(b"NtSetSystemInformation\0") {
+            Some(a) => a,
+            None => return Err("NtSetSystemInformation não encontrado".to_string()),
+        };
         let nt_set_system_information: extern "system" fn(i32, *mut i32, u32) -> i32 =
             std::mem::transmute(proc_addr);
 
@@ -1372,9 +1436,15 @@ fn ram_clean_worker_entrypoint() {
     let result_path = dir.join("ram_clean_result.txt");
     let mode = fs::read_to_string(dir.join("ram_action_mode.txt"))
         .unwrap_or_else(|_| "standby".to_string());
-    let mode = mode.trim();
+    let mode = mode.trim().to_string();
 
-    let before = available_phys_mb();
+    // No modo "standby" medimos o tamanho real da Standby List antes/depois
+    // (é isso que realmente mostra quantos GB foram liberados). No modo
+    // "workingset" isso não se aplica (o que muda é o working set de cada
+    // processo, não a standby list) — usamos memória disponível ali.
+    let standby_before = if mode != "workingset" { standby_list_mb() } else { None };
+    let avail_before = available_phys_mb();
+
     let trimmed_result: Result<u32, String> = if mode == "workingset" {
         Ok(trim_all_working_sets())
     } else {
@@ -1383,8 +1453,12 @@ fn ram_clean_worker_entrypoint() {
 
     let content = match trimmed_result {
         Ok(trimmed) => {
-            let after = available_phys_mb();
-            let freed = after.saturating_sub(before);
+            let freed = if let (Some(before), Some(after)) = (standby_before, standby_list_mb()) {
+                before.saturating_sub(after)
+            } else {
+                let after = available_phys_mb();
+                after.saturating_sub(avail_before)
+            };
             format!("OK|{freed}|trimmed={trimmed}")
         }
         Err(e) => format!("ERRO|{e}"),
