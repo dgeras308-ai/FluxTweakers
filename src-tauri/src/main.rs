@@ -1291,8 +1291,19 @@ fn write_ram_clean_script() -> Result<std::path::PathBuf, String> {
     let dir = std::env::temp_dir().join("FluxTweakers");
     fs::create_dir_all(&dir).map_err(|e| format!("Falha ao criar pasta: {e}"))?;
     let ps1_path = dir.join("ram_clean.ps1");
-    fs::write(&ps1_path, ram_clean_ps1_content())
-        .map_err(|e| format!("Falha ao gravar script de limpeza: {e}"))?;
+    let new_content = ram_clean_ps1_content();
+    // Só regrava se o conteúdo realmente mudou (ex: update do app). Reescrever
+    // toda vez que o usuário clica faz o Windows Defender rescanear o .ps1 do
+    // zero a cada clique, o que pode estourar o timeout de forma
+    // inconsistente — às vezes rápido, às vezes não.
+    let needs_write = match fs::read_to_string(&ps1_path) {
+        Ok(existing) => existing != new_content,
+        Err(_) => true,
+    };
+    if needs_write {
+        fs::write(&ps1_path, new_content)
+            .map_err(|e| format!("Falha ao gravar script de limpeza: {e}"))?;
+    }
     Ok(ps1_path)
 }
 
@@ -1414,7 +1425,7 @@ async fn run_ram_clean(mode: Option<String>) -> Result<String, String> {
     // Como o app já mostra "Limpando..." e não trava esperando, dar bastante
     // margem aqui só evita um alarme falso de erro numa limpeza que só está
     // demorando um pouco mais pra começar.
-    for _ in 0..225 {
+    for _ in 0..450 {
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
         if let Ok(content) = fs::read_to_string(&result_path) {
             let content = content.trim();
