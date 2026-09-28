@@ -749,6 +749,15 @@
     border-bottom:1px solid var(--border-soft);font-size:12.5px;
   }
   .ram-process-row:last-child{border-bottom:none;}
+  .ram-kill-btn{
+    font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer;
+    background:transparent;color:var(--muted);border:1px solid var(--border-soft);
+    min-width:78px;transition:background .15s,color .15s,border-color .15s;
+  }
+  .ram-kill-btn:hover{color:var(--off);border-color:var(--off);}
+  .ram-kill-btn.confirm{background:var(--off);color:#fff;border-color:var(--off);}
+  .ram-kill-btn:disabled{opacity:.5;cursor:default;}
+  .ram-kill-slot{min-width:78px;display:inline-block;}
   .ram-process-name{flex:1;color:var(--text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .ram-process-mem{color:var(--muted);font-family:var(--mono);min-width:60px;text-align:right;}
   .ram-process-sev{font-size:9.5px;padding:2px 8px;border-radius:999px;font-weight:700;letter-spacing:.03em;min-width:48px;text-align:center;}
@@ -5487,16 +5496,53 @@ async function loadRamDashboard(){
       const sev = p.memory_mb > 2000 ? 'alto' : p.memory_mb > 800 ? 'medio' : 'baixo';
       const sevLabel = sev === 'alto' ? 'ALTO' : sev === 'medio' ? 'MÉDIO' : 'BAIXO';
       const display = p.memory_mb >= 1024 ? (p.memory_mb/1024).toFixed(1)+' GB' : Math.round(p.memory_mb)+' MB';
+      const protectedName = RAM_PROTECTED.has(p.name.toLowerCase());
+      const killBtn = protectedName
+        ? `<span class="ram-kill-slot"></span>`
+        : `<button class="ram-kill-btn" data-proc="${encodeURIComponent(p.name)}" data-mb="${Math.round(p.memory_mb)}" title="Encerra todas as instâncias de ${p.name}">Encerrar</button>`;
       return `<div class="ram-process-row">
         <span class="ram-process-name">${p.name}</span>
         <span class="ram-process-mem">${display}</span>
         <span class="ram-process-sev ram-process-sev-${sev}">${sevLabel}</span>
+        ${killBtn}
       </div>`;
     }).join('');
   }catch(err){
     dash.innerHTML = `<p class="bench-note">Erro ao carregar dados de memória: ${err}</p>`;
   }
 }
+
+// Espelho da lista protegida do backend (o backend é quem realmente bloqueia;
+// isso só esconde o botão pra não oferecer algo que vai ser recusado).
+const RAM_PROTECTED = new Set(['system','system idle process','registry','memory compression','smss.exe','csrss.exe','wininit.exe','winlogon.exe','services.exe','lsass.exe','svchost.exe','dwm.exe','explorer.exe','fontdrvhost.exe','sihost.exe','taskhostw.exe','ctfmon.exe','conhost.exe','audiodg.exe','spoolsv.exe','msmpeng.exe','securityhealthservice.exe','runtimebroker.exe','searchhost.exe','startmenuexperiencehost.exe','shellexperiencehost.exe','fluxtweakers.exe','msedgewebview2.exe']);
+
+// Encerrar processo: 1º clique vira "Confirmar?" (some sozinho em 4s), 2º clique encerra.
+document.addEventListener('click', async (e)=>{
+  const btn = e.target?.closest?.('.ram-kill-btn');
+  if(!btn || btn.disabled) return;
+  const name = decodeURIComponent(btn.dataset.proc);
+
+  if(!btn.classList.contains('confirm')){
+    btn.classList.add('confirm');
+    btn.textContent = 'Confirmar?';
+    clearTimeout(btn.__t);
+    btn.__t = setTimeout(()=>{ if(btn.isConnected){ btn.classList.remove('confirm'); btn.textContent = 'Encerrar'; } }, 4000);
+    return;
+  }
+
+  clearTimeout(btn.__t);
+  btn.disabled = true;
+  btn.textContent = 'Encerrando...';
+  try{
+    const { invoke } = window.__TAURI__.core;
+    const r = await invoke('kill_processes_by_name', { name });
+    const mb = r.freed_mb >= 1024 ? (r.freed_mb/1024).toFixed(1)+' GB' : Math.round(r.freed_mb)+' MB';
+    showToast(`${name} encerrado (${r.instances} processo${r.instances>1?'s':''}, ~${mb} liberados)`);
+  }catch(err){
+    showToast(`Não foi possível encerrar ${name}: ${err}`);
+  }
+  setTimeout(loadRamDashboard, 600);
+});
 
 document.addEventListener('click', (e)=>{
   if(e.target?.id === 'ramActWorkingset'){
@@ -5521,6 +5567,8 @@ if(document.getElementById('ramDashboard')) loadRamDashboard();
 setInterval(()=>{
   const panel = document.getElementById('panel-ram');
   if(panel && panel.classList.contains('active') && document.getElementById('ramDashboard')){
+    // não redesenha a lista enquanto um botão "Encerrar" está esperando confirmação
+    if(document.querySelector('.ram-kill-btn.confirm, .ram-kill-btn:disabled')) return;
     loadRamDashboard();
   }
 }, 4000);

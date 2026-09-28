@@ -525,6 +525,87 @@ struct ProcessMemInfo {
 }
 
 #[derive(Serialize)]
+struct KillResult {
+    instances: u32,
+    freed_mb: f64,
+}
+
+/// Nomes que nunca podem ser encerrados por aqui: processos essenciais do
+/// Windows (encerrar derruba o sistema ou causa tela azul) e o próprio
+/// FluxTweakers (incluindo o WebView2, que é a janela do app).
+const PROTECTED_PROCESSES: &[&str] = &[
+    "system", "system idle process", "registry", "memory compression", "smss.exe",
+    "csrss.exe", "wininit.exe", "winlogon.exe", "services.exe", "lsass.exe",
+    "svchost.exe", "dwm.exe", "explorer.exe", "fontdrvhost.exe", "sihost.exe",
+    "taskhostw.exe", "ctfmon.exe", "conhost.exe", "audiodg.exe", "spoolsv.exe",
+    "msmpeng.exe", "securityhealthservice.exe", "runtimebroker.exe",
+    "searchhost.exe", "startmenuexperiencehost.exe", "shellexperiencehost.exe",
+    "fluxtweakers.exe", "msedgewebview2.exe",
+];
+
+/// Encerra TODAS as instâncias de um app pelo nome (ex: todas as abas/processos
+/// de "msedge.exe"), sem precisar abrir o Gerenciador de Tarefas. Roda só pra
+/// apps do usuário — os essenciais do Windows e o próprio FluxTweakers são
+/// bloqueados aqui no backend (a interface também esconde o botão neles).
+#[tauri::command]
+async fn kill_processes_by_name(name: String, state: State<'_, SysState>) -> Result<KillResult, String> {
+    let name = name.trim().to_string();
+    let valid = !name.is_empty()
+        && name.len() <= 128
+        && name.chars().all(|c| c.is_ascii_alphanumeric() || " ._-()[]+".contains(c));
+    if !valid {
+        return Err("Nome de processo inválido".to_string());
+    }
+    if PROTECTED_PROCESSES.iter().any(|p| p.eq_ignore_ascii_case(&name)) {
+        return Err(format!("{name} é um processo protegido (essencial do Windows ou do próprio FluxTweakers)"));
+    }
+
+    // Conta as instâncias e a memória que elas usam ANTES de encerrar.
+    let (instances, mem_bytes) = {
+        let mut sys = state.0.lock().unwrap();
+        sys.refresh_processes(ProcessesToUpdate::All, true);
+        let mut n = 0u32;
+        let mut bytes = 0u64;
+        for p in sys.processes().values() {
+            if p.name().to_string_lossy().eq_ignore_ascii_case(&name) {
+                n += 1;
+                bytes += p.memory();
+            }
+        }
+        (n, bytes)
+    };
+    if instances == 0 {
+        return Err(format!("{name} não está mais em execução"));
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let output = tauri::async_runtime::spawn_blocking(move || {
+            Command::new("taskkill")
+                .args(["/F", "/IM", &name])
+                .creation_flags(CREATE_NO_WINDOW)
+                .output()
+        })
+        .await
+        .map_err(|e| format!("Falha interna: {e}"))?
+        .map_err(|e| format!("Não consegui executar o encerramento: {e}"))?;
+
+        if !output.status.success() {
+            return Err("O Windows negou o encerramento (o app pode exigir permissão de administrador)".to_string());
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        return Err("Disponível apenas no Windows".to_string());
+    }
+
+    Ok(KillResult {
+        instances,
+        freed_mb: ((mem_bytes as f64) / 1_048_576.0 * 10.0).round() / 10.0,
+    })
+}
+
+#[derive(Serialize)]
 struct RamDetails {
     total_gb: f64,
     used_gb: f64,
@@ -1736,7 +1817,7 @@ fn main() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));
