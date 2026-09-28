@@ -682,7 +682,11 @@ struct SystemStats {
     ram_percent: f64,
     gpu_percent: Option<f64>,
     disks: Vec<DiskInfo>,
-    cpu_freq_ghz: f64,
+    /// true só nos ciclos em que as leituras "lentas" (GPU, frequência real,
+    /// cache) foram feitas — aí um valor None significa "não deu pra medir",
+    /// e não "não foi lido neste ciclo".
+    slow_read: bool,
+    cpu_freq_ghz: Option<f64>,
     cpu_cores: Option<usize>,
     cpu_threads: usize,
     cached_gb: Option<f64>,
@@ -696,13 +700,10 @@ struct SystemStats {
 /// de vez em quando pelo frontend, nunca a cada atualização.
 #[tauri::command]
 async fn get_system_stats(state: State<'_, SysState>, include_gpu: bool) -> Result<SystemStats, String> {
-    let (cpu_percent, ram_used_gb, ram_total_gb, ram_percent, cpu_freq_ghz, cpu_cores, cpu_threads) = {
+    let (cpu_percent, ram_used_gb, ram_total_gb, ram_percent, cpu_cores, cpu_threads) = {
         let mut sys = state.0.lock().unwrap();
         sys.refresh_cpu_usage();
-        sys.refresh_cpu_frequency();
         sys.refresh_memory();
-        let freq_mhz = sys.cpus().first().map(|c| c.frequency()).unwrap_or(0);
-        let cpu_freq_ghz = ((freq_mhz as f64) / 1000.0 * 10.0).round() / 10.0;
         let cpu_cores = sys.physical_core_count();
         let cpu_threads = sys.cpus().len();
 
@@ -710,7 +711,7 @@ async fn get_system_stats(state: State<'_, SysState>, include_gpu: bool) -> Resu
         let total = sys.total_memory() as f64 / 1_073_741_824.0;
         let used = sys.used_memory() as f64 / 1_073_741_824.0;
         let percent = if total > 0.0 { (used / total) * 100.0 } else { 0.0 };
-        (cpu, used, total, percent, cpu_freq_ghz, cpu_cores, cpu_threads)
+        (cpu, used, total, percent, cpu_cores, cpu_threads)
     };
     let uptime_secs = System::uptime();
 
@@ -732,15 +733,12 @@ async fn get_system_stats(state: State<'_, SysState>, include_gpu: bool) -> Resu
         })
         .collect();
 
-    // GPU: sysinfo não lê uso de GPU. Usamos o contador nativo de performance
-    // do Windows (GPU Engine), que funciona pra qualquer fabricante (NVIDIA/AMD/Intel)
-    // sem precisar instalar nada extra — mas roda numa thread separada (spawn_blocking)
-    // pra nunca travar a interface, e só quando o frontend realmente pede.
-    let gpu_percent = if include_gpu {
-        tauri::async_runtime::spawn_blocking(read_gpu_usage_windows)
-            .await
-            .unwrap_or(0.0)
-    } else {
+    // GPU, frequência REAL da CPU e cache não vêm do sysinfo (ele só dá a
+    // frequência nominal, que parece "travada"). Vêm de contadores do Windows
+    // lidos via WMI — o mesmo que o Gerenciador de Tarefas usa. Tudo numa
+    // ÚNICA chamada de PowerShell (antes eram várias, e o próprio custo de abrir
+    // PowerShell inflava o uso de CPU medido), e só de vez em quando.
+    if !include_gpu {
         return Ok(SystemStats {
             cpu_percent: (cpu_percent * 10.0).round() / 10.0,
             ram_used_gb: (ram_used_gb * 10.0).round() / 10.0,
@@ -748,35 +746,87 @@ async fn get_system_stats(state: State<'_, SysState>, include_gpu: bool) -> Resu
             ram_percent: (ram_percent * 10.0).round() / 10.0,
             gpu_percent: None,
             disks,
-            cpu_freq_ghz,
+            slow_read: false,
+            cpu_freq_ghz: None,
             cpu_cores,
             cpu_threads,
             cached_gb: None,
             uptime_secs,
         });
-    };
+    }
 
-    // Cache real (mesmo contador do Gerenciador de Tarefas). Também usa
-    // PowerShell, por isso só é lido junto com a GPU (a cada ~8s).
-    let cached_gb = tauri::async_runtime::spawn_blocking(read_cache_bytes_windows)
+    let slow = tauri::async_runtime::spawn_blocking(read_slow_metrics_windows)
         .await
-        .ok()
-        .filter(|b| *b > 0.0)
-        .map(|b| (b / 1_073_741_824.0 * 10.0).round() / 10.0);
+        .unwrap_or_default();
 
     Ok(SystemStats {
         cpu_percent: (cpu_percent * 10.0).round() / 10.0,
         ram_used_gb: (ram_used_gb * 10.0).round() / 10.0,
         ram_total_gb: (ram_total_gb * 10.0).round() / 10.0,
         ram_percent: (ram_percent * 10.0).round() / 10.0,
-        gpu_percent: Some(gpu_percent),
+        gpu_percent: slow.gpu.map(|g| (g.clamp(0.0, 100.0) * 10.0).round() / 10.0),
         disks,
-        cpu_freq_ghz,
+        slow_read: true,
+        cpu_freq_ghz: slow.cpu_mhz.filter(|m| *m > 0.0).map(|m| (m / 1000.0 * 100.0).round() / 100.0),
         cpu_cores,
         cpu_threads,
-        cached_gb,
+        cached_gb: slow.cache_bytes.filter(|b| *b > 0.0).map(|b| (b / 1_073_741_824.0 * 10.0).round() / 10.0),
         uptime_secs,
     })
+}
+
+#[derive(Default, serde::Deserialize)]
+struct SlowMetrics {
+    gpu: Option<f64>,
+    cpu_mhz: Option<f64>,
+    cache_bytes: Option<f64>,
+}
+
+/// Lê GPU / frequência real da CPU / cache numa única chamada de PowerShell.
+/// Tudo via WMI (nomes de classe e propriedades sempre em inglês, funciona em
+/// Windows de qualquer idioma — o Get-Counter falhava em Windows em português).
+///  - GPU: soma o uso de cada "engine" entre todos os processos e pega o engine
+///    mais ocupado (é como o Gerenciador de Tarefas calcula), em vez de somar
+///    só engines 3D de forma bruta.
+///  - Frequência: velocidade base × "% Desempenho do Processador" (passa de
+///    100% quando o turbo está ativo) — o valor real de agora, não o nominal.
+/// Devolve None em cada campo que não conseguir medir (nada de inventar 0).
+#[cfg(target_os = "windows")]
+fn read_slow_metrics_windows() -> SlowMetrics {
+    let ps_cmd = r#"
+$ErrorActionPreference = 'SilentlyContinue'
+$gpu = $null
+$g = Get-CimInstance Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine
+if ($g) {
+  $gpu = ($g | Group-Object { $_.Name -replace '^pid_\d+_', '' } |
+    ForEach-Object { ($_.Group | Measure-Object -Property UtilizationPercentage -Sum).Sum } |
+    Measure-Object -Maximum).Maximum
+}
+$mhz = $null
+$perf = Get-CimInstance Win32_PerfFormattedData_Counters_ProcessorInformation -Filter "Name='_Total'"
+$base = (Get-CimInstance Win32_Processor | Select-Object -First 1).MaxClockSpeed
+if ($perf -and $base) { $mhz = [math]::Round($base * $perf.PercentProcessorPerformance / 100) }
+$cache = (Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory).CacheBytes
+[pscustomobject]@{ gpu = $gpu; cpu_mhz = $mhz; cache_bytes = $cache } | ConvertTo-Json -Compress
+"#;
+
+    let output = Command::new("powershell")
+        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps_cmd])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
+
+    match output {
+        Ok(o) => {
+            let text = String::from_utf8_lossy(&o.stdout);
+            serde_json::from_str::<SlowMetrics>(text.trim()).unwrap_or_default()
+        }
+        Err(_) => SlowMetrics::default(),
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn read_slow_metrics_windows() -> SlowMetrics {
+    SlowMetrics::default()
 }
 
 #[derive(Serialize)]
@@ -1058,32 +1108,6 @@ fn check_disk_health_windows() -> (String, String) {
 #[cfg(not(target_os = "windows"))]
 fn check_recent_critical_events_windows() -> (String, String) {
     ("ok".to_string(), "Checagem disponível apenas no Windows".to_string())
-}
-
-#[cfg(target_os = "windows")]
-fn read_gpu_usage_windows() -> f64 {
-    // Soma a utilização de todos os "engines" do tipo 3D de todas as GPUs —
-    // é o mesmo contador que o Gerenciador de Tarefas do Windows usa.
-    let ps_cmd = "(Get-Counter '\\GPU Engine(*engtype_3D)\\Utilization Percentage' -ErrorAction SilentlyContinue).CounterSamples | Measure-Object -Property CookedValue -Sum | Select-Object -ExpandProperty Sum";
-
-    let output = Command::new("powershell")
-        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps_cmd])
-        .creation_flags(CREATE_NO_WINDOW)
-        .output();
-
-    match output {
-        Ok(o) => {
-            let text = String::from_utf8_lossy(&o.stdout);
-            let val: f64 = text.trim().replace(',', ".").parse().unwrap_or(0.0);
-            val.min(100.0).max(0.0)
-        }
-        Err(_) => 0.0,
-    }
-}
-
-#[cfg(not(target_os = "windows"))]
-fn read_gpu_usage_windows() -> f64 {
-    0.0
 }
 
 #[cfg(target_os = "windows")]

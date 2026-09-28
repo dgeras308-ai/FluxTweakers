@@ -4910,6 +4910,10 @@ function updateHomeScoreRing(score){
   circle.style.stroke = scoreColor(clamped);
   label.textContent = Math.round(clamped);
 }
+// CPU/RAM/disco são leitura rápida (em memória) — atualiza a cada 2.5s.
+// GPU abre um processo do PowerShell pra ler (mais pesado) — atualiza só a
+// cada ~10s, senão o próprio ato de medir infla o uso de CPU medido.
+let __homeStatsTick = 0;
 async function updateHomeStats(){
   if (!window.__TAURI__) return;
   if (document.getElementById('appContent').hidden) return;
@@ -4917,14 +4921,17 @@ async function updateHomeStats(){
   if (!panel || !panel.classList.contains('active')) return;
   try{
     const { invoke } = window.__TAURI__.core;
-    const stats = await invoke('get_system_stats', { includeGpu: true });
+    __homeStatsTick++;
+    const includeGpu = (__homeStatsTick % 4 === 0);
+    const stats = await invoke('get_system_stats', { includeGpu });
     const cpuVal = Math.round(stats.cpu_percent);
     const ramVal = Math.round(stats.ram_percent);
     const diskAvg = stats.disks && stats.disks.length
       ? Math.round(stats.disks.reduce((a,d)=>a+d.percent,0) / stats.disks.length)
       : 0;
-    const gpuVal = Math.round((stats.gpu_percent === null) ? (window.__lastGpuPct ?? 0) : stats.gpu_percent);
-    window.__lastGpuPct = gpuVal;
+    if (stats.slow_read) window.__lastGpuPct = stats.gpu_percent;
+    const gpuKnown = (window.__lastGpuPct !== undefined && window.__lastGpuPct !== null);
+    const gpuVal = gpuKnown ? Math.round(window.__lastGpuPct) : null;
 
     document.getElementById('homeStatCpuVal').textContent = `${cpuVal}%`;
     document.getElementById('homeStatCpuBar').style.width = `${cpuVal}%`;
@@ -4932,8 +4939,8 @@ async function updateHomeStats(){
     document.getElementById('homeStatRamBar').style.width = `${ramVal}%`;
     document.getElementById('homeStatDiskVal').textContent = `${diskAvg}%`;
     document.getElementById('homeStatDiskBar').style.width = `${diskAvg}%`;
-    document.getElementById('homeStatGpuVal').textContent = `${gpuVal}%`;
-    document.getElementById('homeStatGpuBar').style.width = `${gpuVal}%`;
+    document.getElementById('homeStatGpuVal').textContent = gpuKnown ? `${gpuVal}%` : '–';
+    document.getElementById('homeStatGpuBar').style.width = `${gpuVal ?? 0}%`;
 
     const score = 100 - Math.round((cpuVal + ramVal + diskAvg) / 3);
     updateHomeScoreRing(score);
@@ -5378,11 +5385,12 @@ document.addEventListener('click', (e)=>{
 
 // ---------- Monitor em tempo real (CPU/RAM/GPU/Disco reais) ----------
 function liveRingSVG(pct, colorVar){
-  const p = Math.max(0, Math.min(100, Math.round(pct)));
+  const unknown = (pct === null || pct === undefined || Number.isNaN(pct));
+  const p = unknown ? 0 : Math.max(0, Math.min(100, Math.round(pct)));
   return `<svg viewBox="0 0 36 36" class="live-ring">
     <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
     <path class="ring-fill" style="stroke:${colorVar}" stroke-dasharray="${p}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-    <text x="18" y="20.7" class="ring-text">${p}%</text>
+    <text x="18" y="20.7" class="ring-text">${unknown ? '–' : p + '%'}</text>
   </svg>`;
 }
 
@@ -5404,16 +5412,22 @@ async function updateLiveMonitor(includeGpu){
 
     const ringsEl = document.getElementById('liveMonitorRings');
     if (ringsEl){
-      const gpuDisplay = (stats.gpu_percent === null)
-        ? (window.__lastGpuPct ?? 0)
-        : (window.__lastGpuPct = stats.gpu_percent);
-      if (stats.cached_gb !== null && stats.cached_gb !== undefined) window.__lastCachedGb = stats.cached_gb;
+      // Só atualiza GPU/frequência real/cache nos ciclos em que o backend
+      // realmente os leu (slow_read) — assim nunca mostra um 0%/valor
+      // inventado enquanto espera a próxima leitura (que é mais pesada e
+      // roda a cada ~8s, não a cada 1s como CPU/RAM).
+      if (stats.slow_read){
+        window.__lastGpuPct = stats.gpu_percent;
+        window.__lastCpuGhz = stats.cpu_freq_ghz;
+        window.__lastCachedGb = stats.cached_gb;
+      }
+      const gpuDisplay = window.__lastGpuPct ?? null;
       const cpuSub = [
-        stats.cpu_freq_ghz > 0 ? `${stats.cpu_freq_ghz.toFixed(1)} GHz` : null,
+        window.__lastCpuGhz ? `${window.__lastCpuGhz.toFixed(2)} GHz` : null,
         stats.cpu_cores ? `${stats.cpu_cores}N/${stats.cpu_threads}T` : `${stats.cpu_threads}T`
       ].filter(Boolean).join(' · ');
       const ramSub = `${stats.ram_used_gb}/${stats.ram_total_gb} GB` +
-        (window.__lastCachedGb !== undefined ? ` · cache ${window.__lastCachedGb} GB` : '');
+        (window.__lastCachedGb ? ` · cache ${window.__lastCachedGb} GB` : '');
       ringsEl.innerHTML = `
         <div class="live-monitor-item">
           ${liveRingSVG(stats.cpu_percent, 'var(--accent)')}
@@ -5425,7 +5439,7 @@ async function updateLiveMonitor(includeGpu){
         </div>
         <div class="live-monitor-item">
           ${liveRingSVG(gpuDisplay, 'var(--accent)')}
-          <div class="live-monitor-label"><b>GPU</b><span>${shortGpuName(window.__gpuName)}</span></div>
+          <div class="live-monitor-label"><b>GPU</b><span>${shortGpuName(window.__gpuName)}${gpuDisplay === null ? ' · sem leitura' : ''}</span></div>
         </div>
         <div class="live-monitor-item">
           <div class="live-monitor-label"><b>Ligado há</b><span>${fmtUptime(stats.uptime_secs)}</span></div>
