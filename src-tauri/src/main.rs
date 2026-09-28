@@ -758,6 +758,13 @@ async fn get_system_stats(state: State<'_, SysState>, include_gpu: bool) -> Resu
     let slow = tauri::async_runtime::spawn_blocking(read_slow_metrics_windows)
         .await
         .unwrap_or_default();
+    #[cfg(target_os = "windows")]
+    let cache_mb = tauri::async_runtime::spawn_blocking(standby_list_mb)
+        .await
+        .ok()
+        .flatten();
+    #[cfg(not(target_os = "windows"))]
+    let cache_mb: Option<u64> = None;
 
     Ok(SystemStats {
         cpu_percent: (cpu_percent * 10.0).round() / 10.0,
@@ -770,7 +777,7 @@ async fn get_system_stats(state: State<'_, SysState>, include_gpu: bool) -> Resu
         cpu_freq_ghz: slow.cpu_mhz.filter(|m| *m > 0.0).map(|m| (m / 1000.0 * 100.0).round() / 100.0),
         cpu_cores,
         cpu_threads,
-        cached_gb: slow.cache_bytes.filter(|b| *b > 0.0).map(|b| (b / 1_073_741_824.0 * 10.0).round() / 10.0),
+        cached_gb: cache_mb.map(|mb| ((mb as f64) / 1024.0 * 10.0).round() / 10.0),
         uptime_secs,
     })
 }
@@ -779,17 +786,20 @@ async fn get_system_stats(state: State<'_, SysState>, include_gpu: bool) -> Resu
 struct SlowMetrics {
     gpu: Option<f64>,
     cpu_mhz: Option<f64>,
-    cache_bytes: Option<f64>,
 }
 
-/// Lê GPU / frequência real da CPU / cache numa única chamada de PowerShell.
-/// Tudo via WMI (nomes de classe e propriedades sempre em inglês, funciona em
-/// Windows de qualquer idioma — o Get-Counter falhava em Windows em português).
+/// Lê GPU e frequência real da CPU numa única chamada de PowerShell, via WMI
+/// (nomes de classe/propriedade sempre em inglês — funciona em Windows de
+/// qualquer idioma; o Get-Counter falhava em Windows em português).
 ///  - GPU: soma o uso de cada "engine" entre todos os processos e pega o engine
 ///    mais ocupado (é como o Gerenciador de Tarefas calcula), em vez de somar
 ///    só engines 3D de forma bruta.
 ///  - Frequência: velocidade base × "% Desempenho do Processador" (passa de
 ///    100% quando o turbo está ativo) — o valor real de agora, não o nominal.
+/// O cache NÃO vem daqui — vem de standby_list_mb() (NtQuerySystemInformation),
+/// a mesma leitura nativa e correta que a limpeza de RAM já usa. O contador WMI
+/// "CacheBytes" que era usado antes mede outra coisa (bem mais ampla) e não bate
+/// com o que o Gerenciador de Tarefas mostra como "Em cache".
 /// Devolve None em cada campo que não conseguir medir (nada de inventar 0).
 #[cfg(target_os = "windows")]
 fn read_slow_metrics_windows() -> SlowMetrics {
@@ -806,8 +816,7 @@ $mhz = $null
 $perf = Get-CimInstance Win32_PerfFormattedData_Counters_ProcessorInformation -Filter "Name='_Total'"
 $base = (Get-CimInstance Win32_Processor | Select-Object -First 1).MaxClockSpeed
 if ($perf -and $base) { $mhz = [math]::Round($base * $perf.PercentProcessorPerformance / 100) }
-$cache = (Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory).CacheBytes
-[pscustomobject]@{ gpu = $gpu; cpu_mhz = $mhz; cache_bytes = $cache } | ConvertTo-Json -Compress
+[pscustomobject]@{ gpu = $gpu; cpu_mhz = $mhz } | ConvertTo-Json -Compress
 "#;
 
     let output = Command::new("powershell")
