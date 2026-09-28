@@ -1271,6 +1271,7 @@
     0%{background-position:220% center;}
     100%{background-position:-220% center;}
   }
+  .login-by{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted2);font-weight:700;margin:-2px 0 12px;}
   .login-sub{color:var(--muted);font-size:12.5px;margin:0 0 26px;line-height:1.55;animation:cardEnter .6s cubic-bezier(.16,1,.3,1) .15s backwards;}
   .login-label{
     display:block;text-align:left;font-size:11px;font-weight:600;letter-spacing:.03em;
@@ -1607,8 +1608,9 @@
     <div class="brand-badge login-logo">
       <img src="assets/logo-mark.png" alt="FluxTweakers" class="login-logo-img">
     </div>
-    <div class="brand login-brand">By Dgeras</div>
-    <p class="login-sub">Entre pra acessar o painel de otimização</p>
+    <div class="brand login-brand">FluxTweakers</div>
+    <div class="login-by">by Dgeras</div>
+    <p class="login-sub">Mais FPS, menos lag. Entre para acessar o painel de otimização.</p>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" type="button">Entrar</button>
       <button class="auth-tab" id="tabSignup" type="button">Criar conta</button>
@@ -1651,10 +1653,10 @@
       <label class="login-label">Plano</label>
       <div class="plan-choice">
         <button type="button" class="plan-option active" data-plan="free">
-          <b>ByDgerasFree</b><span>Acesso com categorias limitadas</span>
+          <b>Free</b><span>Categorias essenciais liberadas</span>
         </button>
         <button type="button" class="plan-option" data-plan="paid">
-          <b>ByDgeras Pago</b><span>Acesso completo (liberado pelo suporte)</span>
+          <b>Pro</b><span>Acesso completo, ativado após aprovação</span>
         </button>
       </div>
       <p class="login-error" id="signupError" hidden></p>
