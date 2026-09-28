@@ -187,7 +187,7 @@
   .live-disk-row b{color:var(--text);min-width:26px;}
   .live-disk-bar{flex:1;height:5px;border-radius:4px;background:var(--item-bg);overflow:hidden;}
   .live-disk-bar-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .4s ease;}
-  .live-disk-pct{min-width:34px;text-align:right;color:var(--text);font-weight:600;font-family:var(--mono);}
+  .live-disk-pct{min-width:34px;text-align:right;white-space:nowrap;color:var(--text);font-weight:600;font-family:var(--mono);}
   @media (max-width:900px){
     .top-strip{flex-direction:column;align-items:stretch;}
     .top-strip-divider{width:100%;height:1px;}
@@ -4869,6 +4869,7 @@ async function loadHomeHardwareInfo(){
   try{
     const { invoke } = window.__TAURI__.core;
     const info = await invoke('get_hardware_info');
+    window.__gpuName = info.gpu_name;
     el.innerHTML = `
       <div class="home-spec-card"><span>Sistema</span><b>${info.os_name}</b></div>
       <div class="home-spec-card"><span>Processador</span><b>${info.cpu_brand}</b></div>
@@ -5376,6 +5377,15 @@ function liveRingSVG(pct, colorVar){
   </svg>`;
 }
 
+function shortGpuName(n){
+  if(!n) return 'GPU';
+  return String(n).replace(/\(R\)|\(TM\)/gi,'').replace(/NVIDIA|GeForce|AMD|Radeon|Intel|Graphics/gi,'').replace(/\s+/g,' ').trim() || 'GPU';
+}
+function fmtUptime(sec){
+  const d = Math.floor(sec/86400), h = Math.floor((sec%86400)/3600), m = Math.floor((sec%3600)/60);
+  return d > 0 ? `${d}d ${h}h` : h > 0 ? `${h}h ${m}min` : `${m}min`;
+}
+
 async function updateLiveMonitor(includeGpu){
   if (!window.__TAURI__) return; // monitoramento real só existe dentro do app nativo
   if (document.getElementById('appContent').hidden) return; // só roda depois do login
@@ -5388,18 +5398,28 @@ async function updateLiveMonitor(includeGpu){
       const gpuDisplay = (stats.gpu_percent === null)
         ? (window.__lastGpuPct ?? 0)
         : (window.__lastGpuPct = stats.gpu_percent);
+      if (stats.cached_gb !== null && stats.cached_gb !== undefined) window.__lastCachedGb = stats.cached_gb;
+      const cpuSub = [
+        stats.cpu_freq_ghz > 0 ? `${stats.cpu_freq_ghz.toFixed(1)} GHz` : null,
+        stats.cpu_cores ? `${stats.cpu_cores}N/${stats.cpu_threads}T` : `${stats.cpu_threads}T`
+      ].filter(Boolean).join(' · ');
+      const ramSub = `${stats.ram_used_gb}/${stats.ram_total_gb} GB` +
+        (window.__lastCachedGb !== undefined ? ` · cache ${window.__lastCachedGb} GB` : '');
       ringsEl.innerHTML = `
         <div class="live-monitor-item">
           ${liveRingSVG(stats.cpu_percent, 'var(--accent)')}
-          <div class="live-monitor-label"><b>CPU</b><span>${stats.cpu_percent}%</span></div>
+          <div class="live-monitor-label"><b>CPU</b><span>${cpuSub}</span></div>
         </div>
         <div class="live-monitor-item">
           ${liveRingSVG(stats.ram_percent, 'var(--accent)')}
-          <div class="live-monitor-label"><b>RAM</b><span>${stats.ram_used_gb} / ${stats.ram_total_gb} GB</span></div>
+          <div class="live-monitor-label"><b>RAM</b><span>${ramSub}</span></div>
         </div>
         <div class="live-monitor-item">
           ${liveRingSVG(gpuDisplay, 'var(--accent)')}
-          <div class="live-monitor-label"><b>GPU</b><span>${gpuDisplay}%</span></div>
+          <div class="live-monitor-label"><b>GPU</b><span>${shortGpuName(window.__gpuName)}</span></div>
+        </div>
+        <div class="live-monitor-item">
+          <div class="live-monitor-label"><b>Ligado há</b><span>${fmtUptime(stats.uptime_secs)}</span></div>
         </div>
       `;
     }
@@ -5411,7 +5431,7 @@ async function updateLiveMonitor(includeGpu){
           <b>${d.is_ssd ? 'SSD' : 'HD'}</b>
           <span style="min-width:34px">${d.name}</span>
           <div class="live-disk-bar"><div class="live-disk-bar-fill" style="width:${d.percent}%"></div></div>
-          <span class="live-disk-pct">${d.percent}%</span>
+          <span class="live-disk-pct">${d.percent}% · ${Math.max(0,(d.total_gb - d.used_gb)).toFixed(0)} GB livres</span>
         </div>
       `).join('');
     }

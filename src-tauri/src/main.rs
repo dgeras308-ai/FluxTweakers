@@ -601,6 +601,11 @@ struct SystemStats {
     ram_percent: f64,
     gpu_percent: Option<f64>,
     disks: Vec<DiskInfo>,
+    cpu_freq_ghz: f64,
+    cpu_cores: Option<usize>,
+    cpu_threads: usize,
+    cached_gb: Option<f64>,
+    uptime_secs: u64,
 }
 
 /// Lê o uso real de CPU e RAM via sysinfo (biblioteca nativa, sem depender
@@ -610,17 +615,23 @@ struct SystemStats {
 /// de vez em quando pelo frontend, nunca a cada atualização.
 #[tauri::command]
 async fn get_system_stats(state: State<'_, SysState>, include_gpu: bool) -> Result<SystemStats, String> {
-    let (cpu_percent, ram_used_gb, ram_total_gb, ram_percent) = {
+    let (cpu_percent, ram_used_gb, ram_total_gb, ram_percent, cpu_freq_ghz, cpu_cores, cpu_threads) = {
         let mut sys = state.0.lock().unwrap();
         sys.refresh_cpu_usage();
+        sys.refresh_cpu_frequency();
         sys.refresh_memory();
+        let freq_mhz = sys.cpus().first().map(|c| c.frequency()).unwrap_or(0);
+        let cpu_freq_ghz = ((freq_mhz as f64) / 1000.0 * 10.0).round() / 10.0;
+        let cpu_cores = sys.physical_core_count();
+        let cpu_threads = sys.cpus().len();
 
         let cpu = sys.global_cpu_usage() as f64;
         let total = sys.total_memory() as f64 / 1_073_741_824.0;
         let used = sys.used_memory() as f64 / 1_073_741_824.0;
         let percent = if total > 0.0 { (used / total) * 100.0 } else { 0.0 };
-        (cpu, used, total, percent)
+        (cpu, used, total, percent, cpu_freq_ghz, cpu_cores, cpu_threads)
     };
+    let uptime_secs = System::uptime();
 
     let disks_list = Disks::new_with_refreshed_list();
     let disks: Vec<DiskInfo> = disks_list
@@ -656,8 +667,21 @@ async fn get_system_stats(state: State<'_, SysState>, include_gpu: bool) -> Resu
             ram_percent: (ram_percent * 10.0).round() / 10.0,
             gpu_percent: None,
             disks,
+            cpu_freq_ghz,
+            cpu_cores,
+            cpu_threads,
+            cached_gb: None,
+            uptime_secs,
         });
     };
+
+    // Cache real (mesmo contador do Gerenciador de Tarefas). Também usa
+    // PowerShell, por isso só é lido junto com a GPU (a cada ~8s).
+    let cached_gb = tauri::async_runtime::spawn_blocking(read_cache_bytes_windows)
+        .await
+        .ok()
+        .filter(|b| *b > 0.0)
+        .map(|b| (b / 1_073_741_824.0 * 10.0).round() / 10.0);
 
     Ok(SystemStats {
         cpu_percent: (cpu_percent * 10.0).round() / 10.0,
@@ -666,6 +690,11 @@ async fn get_system_stats(state: State<'_, SysState>, include_gpu: bool) -> Resu
         ram_percent: (ram_percent * 10.0).round() / 10.0,
         gpu_percent: Some(gpu_percent),
         disks,
+        cpu_freq_ghz,
+        cpu_cores,
+        cpu_threads,
+        cached_gb,
+        uptime_secs,
     })
 }
 
