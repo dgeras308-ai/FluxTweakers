@@ -4953,23 +4953,27 @@ async function updateHomeStats(){
     const stats = await invoke('get_system_stats', { includeGpu });
     const cpuVal = Math.round(stats.cpu_percent);
     const ramVal = Math.round(stats.ram_percent);
-    const diskAvg = stats.disks && stats.disks.length
-      ? Math.round(stats.disks.reduce((a,d)=>a+d.percent,0) / stats.disks.length)
-      : 0;
-    if (stats.slow_read) window.__lastGpuPct = stats.gpu_percent;
+    if (stats.slow_read){
+      window.__lastGpuPct = stats.gpu_percent;
+      window.__lastDiskActive = stats.disk_active_pct;
+    }
     const gpuKnown = (window.__lastGpuPct !== undefined && window.__lastGpuPct !== null);
     const gpuVal = gpuKnown ? Math.round(window.__lastGpuPct) : null;
+    // Atividade real do disco (o mesmo número do Gerenciador de Tarefas), não
+    // quanto o disco está cheio. Se ainda não leu, mostra 0 até a 1ª leitura.
+    const diskVal = (window.__lastDiskActive !== undefined && window.__lastDiskActive !== null)
+      ? Math.round(window.__lastDiskActive) : 0;
 
     document.getElementById('homeStatCpuVal').textContent = `${cpuVal}%`;
     document.getElementById('homeStatCpuBar').style.width = `${cpuVal}%`;
     document.getElementById('homeStatRamVal').textContent = `${ramVal}%`;
     document.getElementById('homeStatRamBar').style.width = `${ramVal}%`;
-    document.getElementById('homeStatDiskVal').textContent = `${diskAvg}%`;
-    document.getElementById('homeStatDiskBar').style.width = `${diskAvg}%`;
+    document.getElementById('homeStatDiskVal').textContent = `${diskVal}%`;
+    document.getElementById('homeStatDiskBar').style.width = `${diskVal}%`;
     document.getElementById('homeStatGpuVal').textContent = gpuKnown ? `${gpuVal}%` : '–';
     document.getElementById('homeStatGpuBar').style.width = `${gpuVal ?? 0}%`;
 
-    const score = 100 - Math.round((cpuVal + ramVal + diskAvg) / 3);
+    const score = 100 - Math.round((cpuVal + ramVal + diskVal) / 3);
     updateHomeScoreRing(score);
   }catch(err){
     console.log('Stats do dashboard indisponíveis:', err);

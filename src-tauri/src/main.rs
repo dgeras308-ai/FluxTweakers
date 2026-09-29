@@ -719,6 +719,10 @@ struct SystemStats {
     cpu_threads: usize,
     cached_gb: Option<f64>,
     uptime_secs: u64,
+    /// atividade real do disco (0-100%, tempo ocupado) — o mesmo número que
+    /// o Gerenciador de Tarefas mostra. NÃO é o quanto do disco está cheio
+    /// (isso é o `percent` de cada DiskInfo, uma coisa bem diferente).
+    disk_active_pct: Option<f64>,
 }
 
 /// Lê o uso real de CPU e RAM via sysinfo (biblioteca nativa, sem depender
@@ -780,6 +784,7 @@ async fn get_system_stats(state: State<'_, SysState>, include_gpu: bool) -> Resu
             cpu_threads,
             cached_gb: None,
             uptime_secs,
+            disk_active_pct: None,
         });
     }
 
@@ -807,6 +812,7 @@ async fn get_system_stats(state: State<'_, SysState>, include_gpu: bool) -> Resu
         cpu_threads,
         cached_gb: cache_mb.map(|mb| ((mb as f64) / 1024.0 * 10.0).round() / 10.0),
         uptime_secs,
+        disk_active_pct: slow.disk_active.map(|d| (d.clamp(0.0, 100.0) * 10.0).round() / 10.0),
     })
 }
 
@@ -814,16 +820,22 @@ async fn get_system_stats(state: State<'_, SysState>, include_gpu: bool) -> Resu
 struct SlowMetrics {
     gpu: Option<f64>,
     cpu_mhz: Option<f64>,
+    disk_active: Option<f64>,
 }
 
-/// Lê GPU e frequência real da CPU numa única chamada de PowerShell, via WMI
-/// (nomes de classe/propriedade sempre em inglês — funciona em Windows de
-/// qualquer idioma; o Get-Counter falhava em Windows em português).
+/// Lê GPU, frequência real da CPU e ATIVIDADE do disco (não confundir com
+/// espaço ocupado!) numa única chamada de PowerShell, via WMI (nomes de
+/// classe/propriedade sempre em inglês — funciona em Windows de qualquer
+/// idioma; o Get-Counter falhava em Windows em português).
 ///  - GPU: soma o uso de cada "engine" entre todos os processos e pega o engine
 ///    mais ocupado (é como o Gerenciador de Tarefas calcula), em vez de somar
 ///    só engines 3D de forma bruta.
 ///  - Frequência: velocidade base × "% Desempenho do Processador" (passa de
 ///    100% quando o turbo está ativo) — o valor real de agora, não o nominal.
+///  - Disco: 100 − "% tempo ocioso" do disco físico, que é exatamente o
+///    número que o Gerenciador de Tarefas mostra na coluna "Disco" — bem
+///    diferente de "quanto do disco está cheio" (isso continua existindo,
+///    por unidade, na aba Armazenamento; são métricas diferentes).
 /// O cache NÃO vem daqui — vem de standby_list_mb() (NtQuerySystemInformation),
 /// a mesma leitura nativa e correta que a limpeza de RAM já usa. O contador WMI
 /// "CacheBytes" que era usado antes mede outra coisa (bem mais ampla) e não bate
@@ -844,7 +856,10 @@ $mhz = $null
 $perf = Get-CimInstance Win32_PerfFormattedData_Counters_ProcessorInformation -Filter "Name='_Total'"
 $base = (Get-CimInstance Win32_Processor | Select-Object -First 1).MaxClockSpeed
 if ($perf -and $base) { $mhz = [math]::Round($base * $perf.PercentProcessorPerformance / 100) }
-[pscustomobject]@{ gpu = $gpu; cpu_mhz = $mhz } | ConvertTo-Json -Compress
+$diskActive = $null
+$dperf = Get-CimInstance Win32_PerfFormattedData_PerfDisk_PhysicalDisk -Filter "Name='_Total'"
+if ($dperf) { $diskActive = [math]::Round(100 - $dperf.PercentIdleTime, 1) }
+[pscustomobject]@{ gpu = $gpu; cpu_mhz = $mhz; disk_active = $diskActive } | ConvertTo-Json -Compress
 "#;
 
     let output = Command::new("powershell")
