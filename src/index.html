@@ -5134,15 +5134,24 @@ document.getElementById('homeActTurbo')?.addEventListener('click', async ()=>{
 
   const report = [];
 
-  // 1) Plano de energia no máximo (lembra o plano atual pra poder voltar)
+  // 1) Plano de energia FluxTweakers (lembra o plano atual pra poder voltar)
   try{
     const plans = await invoke('list_power_plans');
     const current = plans.find(p => p.active);
-    const best = plans.find(p => /desempenho m[aá]ximo|ultimate|high performance/i.test(p.name));
     if (current) window.__turboPrevPlanGuid = current.guid;
-    if (best && !best.active){
-      await invoke('set_power_plan', { guid: best.guid });
-      report.push('energia no máximo');
+    const fluxPlan = plans.find(p => p.name.trim().toLowerCase() === 'fluxtweakers');
+    if (fluxPlan){
+      if (!fluxPlan.active){
+        await invoke('set_power_plan', { guid: fluxPlan.guid });
+      }
+      report.push('plano FluxTweakers ativado');
+    } else {
+      // Primeira vez nessa máquina: o plano ainda não foi importado. Isso
+      // precisa de admin (só essa etapa) — as próximas ativações não pedem mais.
+      const filePath = await invoke('extract_fluxtweakers_plan_file');
+      const script = `powercfg -import "${filePath}"\nfor /f "tokens=4 delims= " %%i in ('powercfg /list ^| findstr /I "FLUXTWEAKERS"') do powercfg /setactive %%i`;
+      const ok = await saveOrRunScript(script, 'ativar-plano-fluxtweakers-dgeras.bat');
+      if (ok) report.push('plano FluxTweakers importado e ativado');
     }
   }catch(err){ /* segue sem essa parte */ }
 
