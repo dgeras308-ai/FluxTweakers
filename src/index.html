@@ -59,7 +59,7 @@
     --shadow-lg:0 22px 55px -20px rgba(20,20,30,.2);
     --surface-strong:rgba(255,255,255,.97);
   }
-  :root.light-mode #bg3d, :root.light-mode #bgFallback{opacity:0;}
+  :root.light-mode #bg3d, :root.light-mode #bgFallback, :root.light-mode #bgRaio{opacity:0;}
   *{box-sizing:border-box;}
   ::selection{background:var(--accent);color:#000;}
   ::-webkit-scrollbar{width:10px;height:10px;}
@@ -113,6 +113,7 @@
     background-size:140px 140px, 140px 140px, 140px 140px, auto, auto, auto, auto;
   }
   #bg3d{position:fixed;inset:0;width:100vw;height:100vh;display:block;pointer-events:none;opacity:.32;}
+  #bgRaio{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;display:block;}
 
   .page{
     position:relative;
@@ -1611,6 +1612,21 @@
 </div>
 <div id="bgFallback"></div>
 <canvas id="bg3d"></canvas>
+<svg id="bgRaio" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <radialGradient id="raioGlow" cx="88%" cy="6%" r="55%">
+      <stop offset="0%" style="stop-color:var(--accent);stop-opacity:.16"/>
+      <stop offset="100%" style="stop-color:var(--accent);stop-opacity:0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#raioGlow)"/>
+  <g style="fill:var(--accent)">
+    <path style="opacity:.05" transform="translate(1330,20) scale(9) rotate(8)" d="M13 2 3 14h7l-1 8 11-14h-7l1-8Z"/>
+    <path style="opacity:.035" transform="translate(160,540) scale(3.2) rotate(-12)" d="M13 2 3 14h7l-1 8 11-14h-7l1-8Z"/>
+    <path style="opacity:.03" transform="translate(760,740) scale(2.6) rotate(15)" d="M13 2 3 14h7l-1 8 11-14h-7l1-8Z"/>
+    <path style="opacity:.03" transform="translate(1220,630) scale(2.2) rotate(-6)" d="M13 2 3 14h7l-1 8 11-14h-7l1-8Z"/>
+  </g>
+</svg>
 <div id="topProgress"><div id="topProgressFill"></div></div>
 
 <div id="loginScreen">
@@ -1958,7 +1974,11 @@ async function saveOrRunScript(script, filename){
     const palette = [0xffffff, 0xcccccc, 0x888888];
 
     const shapes = [];
-    const COUNT = 34;
+    // Os poliedros de linha foram removidos (fundo genérico, sem cara do app).
+    // Mantém a cena/câmera/renderer só pelo efeito de "explosão de partículas"
+    // que já roda na abertura do app (triggerAppIntro) — o fundo parado agora
+    // é o SVG #bgRaio (raio do logo + brilho), fora do canvas do three.js.
+    const COUNT = 0;
     for(let i=0;i<COUNT;i++){
       const geo = Math.random() > 0.5 ? geoA : geoB;
       const color = palette[Math.floor(Math.random()*palette.length)];
