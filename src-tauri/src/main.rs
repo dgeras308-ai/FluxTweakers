@@ -836,7 +836,7 @@ $ErrorActionPreference = 'SilentlyContinue'
 $gpu = $null
 $g = Get-CimInstance Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine
 if ($g) {
-  $gpu = ($g | Group-Object { $_.Name -replace '^pid_\d+_', '' } |
+  $gpu = ($g | Group-Object { $_.Name -replace '.*engtype_', '' } |
     ForEach-Object { ($_.Group | Measure-Object -Property UtilizationPercentage -Sum).Sum } |
     Measure-Object -Maximum).Maximum
 }
