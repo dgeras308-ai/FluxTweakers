@@ -271,6 +271,34 @@ fn list_power_plans() -> Result<Vec<PowerPlan>, String> {
     Ok(Vec::new())
 }
 
+/// Troca o plano de energia ativo (powercfg /setactive) — diferente de
+/// IMPORTAR um plano novo, isso NÃO precisa de admin: qualquer usuário pode
+/// alternar entre planos que já existem no Windows.
+#[cfg(target_os = "windows")]
+#[tauri::command]
+fn set_power_plan(guid: String) -> Result<(), String> {
+    let valid = !guid.is_empty() && guid.chars().all(|c| c.is_ascii_hexdigit() || c == '-');
+    if !valid {
+        return Err("GUID de plano inválido".to_string());
+    }
+    let output = Command::new("powercfg")
+        .args(["/setactive", &guid])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output()
+        .map_err(|e| format!("Não consegui trocar o plano: {e}"))?;
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+#[tauri::command]
+fn set_power_plan(_guid: String) -> Result<(), String> {
+    Err("Disponível apenas no Windows".to_string())
+}
+
 /// O plano de energia "FLUXTWEAKERS" (ajustado à mão pelo Marcos) vem embutido
 /// dentro do próprio .exe — não é um arquivo solto que pode se perder ou faltar
 /// na instalação. Isso só escreve o arquivo num local temporário; a importação
@@ -1850,7 +1878,7 @@ fn main() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));

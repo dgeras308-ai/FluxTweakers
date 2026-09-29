@@ -584,6 +584,9 @@
   .home-hero-btn.primary:disabled{opacity:.6;cursor:default;transform:none;}
   .home-hero-btn.secondary{background:transparent;border-color:var(--border);color:var(--text);}
   .home-hero-btn.secondary:hover{border-color:var(--tab-accent);color:var(--tab-accent);}
+  .home-hero-btn.turbo-on{background:#f0b83c;border-color:#f0b83c;color:#000;font-weight:700;}
+  .home-hero-btn.turbo-on:hover{filter:brightness(1.08);}
+  .home-hero-btn.turbo-busy{opacity:.7;cursor:default;}
 
   .home-hero-score{position:relative;z-index:1;width:110px;height:110px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
   .home-score-ring{width:110px;height:110px;transform:rotate(-90deg);}
@@ -3951,6 +3954,10 @@ homePanel.innerHTML = `
             ${lineIcon('<path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>')}
             Otimização Total
           </button>
+          <button class="home-hero-btn secondary" id="homeActTurbo" title="Limpa a RAM, fecha apps pesados em segundo plano e troca pro plano de energia de máximo desempenho — tudo com um clique">
+            ${lineIcon('<path d="M13 2 3 14h7l-1 8 11-14h-7l1-8Z"/>')}
+            Modo Turbo
+          </button>
         </div>
       </div>
       <div class="home-hero-score">
@@ -5096,6 +5103,78 @@ document.getElementById('homeActAnalyze')?.addEventListener('click', ()=>{
 });
 document.getElementById('homeActApplyRec2')?.addEventListener('click', ()=>{
   document.getElementById('homeActApplyRec')?.click();
+});
+
+// ---------- Modo Turbo: limpa RAM + fecha apps pesados + energia no máximo ----------
+window.__turboOn = false;
+window.__turboPrevPlanGuid = null;
+document.getElementById('homeActTurbo')?.addEventListener('click', async ()=>{
+  if (!window.__TAURI__) return;
+  const btn = document.getElementById('homeActTurbo');
+  if (btn.classList.contains('turbo-busy')) return;
+  const { invoke } = window.__TAURI__.core;
+
+  if (window.__turboOn){
+    // Desligar: só desfaz a troca de plano de energia (RAM limpa e apps
+    // fechados não têm "desfazer" — voltar não reabre o que foi encerrado).
+    btn.classList.add('turbo-busy');
+    if (window.__turboPrevPlanGuid){
+      try{ await invoke('set_power_plan', { guid: window.__turboPrevPlanGuid }); }catch(err){}
+    }
+    window.__turboOn = false;
+    window.__turboPrevPlanGuid = null;
+    btn.classList.remove('turbo-on','turbo-busy');
+    btn.innerHTML = `${lineIcon('<path d="M13 2 3 14h7l-1 8 11-14h-7l1-8Z"/>')}Modo Turbo`;
+    showToast('Modo Turbo desativado — plano de energia normal restaurado');
+    return;
+  }
+
+  btn.classList.add('turbo-busy');
+  btn.innerHTML = `${lineIcon('<path d="M13 2 3 14h7l-1 8 11-14h-7l1-8Z"/>')}Ativando...`;
+
+  const report = [];
+
+  // 1) Plano de energia no máximo (lembra o plano atual pra poder voltar)
+  try{
+    const plans = await invoke('list_power_plans');
+    const current = plans.find(p => p.active);
+    const best = plans.find(p => /desempenho m[aá]ximo|ultimate|high performance/i.test(p.name));
+    if (current) window.__turboPrevPlanGuid = current.guid;
+    if (best && !best.active){
+      await invoke('set_power_plan', { guid: best.guid });
+      report.push('energia no máximo');
+    }
+  }catch(err){ /* segue sem essa parte */ }
+
+  // 2) Limpa a RAM
+  try{
+    await invoke('run_ram_clean', { mode: 'standby' });
+    report.push('RAM limpa');
+  }catch(err){ /* segue sem essa parte */ }
+
+  // 3) Fecha apps pesados em segundo plano (só os que usam bastante RAM e não
+  // são essenciais/protegidos — o backend também recusa qualquer protegido).
+  let closedCount = 0;
+  try{
+    const details = await invoke('get_ram_details');
+    const heavy = (details.top_processes || [])
+      .filter(p => p.memory_mb > 500 && !RAM_PROTECTED.has(p.name.toLowerCase()))
+      .slice(0, 5);
+    for (const p of heavy){
+      try{
+        await invoke('kill_processes_by_name', { name: p.name });
+        closedCount++;
+      }catch(err){ /* app pode já ter fechado ou exigir admin — ignora e segue */ }
+    }
+    if (closedCount > 0) report.push(`${closedCount} app${closedCount>1?'s':''} fechado${closedCount>1?'s':''}`);
+  }catch(err){ /* segue sem essa parte */ }
+
+  window.__turboOn = true;
+  btn.classList.remove('turbo-busy');
+  btn.classList.add('turbo-on');
+  btn.innerHTML = `${lineIcon('<path d="M13 2 3 14h7l-1 8 11-14h-7l1-8Z"/>')}Turbo ativo`;
+  showToast(report.length ? `Modo Turbo ativado — ${report.join(', ')}` : 'Modo Turbo ativado');
+  setTimeout(loadRamDashboard, 800);
 });
 
 const TAB_GROUPS = [
