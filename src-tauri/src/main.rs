@@ -1921,7 +1921,7 @@ fn main() {
                     loop {
                         tokio::time::sleep(std::time::Duration::from_millis(1200)).await;
                         tick += 1;
-                        let include_gpu = tick % 8 == 0; // leitura pesada (GPU/disco/cache) a cada ~9.6s
+                        let include_gpu = tick % 3 == 0; // leitura pesada (GPU/disco/cache) a cada ~3.6s
                         let sys_state = app_handle.state::<SysState>();
                         if let Ok(stats) = compute_system_stats(&sys_state, include_gpu).await {
                             let _ = app_handle.emit("system-stats", stats);
