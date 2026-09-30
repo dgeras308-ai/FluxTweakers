@@ -4937,20 +4937,18 @@ function updateHomeScoreRing(score){
   circle.style.stroke = scoreColor(clamped);
   label.textContent = Math.round(clamped);
 }
-// CPU/RAM/disco são leitura rápida (em memória) — atualiza a cada 2.5s.
-// GPU abre um processo do PowerShell pra ler (mais pesado) — atualiza só a
-// cada ~10s, senão o próprio ato de medir infla o uso de CPU medido.
-let __homeStatsTick = 0;
-async function updateHomeStats(){
+// Os números de CPU/RAM/Disco/GPU chegam via evento empurrado pelo Rust
+// (system-stats), não mais perguntando com setInterval — um timer no
+// JavaScript da página é desacelerado pelo Windows/WebView2 quando a janela
+// perde o foco, o que fazia os números ficarem "congelados" e desatualizados
+// bem na hora de comparar com o Gerenciador de Tarefas. O loop que lê de
+// verdade agora roda dentro do próprio programa (sempre ativo).
+function renderHomeStats(stats){
   if (!window.__TAURI__) return;
   if (document.getElementById('appContent').hidden) return;
   const panel = document.getElementById('panel-home');
   if (!panel || !panel.classList.contains('active')) return;
   try{
-    const { invoke } = window.__TAURI__.core;
-    __homeStatsTick++;
-    const includeGpu = (__homeStatsTick % 4 === 0);
-    const stats = await invoke('get_system_stats', { includeGpu });
     const cpuVal = Math.round(stats.cpu_percent);
     const ramVal = Math.round(stats.ram_percent);
     if (stats.slow_read){
@@ -4979,8 +4977,6 @@ async function updateHomeStats(){
     console.log('Stats do dashboard indisponíveis:', err);
   }
 }
-setInterval(updateHomeStats, 2500);
-updateHomeStats();
 
 function diagIconSvg(status){
   if (status === 'ok') return '<path d="M20 6 9 17l-5-5"/>';
@@ -5122,7 +5118,9 @@ document.getElementById('diagModal')?.addEventListener('click', (e)=>{
 });
 document.getElementById('homeActAnalyze')?.addEventListener('click', ()=>{
   loadHomeHardwareInfo();
-  updateHomeStats();
+  if (window.__TAURI__){
+    window.__TAURI__.core.invoke('get_system_stats', { includeGpu: true }).then(renderHomeStats).catch(()=>{});
+  }
   runSystemDiagnostics();
 });
 document.getElementById('homeActApplyRec2')?.addEventListener('click', ()=>{
@@ -5515,19 +5513,16 @@ function fmtUptime(sec){
   return d > 0 ? `${d}d ${h}h` : h > 0 ? `${h}h ${m}min` : `${m}min`;
 }
 
-async function updateLiveMonitor(includeGpu){
+function renderLiveMonitor(stats){
   if (!window.__TAURI__) return; // monitoramento real só existe dentro do app nativo
   if (document.getElementById('appContent').hidden) return; // só roda depois do login
   try{
-    const { invoke } = window.__TAURI__.core;
-    const stats = await invoke('get_system_stats', { includeGpu: !!includeGpu });
-
     const ringsEl = document.getElementById('liveMonitorRings');
     if (ringsEl){
       // Só atualiza GPU/frequência real/cache nos ciclos em que o backend
       // realmente os leu (slow_read) — assim nunca mostra um 0%/valor
       // inventado enquanto espera a próxima leitura (que é mais pesada e
-      // roda a cada ~8s, não a cada 1s como CPU/RAM).
+      // roda a cada ~10s, não a cada ~1.2s como CPU/RAM).
       if (stats.slow_read){
         window.__lastGpuPct = stats.gpu_percent;
         window.__lastCpuGhz = stats.cpu_freq_ghz;
@@ -5575,14 +5570,15 @@ async function updateLiveMonitor(includeGpu){
   }
 }
 
-// CPU/RAM/disco são leitura rápida (em memória, sem abrir processo) — atualiza a cada 2s.
-// GPU depende de um contador do Windows mais pesado — atualiza só a cada 8s, pra não travar o app.
-let __liveMonitorTick = 0;
-setInterval(() => {
-  __liveMonitorTick++;
-  const includeGpu = (__liveMonitorTick % 4 === 0); // a cada 4 ticks (~8s)
-  updateLiveMonitor(includeGpu);
-}, 2000);
+// Um único listener recebe os números (CPU/RAM/Disco/GPU) empurrados pelo
+// loop de monitoramento do Rust (roda sempre, mesmo com a janela em segundo
+// plano) e atualiza tanto a Home quanto a aba RAM ao mesmo tempo.
+if (window.__TAURI__){
+  window.__TAURI__.event.listen('system-stats', (event) => {
+    renderHomeStats(event.payload);
+    renderLiveMonitor(event.payload);
+  });
+}
 
 // ---------- Dashboard detalhado de memória (aba RAM) ----------
 async function loadRamDashboard(){

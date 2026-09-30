@@ -9,6 +9,7 @@ use serde::Serialize;
 use sysinfo::{Disks, ProcessesToUpdate, System};
 use tauri::State;
 use tauri::Manager;
+use tauri::Emitter;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -18,7 +19,7 @@ const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 struct SysState(Mutex<System>);
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 struct DiskInfo {
     name: String,
     used_gb: f64,
@@ -702,7 +703,7 @@ async fn get_ram_details(state: State<'_, SysState>) -> Result<RamDetails, Strin
     })
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 struct SystemStats {
     cpu_percent: f64,
     ram_used_gb: f64,
@@ -732,8 +733,16 @@ struct SystemStats {
 /// de vez em quando pelo frontend, nunca a cada atualização.
 #[tauri::command]
 async fn get_system_stats(state: State<'_, SysState>, include_gpu: bool) -> Result<SystemStats, String> {
+    compute_system_stats(&state, include_gpu).await
+}
+
+/// O mesmo cálculo de get_system_stats, só que como função comum (não um
+/// tauri::command) — assim tanto o comando quanto o loop de monitoramento em
+/// segundo plano (que roda independente da janela estar em foco) usam
+/// exatamente a mesma lógica, sem duplicar nada.
+async fn compute_system_stats(sys_state: &SysState, include_gpu: bool) -> Result<SystemStats, String> {
     let (cpu_percent, ram_used_gb, ram_total_gb, ram_percent, cpu_cores, cpu_threads) = {
-        let mut sys = state.0.lock().unwrap();
+        let mut sys = sys_state.0.lock().unwrap();
         sys.refresh_cpu_usage();
         sys.refresh_memory();
         let cpu_cores = sys.physical_core_count();
@@ -1897,6 +1906,29 @@ fn main() {
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));
+
+            // Monitor de sistema rodando de verdade em segundo plano — não
+            // depende da janela estar em foco (diferente de um timer no
+            // JavaScript da página, que o Windows/WebView2 desacelera bastante
+            // quando a janela perde o foco ou fica atrás de outra, causando
+            // números "congelados" e desatualizados ao comparar com o
+            // Gerenciador de Tarefas). Empurra os números pro frontend via
+            // evento assim que lê, ao vés de esperar o frontend perguntar.
+            {
+                let app_handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    let mut tick: u64 = 0;
+                    loop {
+                        tokio::time::sleep(std::time::Duration::from_millis(1200)).await;
+                        tick += 1;
+                        let include_gpu = tick % 8 == 0; // leitura pesada (GPU/disco/cache) a cada ~9.6s
+                        let sys_state = app_handle.state::<SysState>();
+                        if let Ok(stats) = compute_system_stats(&sys_state, include_gpu).await {
+                            let _ = app_handle.emit("system-stats", stats);
+                        }
+                    }
+                });
+            }
 
             #[cfg(target_os = "windows")]
             {
