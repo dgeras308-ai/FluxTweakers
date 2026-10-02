@@ -19,6 +19,13 @@ const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 struct SysState(Mutex<System>);
 
+/// Guarda a conexão PDH aberta (ver "Monitor nativo via PDH" mais abaixo).
+/// Em None quando a PDH falhou ao iniciar (ou fora do Windows) — nesse caso
+/// GPU/frequência real/disco simplesmente ficam sem leitura, sem travar nada.
+struct PdhState(Mutex<Option<PdhMonitor>>);
+#[cfg(not(target_os = "windows"))]
+struct PdhMonitor;
+
 #[derive(Serialize, Clone)]
 struct DiskInfo {
     name: String,
@@ -732,15 +739,23 @@ struct SystemStats {
 /// PowerShell nos bastidores e é bem mais lenta — por isso só é chamada
 /// de vez em quando pelo frontend, nunca a cada atualização.
 #[tauri::command]
-async fn get_system_stats(state: State<'_, SysState>, include_gpu: bool) -> Result<SystemStats, String> {
-    compute_system_stats(&state, include_gpu).await
+async fn get_system_stats(
+    state: State<'_, SysState>,
+    pdh_state: State<'_, PdhState>,
+    include_gpu: bool,
+) -> Result<SystemStats, String> {
+    compute_system_stats(&state, &pdh_state, include_gpu).await
 }
 
 /// O mesmo cálculo de get_system_stats, só que como função comum (não um
 /// tauri::command) — assim tanto o comando quanto o loop de monitoramento em
 /// segundo plano (que roda independente da janela estar em foco) usam
 /// exatamente a mesma lógica, sem duplicar nada.
-async fn compute_system_stats(sys_state: &SysState, include_gpu: bool) -> Result<SystemStats, String> {
+async fn compute_system_stats(
+    sys_state: &SysState,
+    pdh_state: &PdhState,
+    include_gpu: bool,
+) -> Result<SystemStats, String> {
     let (cpu_percent, ram_used_gb, ram_total_gb, ram_percent, cpu_cores, cpu_threads) = {
         let mut sys = sys_state.0.lock().unwrap();
         sys.refresh_cpu_usage();
@@ -797,9 +812,14 @@ async fn compute_system_stats(sys_state: &SysState, include_gpu: bool) -> Result
         });
     }
 
-    let slow = tauri::async_runtime::spawn_blocking(read_slow_metrics_windows)
-        .await
-        .unwrap_or_default();
+    #[cfg(target_os = "windows")]
+    let (gpu, cpu_mhz, disk_active) = {
+        let mut guard = pdh_state.0.lock().unwrap();
+        read_pdh_metrics(&mut guard)
+    };
+    #[cfg(not(target_os = "windows"))]
+    let (gpu, cpu_mhz, disk_active): (Option<f64>, Option<f64>, Option<f64>) = (None, None, None);
+
     #[cfg(target_os = "windows")]
     let cache_mb = tauri::async_runtime::spawn_blocking(standby_list_mb)
         .await
@@ -813,81 +833,266 @@ async fn compute_system_stats(sys_state: &SysState, include_gpu: bool) -> Result
         ram_used_gb: (ram_used_gb * 10.0).round() / 10.0,
         ram_total_gb: (ram_total_gb * 10.0).round() / 10.0,
         ram_percent: (ram_percent * 10.0).round() / 10.0,
-        gpu_percent: slow.gpu.map(|g| (g.clamp(0.0, 100.0) * 10.0).round() / 10.0),
+        gpu_percent: gpu.map(|g| (g.clamp(0.0, 100.0) * 10.0).round() / 10.0),
         disks,
         slow_read: true,
-        cpu_freq_ghz: slow.cpu_mhz.filter(|m| *m > 0.0).map(|m| (m / 1000.0 * 100.0).round() / 100.0),
+        cpu_freq_ghz: cpu_mhz.filter(|m| *m > 0.0).map(|m| (m / 1000.0 * 100.0).round() / 100.0),
         cpu_cores,
         cpu_threads,
         cached_gb: cache_mb.map(|mb| ((mb as f64) / 1024.0 * 10.0).round() / 10.0),
         uptime_secs,
-        disk_active_pct: slow.disk_active.map(|d| (d.clamp(0.0, 100.0) * 10.0).round() / 10.0),
+        disk_active_pct: disk_active.map(|d| (d.clamp(0.0, 100.0) * 10.0).round() / 10.0),
     })
 }
 
-#[derive(Default, serde::Deserialize)]
-struct SlowMetrics {
-    gpu: Option<f64>,
-    cpu_mhz: Option<f64>,
-    disk_active: Option<f64>,
-}
-
-/// Lê GPU, frequência real da CPU e ATIVIDADE do disco (não confundir com
-/// espaço ocupado!) numa única chamada de PowerShell, via WMI (nomes de
-/// classe/propriedade sempre em inglês — funciona em Windows de qualquer
-/// idioma; o Get-Counter falhava em Windows em português).
-///  - GPU: soma o uso de cada "engine" entre todos os processos e pega o engine
-///    mais ocupado (é como o Gerenciador de Tarefas calcula), em vez de somar
-///    só engines 3D de forma bruta.
-///  - Frequência: velocidade base × "% Desempenho do Processador" (passa de
-///    100% quando o turbo está ativo) — o valor real de agora, não o nominal.
-///  - Disco: 100 − "% tempo ocioso" do disco físico, que é exatamente o
-///    número que o Gerenciador de Tarefas mostra na coluna "Disco" — bem
-///    diferente de "quanto do disco está cheio" (isso continua existindo,
-///    por unidade, na aba Armazenamento; são métricas diferentes).
-/// O cache NÃO vem daqui — vem de standby_list_mb() (NtQuerySystemInformation),
-/// a mesma leitura nativa e correta que a limpeza de RAM já usa. O contador WMI
-/// "CacheBytes" que era usado antes mede outra coisa (bem mais ampla) e não bate
-/// com o que o Gerenciador de Tarefas mostra como "Em cache".
-/// Devolve None em cada campo que não conseguir medir (nada de inventar 0).
+/// ===== Monitor nativo via PDH (Performance Data Helper) =====
+///
+/// Antes, GPU/CPU-frequência/disco eram lidos abrindo um processo do
+/// PowerShell a cada leitura — o que custa tempo (o próprio PowerShell demora
+/// pra abrir) e por isso só rodava a cada alguns segundos, deixando esses
+/// números "atrasados" na tela em comparação com o Gerenciador de Tarefas,
+/// que atualiza a cada 1 segundo.
+///
+/// Agora a leitura é nativa: abre UMA ÚNICA conexão com a PDH (a mesma API
+/// que o Gerenciador de Tarefas usa por baixo dos panos) quando o programa
+/// inicia, e só CONSULTA esse canal já aberto a cada atualização — sem abrir
+/// processo nenhum. Isso deixa GPU e disco tão rápidos quanto CPU/RAM.
 #[cfg(target_os = "windows")]
-fn read_slow_metrics_windows() -> SlowMetrics {
-    let ps_cmd = r#"
-$ErrorActionPreference = 'SilentlyContinue'
-$gpu = $null
-$g = Get-CimInstance Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine
-if ($g) {
-  $gpu = ($g | Group-Object { $_.Name -replace '.*engtype_', '' } |
-    ForEach-Object { ($_.Group | Measure-Object -Property UtilizationPercentage -Sum).Sum } |
-    Measure-Object -Maximum).Maximum
+struct PdhMonitor {
+    query: isize,
+    disk_counter: isize,
+    cpu_counter: isize,
+    gpu_counter: Option<isize>,
+    base_mhz: Option<f64>,
+    /// contadores de "% de tempo" da PDH precisam de DUAS leituras pra dar um
+    /// valor válido (a primeira é só a "largada" da amostra) — até isso
+    /// acontecer, devolve None em vez de um número fabricado.
+    primed: bool,
 }
-$mhz = $null
-$perf = Get-CimInstance Win32_PerfFormattedData_Counters_ProcessorInformation -Filter "Name='_Total'"
-$base = (Get-CimInstance Win32_Processor | Select-Object -First 1).MaxClockSpeed
-if ($perf -and $base) { $mhz = [math]::Round($base * $perf.PercentProcessorPerformance / 100) }
-$diskActive = $null
-$dperf = Get-CimInstance Win32_PerfFormattedData_PerfDisk_PhysicalDisk -Filter "Name='_Total'"
-if ($dperf) { $diskActive = [math]::Round(100 - $dperf.PercentIdleTime, 1) }
-[pscustomobject]@{ gpu = $gpu; cpu_mhz = $mhz; disk_active = $diskActive } | ConvertTo-Json -Compress
-"#;
+#[cfg(target_os = "windows")]
+unsafe impl Send for PdhMonitor {}
 
-    let output = Command::new("powershell")
-        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps_cmd])
-        .creation_flags(CREATE_NO_WINDOW)
-        .output();
+#[cfg(target_os = "windows")]
+#[repr(C)]
+struct PdhFmtCounterValue {
+    c_status: u32,
+    _pad: u32,
+    value: f64,
+}
 
-    match output {
-        Ok(o) => {
-            let text = String::from_utf8_lossy(&o.stdout);
-            serde_json::from_str::<SlowMetrics>(text.trim()).unwrap_or_default()
+#[cfg(target_os = "windows")]
+#[repr(C)]
+struct PdhFmtCounterValueItemW {
+    sz_name: *const u16,
+    fmt_value: PdhFmtCounterValue,
+}
+
+#[cfg(target_os = "windows")]
+#[link(name = "pdh")]
+extern "system" {
+    fn PdhOpenQueryW(data_source: *const u16, user_data: usize, query: *mut isize) -> u32;
+    fn PdhAddEnglishCounterW(
+        query: isize,
+        full_counter_path: *const u16,
+        user_data: usize,
+        counter: *mut isize,
+    ) -> u32;
+    fn PdhCollectQueryData(query: isize) -> u32;
+    fn PdhGetFormattedCounterValue(
+        counter: isize,
+        format: u32,
+        counter_type: *mut u32,
+        value: *mut PdhFmtCounterValue,
+    ) -> u32;
+    fn PdhGetFormattedCounterArrayW(
+        counter: isize,
+        format: u32,
+        buffer_size: *mut u32,
+        buffer_count: *mut u32,
+        item_buffer: *mut PdhFmtCounterValueItemW,
+    ) -> u32;
+}
+
+#[cfg(target_os = "windows")]
+const PDH_FMT_DOUBLE: u32 = 0x00000200;
+
+/// Lê a velocidade BASE da CPU (MHz) uma única vez, direto do Registro do
+/// Windows — não muda em tempo de execução, então não precisa reler. Isso
+/// evita precisar do WMI/PowerShell só pra essa informação fixa.
+#[cfg(target_os = "windows")]
+fn read_base_cpu_mhz() -> Option<f64> {
+    unsafe {
+        const HKEY_LOCAL_MACHINE: isize = 0x80000002u32 as i32 as isize;
+        const RRF_RT_REG_DWORD: u32 = 0x00000010;
+        let subkey: Vec<u16> = "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0\0"
+            .encode_utf16()
+            .collect();
+        let value_name: Vec<u16> = "~MHz\0".encode_utf16().collect();
+        let mut data: u32 = 0;
+        let mut data_len: u32 = 4;
+        let status = RegGetValueW(
+            HKEY_LOCAL_MACHINE,
+            subkey.as_ptr(),
+            value_name.as_ptr(),
+            RRF_RT_REG_DWORD,
+            std::ptr::null_mut(),
+            &mut data as *mut u32 as *mut core::ffi::c_void,
+            &mut data_len,
+        );
+        if status == 0 && data > 0 {
+            Some(data as f64)
+        } else {
+            None
         }
-        Err(_) => SlowMetrics::default(),
     }
 }
 
-#[cfg(not(target_os = "windows"))]
-fn read_slow_metrics_windows() -> SlowMetrics {
-    SlowMetrics::default()
+/// Abre a conexão com a PDH e registra os 3 contadores que vamos ler sempre
+/// (GPU, CPU e disco) — roda UMA VEZ, na inicialização do programa. Se um
+/// contador específico falhar ao ser adicionado (ex: driver de GPU que não
+/// expõe esses dados), essa métrica fica None pra sempre, mas as outras
+/// continuam funcionando normalmente.
+#[cfg(target_os = "windows")]
+fn init_pdh_monitor() -> Option<PdhMonitor> {
+    unsafe {
+        let mut query: isize = 0;
+        if PdhOpenQueryW(std::ptr::null(), 0, &mut query) != 0 {
+            return None;
+        }
+
+        let add_counter = |path: &str| -> Option<isize> {
+            let wide: Vec<u16> = path.encode_utf16().chain(std::iter::once(0)).collect();
+            let mut counter: isize = 0;
+            if PdhAddEnglishCounterW(query, wide.as_ptr(), 0, &mut counter) == 0 {
+                Some(counter)
+            } else {
+                None
+            }
+        };
+
+        let disk_counter = add_counter(r"\PhysicalDisk(_Total)\% Idle Time")?;
+        let cpu_counter = add_counter(r"\Processor Information(_Total)\% Processor Performance")?;
+        let gpu_counter = add_counter(r"\GPU Engine(*)\Utilization Percentage");
+
+        Some(PdhMonitor {
+            query,
+            disk_counter,
+            cpu_counter,
+            gpu_counter,
+            base_mhz: read_base_cpu_mhz(),
+            primed: false,
+        })
+    }
+}
+
+/// Lê um valor simples (não-array) de um contador já registrado.
+#[cfg(target_os = "windows")]
+fn read_pdh_single(counter: isize) -> Option<f64> {
+    unsafe {
+        let mut value = PdhFmtCounterValue { c_status: 0, _pad: 0, value: 0.0 };
+        if PdhGetFormattedCounterValue(counter, PDH_FMT_DOUBLE, std::ptr::null_mut(), &mut value) == 0 {
+            Some(value.value)
+        } else {
+            None
+        }
+    }
+}
+
+/// Lê o contador de GPU, que tem uma instância por processo/engine (ex: uma
+/// linha "...engtype_3D" por programa usando a GPU nesse modo). Soma todas as
+/// instâncias que são do MESMO tipo de engine e pega o maior total — é
+/// exatamente como o Gerenciador de Tarefas calcula o "GPU %" geral.
+#[cfg(target_os = "windows")]
+fn read_pdh_gpu(counter: isize) -> Option<f64> {
+    unsafe {
+        let mut buffer_size: u32 = 0;
+        let mut buffer_count: u32 = 0;
+        let status = PdhGetFormattedCounterArrayW(
+            counter,
+            PDH_FMT_DOUBLE,
+            &mut buffer_size,
+            &mut buffer_count,
+            std::ptr::null_mut(),
+        );
+        // PDH_MORE_DATA (0x800007D2) é o retorno esperado dessa primeira
+        // chamada — ela só serve pra descobrir o tamanho do buffer necessário.
+        if buffer_size == 0 || buffer_count == 0 {
+            let _ = status;
+            return None;
+        }
+
+        let mut raw: Vec<u8> = vec![0u8; buffer_size as usize];
+        let status2 = PdhGetFormattedCounterArrayW(
+            counter,
+            PDH_FMT_DOUBLE,
+            &mut buffer_size,
+            &mut buffer_count,
+            raw.as_mut_ptr() as *mut PdhFmtCounterValueItemW,
+        );
+        if status2 != 0 {
+            return None;
+        }
+
+        let items = raw.as_ptr() as *const PdhFmtCounterValueItemW;
+        let mut totals: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
+        for i in 0..(buffer_count as isize) {
+            let item = &*items.offset(i);
+            if item.fmt_value.c_status != 0 || item.sz_name.is_null() {
+                continue;
+            }
+            // Lê o nome da instância (string UTF-16 terminada em zero).
+            let mut len = 0usize;
+            while *item.sz_name.add(len) != 0 && len < 512 {
+                len += 1;
+            }
+            let name_slice = std::slice::from_raw_parts(item.sz_name, len);
+            let name = String::from_utf16_lossy(name_slice);
+            let engtype = match name.find("engtype_") {
+                Some(pos) => name[pos + "engtype_".len()..].to_string(),
+                None => continue,
+            };
+            *totals.entry(engtype).or_insert(0.0) += item.fmt_value.value;
+        }
+        totals.values().cloned().fold(None, |max, v| match max {
+            None => Some(v),
+            Some(m) if v > m => Some(v),
+            Some(m) => Some(m),
+        })
+    }
+}
+
+/// Faz uma coleta e devolve (gpu%, cpu_mhz, disco_ativo%). Na primeiríssima
+/// chamada depois do programa abrir, devolve tudo None (os contadores da PDH
+/// precisam de uma leitura "em branco" antes da primeira de verdade). Também
+/// devolve tudo None se a PDH nunca conseguiu iniciar nessa máquina.
+#[cfg(target_os = "windows")]
+fn read_pdh_metrics(pdh_opt: &mut Option<PdhMonitor>) -> (Option<f64>, Option<f64>, Option<f64>) {
+    let pdh = match pdh_opt.as_mut() {
+        Some(p) => p,
+        None => return (None, None, None),
+    };
+    unsafe {
+        if PdhCollectQueryData(pdh.query) != 0 {
+            return (None, None, None);
+        }
+    }
+    if !pdh.primed {
+        pdh.primed = true;
+        return (None, None, None);
+    }
+
+    let disk_idle = read_pdh_single(pdh.disk_counter);
+    let disk_active = disk_idle.map(|idle| 100.0 - idle);
+
+    let cpu_perf = read_pdh_single(pdh.cpu_counter);
+    let cpu_mhz = match (cpu_perf, pdh.base_mhz) {
+        (Some(perf), Some(base)) => Some(base * perf / 100.0),
+        _ => None,
+    };
+
+    let gpu = pdh.gpu_counter.and_then(read_pdh_gpu);
+
+    (gpu, cpu_mhz, disk_active)
 }
 
 #[derive(Serialize)]
@@ -1391,6 +1596,15 @@ extern "system" {
         buffer_len: u32,
         prev_state: *mut (),
         return_len: *mut u32,
+    ) -> i32;
+    fn RegGetValueW(
+        hkey: isize,
+        sub_key: *const u16,
+        value: *const u16,
+        flags: u32,
+        type_out: *mut u32,
+        data: *mut core::ffi::c_void,
+        data_len: *mut u32,
     ) -> i32;
 }
 
@@ -1902,10 +2116,18 @@ fn main() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
+        .manage(PdhState(Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));
+
+            // Abre a conexão PDH (GPU/CPU-frequência/disco) UMA ÚNICA VEZ aqui
+            // na inicialização — ver "Monitor nativo via PDH" mais abaixo.
+            #[cfg(target_os = "windows")]
+            {
+                *app.state::<PdhState>().0.lock().unwrap() = init_pdh_monitor();
+            }
 
             // Monitor de sistema rodando de verdade em segundo plano — não
             // depende da janela estar em foco (diferente de um timer no
@@ -1914,16 +2136,17 @@ fn main() {
             // números "congelados" e desatualizados ao comparar com o
             // Gerenciador de Tarefas). Empurra os números pro frontend via
             // evento assim que lê, ao vés de esperar o frontend perguntar.
+            // GPU/CPU-frequência/disco agora são lidos nativamente via PDH
+            // (sem abrir PowerShell), então dá pra ler em TODO ciclo, no mesmo
+            // ritmo de CPU/RAM — praticamente em tempo real.
             {
                 let app_handle = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
-                    let mut tick: u64 = 0;
                     loop {
                         tokio::time::sleep(std::time::Duration::from_millis(1200)).await;
-                        tick += 1;
-                        let include_gpu = tick % 3 == 0; // leitura pesada (GPU/disco/cache) a cada ~3.6s
                         let sys_state = app_handle.state::<SysState>();
-                        if let Ok(stats) = compute_system_stats(&sys_state, include_gpu).await {
+                        let pdh_state = app_handle.state::<PdhState>();
+                        if let Ok(stats) = compute_system_stats(&sys_state, &pdh_state, true).await {
                             let _ = app_handle.emit("system-stats", stats);
                         }
                     }
