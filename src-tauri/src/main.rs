@@ -813,12 +813,17 @@ async fn compute_system_stats(
     }
 
     #[cfg(target_os = "windows")]
-    let (gpu, cpu_mhz, disk_active) = {
+    let (gpu, cpu_mhz, disk_active, cpu_utility) = {
         let mut guard = pdh_state.0.lock().unwrap();
         read_pdh_metrics(&mut guard)
     };
     #[cfg(not(target_os = "windows"))]
-    let (gpu, cpu_mhz, disk_active): (Option<f64>, Option<f64>, Option<f64>) = (None, None, None);
+    let (gpu, cpu_mhz, disk_active, cpu_utility): (
+        Option<f64>,
+        Option<f64>,
+        Option<f64>,
+        Option<f64>,
+    ) = (None, None, None, None);
 
     #[cfg(target_os = "windows")]
     let cache_mb = tauri::async_runtime::spawn_blocking(standby_list_mb)
@@ -828,8 +833,15 @@ async fn compute_system_stats(
     #[cfg(not(target_os = "windows"))]
     let cache_mb: Option<u64> = None;
 
+    // "% Processor Utility" (via PDH) é o contador que o Gerenciador de
+    // Tarefas realmente usa pra CPU — quando disponível, substitui o valor
+    // do sysinfo (que usa o contador clássico "% Processor Time" e por isso
+    // não reflete o turbo boost do jeito que o Windows mostra na tela).
+    // A RAM continua 100% como estava, sem nenhuma mudança.
+    let reported_cpu_percent = cpu_utility.unwrap_or(cpu_percent);
+
     Ok(SystemStats {
-        cpu_percent: (cpu_percent * 10.0).round() / 10.0,
+        cpu_percent: (reported_cpu_percent * 10.0).round() / 10.0,
         ram_used_gb: (ram_used_gb * 10.0).round() / 10.0,
         ram_total_gb: (ram_total_gb * 10.0).round() / 10.0,
         ram_percent: (ram_percent * 10.0).round() / 10.0,
@@ -862,6 +874,13 @@ struct PdhMonitor {
     query: isize,
     disk_counter: isize,
     cpu_counter: isize,
+    /// "% Processor Utility" — o contador que o Gerenciador de Tarefas
+    /// realmente usa pro número de CPU desde o Windows 10/11 recente
+    /// (diferente do "% Processor Time" clássico, que o sysinfo usa). Ele
+    /// já leva em conta o turbo boost, então reflete melhor o que a tela do
+    /// Windows mostra. Fica em Option porque não existe em Windows mais
+    /// antigos — nesse caso cai pro valor do sysinfo normalmente.
+    cpu_utility_counter: Option<isize>,
     gpu_counter: Option<isize>,
     base_mhz: Option<f64>,
     /// contadores de "% de tempo" da PDH precisam de DUAS leituras pra dar um
@@ -972,12 +991,14 @@ fn init_pdh_monitor() -> Option<PdhMonitor> {
 
         let disk_counter = add_counter(r"\PhysicalDisk(_Total)\% Idle Time")?;
         let cpu_counter = add_counter(r"\Processor Information(_Total)\% Processor Performance")?;
+        let cpu_utility_counter = add_counter(r"\Processor Information(_Total)\% Processor Utility");
         let gpu_counter = add_counter(r"\GPU Engine(*)\Utilization Percentage");
 
         Some(PdhMonitor {
             query,
             disk_counter,
             cpu_counter,
+            cpu_utility_counter,
             gpu_counter,
             base_mhz: read_base_cpu_mhz(),
             primed: false,
@@ -1066,19 +1087,21 @@ fn read_pdh_gpu(counter: isize) -> Option<f64> {
 /// precisam de uma leitura "em branco" antes da primeira de verdade). Também
 /// devolve tudo None se a PDH nunca conseguiu iniciar nessa máquina.
 #[cfg(target_os = "windows")]
-fn read_pdh_metrics(pdh_opt: &mut Option<PdhMonitor>) -> (Option<f64>, Option<f64>, Option<f64>) {
+fn read_pdh_metrics(
+    pdh_opt: &mut Option<PdhMonitor>,
+) -> (Option<f64>, Option<f64>, Option<f64>, Option<f64>) {
     let pdh = match pdh_opt.as_mut() {
         Some(p) => p,
-        None => return (None, None, None),
+        None => return (None, None, None, None),
     };
     unsafe {
         if PdhCollectQueryData(pdh.query) != 0 {
-            return (None, None, None);
+            return (None, None, None, None);
         }
     }
     if !pdh.primed {
         pdh.primed = true;
-        return (None, None, None);
+        return (None, None, None, None);
     }
 
     let disk_idle = read_pdh_single(pdh.disk_counter);
@@ -1090,9 +1113,18 @@ fn read_pdh_metrics(pdh_opt: &mut Option<PdhMonitor>) -> (Option<f64>, Option<f6
         _ => None,
     };
 
+    // "% Processor Utility": o número que o Gerenciador de Tarefas realmente
+    // mostra pra CPU (já considera o turbo boost) — pode passar de 100% num
+    // core turbinado, por isso limitamos em 100 pra bater com o que a tela
+    // do Windows mostra.
+    let cpu_utility = pdh
+        .cpu_utility_counter
+        .and_then(read_pdh_single)
+        .map(|v| v.clamp(0.0, 100.0));
+
     let gpu = pdh.gpu_counter.and_then(read_pdh_gpu);
 
-    (gpu, cpu_mhz, disk_active)
+    (gpu, cpu_mhz, disk_active, cpu_utility)
 }
 
 #[derive(Serialize)]
