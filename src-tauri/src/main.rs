@@ -2179,7 +2179,7 @@ fn main() {
                 let app_handle = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
                     loop {
-                        tokio::time::sleep(std::time::Duration::from_millis(1200)).await;
+                        tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
                         let sys_state = app_handle.state::<SysState>();
                         let pdh_state = app_handle.state::<PdhState>();
                         if let Ok(stats) = compute_system_stats(&sys_state, &pdh_state, true).await {
