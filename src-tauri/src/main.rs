@@ -1334,7 +1334,11 @@ fn check_game_fso_windows(_exe_path: &str) -> (String, String) { ("ok".to_string
 
 #[cfg(target_os = "windows")]
 fn check_device_errors_windows() -> (String, String) {
-    let ps_cmd = "(Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object { $_.ConfigManagerErrorCode -ne 0 }).FriendlyName -join ', '";
+    // Força saída em UTF-8 — sem isso, nomes com acento (ç, ã, é) vêm
+    // corrompidos (tipo "Virtualiza�o"), porque o PowerShell por padrão
+    // escreve no console usando a página de código antiga do Windows, não
+    // UTF-8, e o Rust lê tudo como UTF-8 sem essa linha.
+    let ps_cmd = "[Console]::OutputEncoding=[Text.Encoding]::UTF8; (Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object { $_.ConfigManagerErrorCode -ne 0 }).FriendlyName -join ', '";
     let output = Command::new("powershell")
         .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps_cmd])
         .creation_flags(CREATE_NO_WINDOW)
@@ -1354,7 +1358,7 @@ fn check_device_errors_windows() -> (String, String) {
 
 #[cfg(target_os = "windows")]
 fn check_disk_health_windows() -> (String, String) {
-    let ps_cmd = "(Get-PhysicalDisk -ErrorAction SilentlyContinue | Where-Object { $_.HealthStatus -ne 'Healthy' }).FriendlyName -join ', '";
+    let ps_cmd = "[Console]::OutputEncoding=[Text.Encoding]::UTF8; (Get-PhysicalDisk -ErrorAction SilentlyContinue | Where-Object { $_.HealthStatus -ne 'Healthy' }).FriendlyName -join ', '";
     let output = Command::new("powershell")
         .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps_cmd])
         .creation_flags(CREATE_NO_WINDOW)
