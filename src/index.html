@@ -5649,8 +5649,11 @@ async function loadRamDashboard(){
     const d = await invoke('get_ram_details');
 
     const freeGb = (d.free_mb/1024).toFixed(1);
-    const cacheGb = (d.cached_mb/1024).toFixed(1);
-    const standbyGb = (d.standby_mb/1024).toFixed(1);
+    // "Em cache" do Gerenciador de Tarefas = Standby List real (a mesma
+    // leitura nativa que a limpeza de RAM usa) — o contador WMI antigo
+    // (cached_mb) mede outra coisa e não bate (confirmado por comparação
+    // direta: WMI dava 0.2 GB, Standby dava 6.6 GB, Gerenciador mostrava 6.7 GB).
+    const cacheGb = (d.standby_mb/1024).toFixed(1);
     document.getElementById('ramMetricsRow').innerHTML = `
       <div class="ram-metric-card"><span>MEMÓRIA TOTAL</span><b>${d.total_gb} GB</b></div>
       <div class="ram-metric-card"><span>EM USO</span><b>${d.used_gb} GB</b><small>${d.pressure_percent}%</small></div>
@@ -5671,7 +5674,6 @@ async function loadRamDashboard(){
     document.getElementById('ramPressurePills').innerHTML = `
       <span class="ram-pill ram-pill-used"><i></i>Em uso <b>${d.used_gb} GB</b></span>
       <span class="ram-pill ram-pill-cache"><i></i>Em cache <b>${cacheGb} GB</b></span>
-      <span class="ram-pill ram-pill-standby"><i></i>Standby <b>${standbyGb} GB</b></span>
       <span class="ram-pill ram-pill-free"><i></i>Livre <b>${freeGb} GB</b></span>
     `;
     const ringPct = Math.max(0, Math.min(100, Math.round(p)));
