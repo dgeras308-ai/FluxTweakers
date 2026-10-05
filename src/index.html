@@ -733,6 +733,45 @@
   .ram-pressure-tips li{font-size:12px;color:var(--muted);line-height:1.5;}
   .ram-pressure-tips li b{color:var(--text);}
 
+  .ram-pressure-hero{display:flex;align-items:center;gap:28px;padding:22px 26px;}
+  .ram-pressure-left{flex:1;min-width:0;}
+  .ram-pressure-badge-top{
+    display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:700;
+    padding:4px 11px;border-radius:999px;background:var(--panel);color:var(--text);
+    margin-bottom:12px;letter-spacing:.02em;
+  }
+  .ram-pressure-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;}
+  .ram-pressure-dot.high{background:var(--off);}
+  .ram-pressure-bignum{font-size:30px;font-weight:800;color:var(--text);font-family:var(--mono);line-height:1;}
+  .ram-pressure-bignum small{font-size:13px;font-weight:600;color:var(--muted);font-family:var(--sans);margin-left:4px;}
+  .ram-pressure-sub{margin:7px 0 14px;font-size:12.5px;color:var(--muted);}
+  .ram-pressure-pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+  .ram-pill{
+    display:inline-flex;align-items:center;gap:7px;font-size:11.5px;color:var(--muted);
+    background:var(--panel);border:1px solid var(--border-soft);border-radius:999px;padding:5px 11px;
+  }
+  .ram-pill b{color:var(--text);font-family:var(--mono);font-weight:700;margin-left:2px;}
+  .ram-pill i{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0;}
+  .ram-pill-used i{background:#5ab8ff;}
+  .ram-pill-cache i{background:#b48cff;}
+  .ram-pill-standby i{background:#4ade80;}
+  .ram-pill-free i{background:#8a94a6;}
+  .ram-pressure-freebtn{margin-bottom:10px;}
+  .ram-pressure-safety{margin:0;font-size:11px;color:var(--muted);opacity:.8;}
+  .ram-pressure-right{display:flex;flex-direction:column;align-items:center;gap:10px;flex-shrink:0;}
+  .ram-pressure-ring-wrap{position:relative;width:128px;height:128px;}
+  .ram-pressure-ring-svg{width:128px;height:128px;transform:rotate(-90deg);}
+  .ram-pressure-ring-bg{fill:none;stroke:var(--border-soft);stroke-width:9;}
+  .ram-pressure-ring-fill{fill:none;stroke-width:9;stroke-linecap:round;transition:stroke-dashoffset .6s ease, stroke .3s ease;}
+  .ram-pressure-ring-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .ram-pressure-ring-label b{font-size:25px;color:var(--text);line-height:1;}
+  .ram-pressure-ring-label span{font-size:9px;color:var(--muted);letter-spacing:.08em;margin-top:3px;}
+  .ram-pressure-ring-caption{margin:0;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);white-space:nowrap;}
+  @media (max-width:720px){
+    .ram-pressure-hero{flex-direction:column;align-items:stretch;}
+    .ram-pressure-right{align-self:center;}
+  }
+
   .ram-actions-row{display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:12px;}
   .ram-action-card{
     background:var(--item-bg);border:1px solid var(--item-border);border-radius:var(--radius);
@@ -5611,6 +5650,7 @@ async function loadRamDashboard(){
 
     const freeGb = (d.free_mb/1024).toFixed(1);
     const cacheGb = (d.cached_mb/1024).toFixed(1);
+    const standbyGb = (d.standby_mb/1024).toFixed(1);
     document.getElementById('ramMetricsRow').innerHTML = `
       <div class="ram-metric-card"><span>MEMÓRIA TOTAL</span><b>${d.total_gb} GB</b></div>
       <div class="ram-metric-card"><span>EM USO</span><b>${d.used_gb} GB</b><small>${d.pressure_percent}%</small></div>
@@ -5619,17 +5659,32 @@ async function loadRamDashboard(){
     `;
 
     const p = d.pressure_percent;
-    const level = p >= 90 ? 'CRÍTICA' : p >= 70 ? 'ALTA' : p >= 45 ? 'MODERADA' : 'BAIXA';
-    document.getElementById('ramPressureValue').innerHTML = `${p}<span style="font-size:15px;color:var(--muted)">%</span> <span class="ram-pressure-badge ram-pressure-${level==='CRÍTICA'||level==='ALTA'?'high':'ok'}">${level}</span>`;
-    document.getElementById('ramPressureFill').style.width = Math.min(100, p) + '%';
-    document.getElementById('ramPressureFill').style.background = (p>=70) ? 'var(--off)' : 'var(--accent)';
+    const level = p >= 90 ? 'Crítica' : p >= 70 ? 'Alta' : p >= 45 ? 'Moderada' : 'Baixa';
+    const levelClass = (p>=70) ? 'high' : 'ok';
 
-    const tips = [];
-    if(p >= 70) tips.push('Feche abas de navegador e overlays não usados antes de abrir jogos.');
-    if(d.top_processes[0]) tips.push(`<b>${d.top_processes[0].name}</b> é o maior consumidor agora — considere fechar se não estiver usando.`);
-    if(p >= 85) tips.push('Use a limpeza de cache abaixo e reinicie se a pressão continuar crítica.');
-    if(tips.length === 0) tips.push('Memória sob controle — nenhuma ação necessária agora.');
-    document.getElementById('ramPressureTips').innerHTML = tips.map(t=>`<li>${t}</li>`).join('');
+    document.getElementById('ramPressureBadgeTop').innerHTML =
+      `<span class="ram-pressure-dot ${levelClass}"></span>${level}`;
+    document.getElementById('ramPressureBignum').innerHTML =
+      `${d.used_gb} GB <small>em uso agora</small>`;
+    document.getElementById('ramPressureSub').textContent =
+      `Pressão ${level.toLowerCase()} de memória (${p}% em uso)`;
+    document.getElementById('ramPressurePills').innerHTML = `
+      <span class="ram-pill ram-pill-used"><i></i>Em uso <b>${d.used_gb} GB</b></span>
+      <span class="ram-pill ram-pill-cache"><i></i>Em cache <b>${cacheGb} GB</b></span>
+      <span class="ram-pill ram-pill-standby"><i></i>Standby <b>${standbyGb} GB</b></span>
+      <span class="ram-pill ram-pill-free"><i></i>Livre <b>${freeGb} GB</b></span>
+    `;
+    const ringPct = Math.max(0, Math.min(100, Math.round(p)));
+    const ringCirc = 2 * Math.PI * 52;
+    const ringFill = document.getElementById('ramPressureRingFill');
+    if (ringFill){
+      ringFill.style.strokeDasharray = `${ringCirc}`;
+      ringFill.style.strokeDashoffset = `${ringCirc * (1 - ringPct / 100)}`;
+      ringFill.style.stroke = levelClass === 'high' ? 'var(--off)' : 'var(--accent)';
+    }
+    document.getElementById('ramPressureRingValue').textContent = `${ringPct}%`;
+    document.getElementById('ramPressureCaptionText').textContent = `Pressão de memória · ${level}`;
+    document.getElementById('ramPressureDotCaption').className = `ram-pressure-dot ${levelClass}`;
 
     document.getElementById('ramProcessList').innerHTML = d.top_processes.map(p=>{
       const sev = p.memory_mb > 2000 ? 'alto' : p.memory_mb > 800 ? 'medio' : 'baixo';
@@ -5684,6 +5739,10 @@ document.addEventListener('click', async (e)=>{
 });
 
 document.addEventListener('click', (e)=>{
+  if(e.target?.id === 'ramActWorkingsetHero'){
+    document.getElementById('ramActWorkingset')?.click();
+    return;
+  }
   if(e.target?.id === 'ramActWorkingset'){
     e.target.textContent = 'Reduzindo...';
     triggerRamClean(false, 'workingset', 'ramActWorkingsetResult').finally(()=>{ e.target.textContent = 'Reduzir em uso'; loadRamDashboard(); });
@@ -5830,11 +5889,28 @@ function renderPanel(catId){
   if(cat.special === 'ram'){
     html += `<div class="ram-dashboard" id="ramDashboard">
       <div class="ram-metrics-row" id="ramMetricsRow"></div>
-      <div class="ram-pressure-card">
-        <p class="ram-pressure-title">Pressão de memória</p>
-        <div class="ram-pressure-value" id="ramPressureValue">—</div>
-        <div class="ram-pressure-bar"><div class="ram-pressure-fill" id="ramPressureFill"></div></div>
-        <ul class="ram-pressure-tips" id="ramPressureTips"></ul>
+      <div class="ram-pressure-card ram-pressure-hero">
+        <div class="ram-pressure-left">
+          <span class="ram-pressure-badge-top" id="ramPressureBadgeTop">—</span>
+          <div class="ram-pressure-bignum" id="ramPressureBignum">— GB <small>em uso agora</small></div>
+          <p class="ram-pressure-sub" id="ramPressureSub"></p>
+          <div class="ram-pressure-pills" id="ramPressurePills"></div>
+          <button class="preset-btn ram-pressure-freebtn" id="ramActWorkingsetHero">Liberar memória</button>
+          <p class="ram-pressure-safety">Só cache seguro — nenhum programa aberto é fechado ou afetado.</p>
+        </div>
+        <div class="ram-pressure-right">
+          <div class="ram-pressure-ring-wrap">
+            <svg viewBox="0 0 120 120" class="ram-pressure-ring-svg">
+              <circle cx="60" cy="60" r="52" class="ram-pressure-ring-bg"/>
+              <circle cx="60" cy="60" r="52" class="ram-pressure-ring-fill" id="ramPressureRingFill"/>
+            </svg>
+            <div class="ram-pressure-ring-label">
+              <b id="ramPressureRingValue">—</b>
+              <span>EM USO</span>
+            </div>
+          </div>
+          <p class="ram-pressure-ring-caption"><span class="ram-pressure-dot" id="ramPressureDotCaption"></span><span id="ramPressureCaptionText">Pressão de memória</span></p>
+        </div>
       </div>
       <div class="ram-actions-row">
         <div class="ram-action-card">

@@ -647,6 +647,10 @@ struct RamDetails {
     used_gb: f64,
     free_mb: f64,
     cached_mb: f64,
+    /// Standby List real (NtQuerySystemInformation) — a mesma leitura nativa
+    /// e precisa que a limpeza de RAM já usa, diferente do "cached_mb" acima
+    /// (que vem de um contador WMI mais amplo).
+    standby_mb: f64,
     pressure_percent: f64,
     top_processes: Vec<ProcessMemInfo>,
 }
@@ -699,12 +703,21 @@ async fn get_ram_details(state: State<'_, SysState>) -> Result<RamDetails, Strin
     let cached = tauri::async_runtime::spawn_blocking(read_cache_bytes_windows)
         .await
         .unwrap_or(0.0);
+    #[cfg(target_os = "windows")]
+    let standby_mb = tauri::async_runtime::spawn_blocking(standby_list_mb)
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or(0) as f64;
+    #[cfg(not(target_os = "windows"))]
+    let standby_mb: f64 = 0.0;
 
     Ok(RamDetails {
         total_gb: (total / 1_073_741_824.0 * 10.0).round() / 10.0,
         used_gb: (used / 1_073_741_824.0 * 10.0).round() / 10.0,
         free_mb: (free / 1_048_576.0 * 10.0).round() / 10.0,
         cached_mb: (cached / 1_048_576.0 * 10.0).round() / 10.0,
+        standby_mb,
         pressure_percent: if total > 0.0 { (used / total * 100.0 * 10.0).round() / 10.0 } else { 0.0 },
         top_processes,
     })
