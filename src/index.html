@@ -993,6 +993,22 @@
     opacity:0;transition:opacity .25s ease;
   }
   .setting-row:hover::after{opacity:1;}
+  .setting-row{border-radius:14px;}
+  .setting-row:has(input:checked){
+    border-color:color-mix(in srgb, var(--tab-accent) 38%, var(--item-border));
+    background:linear-gradient(180deg, color-mix(in srgb, var(--tab-accent) 7%, var(--item-bg)), var(--item-bg));
+  }
+  .setting-icon{
+    width:38px;height:38px;border-radius:10px;
+    background:var(--panel);border:1px solid var(--border-soft);
+    display:flex;align-items:center;justify-content:center;padding:7px;
+  }
+  .setting-icon svg{width:100%;height:100%;}
+  .setting-row:has(input:checked) .setting-icon{
+    background:color-mix(in srgb, var(--tab-accent) 14%, var(--panel));
+    border-color:color-mix(in srgb, var(--tab-accent) 35%, var(--border-soft));
+  }
+  .setting-row-top{padding-bottom:10px;border-bottom:1px solid var(--item-border);margin-bottom:2px;}
   .setting-row:hover{
     background:var(--item-bg-hover);
     transform:translateY(-3px) rotateX(1.5deg);
