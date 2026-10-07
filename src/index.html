@@ -377,17 +377,29 @@
 
   .theme-picker{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
   :root[data-color-theme="azul_neon"] .home-hero-btn.primary,
+  :root[data-color-theme="vermelho_neon"] .home-hero-btn.primary,
+  :root[data-color-theme="verde_neon"] .home-hero-btn.primary,
   :root[data-color-theme="azul_neon"] .bar button:not(.bar-btn-secondary),
-  :root[data-color-theme="azul_neon"] .login-btn{
+  :root[data-color-theme="vermelho_neon"] .bar button:not(.bar-btn-secondary),
+  :root[data-color-theme="verde_neon"] .bar button:not(.bar-btn-secondary),
+  :root[data-color-theme="azul_neon"] .login-btn,
+  :root[data-color-theme="vermelho_neon"] .login-btn,
+  :root[data-color-theme="verde_neon"] .login-btn{
     box-shadow:0 0 16px -2px var(--accent), 0 0 3px var(--accent);
   }
-  :root[data-color-theme="azul_neon"] aside#tabs button.active{
+  :root[data-color-theme="azul_neon"] aside#tabs button.active,
+  :root[data-color-theme="vermelho_neon"] aside#tabs button.active,
+  :root[data-color-theme="verde_neon"] aside#tabs button.active{
     box-shadow:0 0 14px -4px var(--accent);
   }
-  :root[data-color-theme="azul_neon"] .home-score-fill{
+  :root[data-color-theme="azul_neon"] .home-score-fill,
+  :root[data-color-theme="vermelho_neon"] .home-score-fill,
+  :root[data-color-theme="verde_neon"] .home-score-fill{
     filter:drop-shadow(0 0 6px var(--accent));
   }
-  :root[data-color-theme="azul_neon"] .switch input:checked ~ .track{
+  :root[data-color-theme="azul_neon"] .switch input:checked ~ .track,
+  :root[data-color-theme="vermelho_neon"] .switch input:checked ~ .track,
+  :root[data-color-theme="verde_neon"] .switch input:checked ~ .track{
     box-shadow:0 0 14px -1px var(--accent);
   }
   .theme-swatch{
@@ -3989,13 +4001,15 @@ const CAT_COLORS = {
 const THEME_COLORS = {
   roxo:"#7c5cff", vermelho:"#ff4d3d", indigo:"#6470ee", emerald:"#2dd4a7", cyan:"#43c9e5",
   azul:"#2f7cf6", laranja:"#ff8a3d", rosa:"#ff5c9e", dourado:"#e0b23d",
-  branco_laranja:"#ff7a1a", mono:"#e8e2df", azul_neon:"#00c8ff"
+  branco_laranja:"#ff7a1a", mono:"#e8e2df", azul_neon:"#00c8ff",
+  vermelho_neon:"#ff0033", verde_neon:"#00e676"
 };
 const LIGHT_THEMES = new Set(["branco_laranja"]);
 const THEME_LABELS = {
   roxo:"Roxo", vermelho:"Vermelho", indigo:"Índigo", emerald:"Esmeralda", cyan:"Ciano",
   azul:"Azul", laranja:"Laranja", rosa:"Rosa", dourado:"Dourado",
-  branco_laranja:"Branco & Laranja", mono:"Mono", azul_neon:"Azul Neon"
+  branco_laranja:"Branco & Laranja", mono:"Mono", azul_neon:"Azul Neon",
+  vermelho_neon:"Vermelho Neon", verde_neon:"Verde Neon"
 };
 
 function safeLocalGet2(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
