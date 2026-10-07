@@ -376,6 +376,20 @@
   .setting-row.search-hidden, .acc-section.search-hidden{display:none !important;}
 
   .theme-picker{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  :root[data-color-theme="azul_neon"] .home-hero-btn.primary,
+  :root[data-color-theme="azul_neon"] .bar button:not(.bar-btn-secondary),
+  :root[data-color-theme="azul_neon"] .login-btn{
+    box-shadow:0 0 16px -2px var(--accent), 0 0 3px var(--accent);
+  }
+  :root[data-color-theme="azul_neon"] aside#tabs button.active{
+    box-shadow:0 0 14px -4px var(--accent);
+  }
+  :root[data-color-theme="azul_neon"] .home-score-fill{
+    filter:drop-shadow(0 0 6px var(--accent));
+  }
+  :root[data-color-theme="azul_neon"] .switch input:checked ~ .track{
+    box-shadow:0 0 14px -1px var(--accent);
+  }
   .theme-swatch{
     width:19px;height:19px;border-radius:50%;border:2px solid var(--bg);cursor:pointer;
     padding:0;transition:transform .15s,box-shadow .15s;flex-shrink:0;box-shadow:0 0 0 1px var(--border);
@@ -3975,7 +3989,7 @@ const CAT_COLORS = {
 const THEME_COLORS = {
   roxo:"#7c5cff", vermelho:"#ff4d3d", indigo:"#6470ee", emerald:"#2dd4a7", cyan:"#43c9e5",
   azul:"#2f7cf6", laranja:"#ff8a3d", rosa:"#ff5c9e", dourado:"#e0b23d",
-  branco_laranja:"#ff7a1a", mono:"#e8e2df", azul_neon:"#2e8fff"
+  branco_laranja:"#ff7a1a", mono:"#e8e2df", azul_neon:"#00c8ff"
 };
 const LIGHT_THEMES = new Set(["branco_laranja"]);
 const THEME_LABELS = {
@@ -3999,6 +4013,7 @@ function applyTheme(colorKey){
   document.documentElement.style.setProperty('--accent', color);
   document.documentElement.style.setProperty('--accent-dim', color + '22');
   document.documentElement.classList.toggle('light-mode', LIGHT_THEMES.has(colorKey));
+  document.documentElement.setAttribute('data-color-theme', colorKey);
   safeLocalSet2('dgeras_theme', colorKey);
   document.querySelectorAll('.theme-swatch').forEach(s=> s.classList.toggle('active', s.dataset.color===colorKey));
 }
