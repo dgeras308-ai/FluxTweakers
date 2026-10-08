@@ -1140,6 +1140,70 @@ fn read_pdh_metrics(
     (gpu, cpu_mhz, disk_active, cpu_utility)
 }
 
+/// Reinício pendente, plano de energia, programas na inicialização e antivírus,
+/// numa única chamada de PowerShell (saída em UTF-8 pra não corromper acentos).
+#[cfg(target_os = "windows")]
+fn check_system_extras_windows() -> Vec<DiagnosticCheck> {
+    let ps_cmd = r#"
+[Console]::OutputEncoding=[Text.Encoding]::UTF8
+$ErrorActionPreference='SilentlyContinue'
+$reboot = (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired') -or (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending')
+$plan = (powercfg /getactivescheme) -join ' '
+$startup = 0
+foreach($k in 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run','HKLM:\Software\Microsoft\Windows\CurrentVersion\Run'){
+  $p = Get-ItemProperty $k
+  if($p){ $startup += @($p.PSObject.Properties | Where-Object { $_.Name -notlike 'PS*' }).Count }
+}
+$rt = $null
+$mp = Get-MpComputerStatus
+if($mp){ $rt = [bool]$mp.RealTimeProtectionEnabled }
+[pscustomobject]@{ reboot=[bool]$reboot; plan=$plan; startup=$startup; defender=$rt } | ConvertTo-Json -Compress
+"#;
+    let mut out = Vec::new();
+    let output = Command::new("powershell")
+        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps_cmd])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
+    let v: serde_json::Value = match output {
+        Ok(o) => serde_json::from_str(String::from_utf8_lossy(&o.stdout).trim()).unwrap_or(serde_json::Value::Null),
+        Err(_) => serde_json::Value::Null,
+    };
+    if v.is_null() { return out; }
+
+    let reboot = v["reboot"].as_bool().unwrap_or(false);
+    out.push(if reboot {
+        DiagnosticCheck{ label: "Reinício pendente".into(), status: "warn".into(), detail: "O Windows está esperando um reinício pra concluir atualizações".into() }
+    } else {
+        DiagnosticCheck{ label: "Reinício pendente".into(), status: "ok".into(), detail: "Nenhum reinício pendente".into() }
+    });
+
+    let plan = v["plan"].as_str().unwrap_or("");
+    let plan_name = match (plan.rfind('('), plan.rfind(')')) {
+        (Some(a), Some(b)) if b > a => plan[a + 1..b].to_string(),
+        _ => "desconhecido".to_string(),
+    };
+    let lower = plan_name.to_lowercase();
+    out.push(if lower.contains("econom") || lower.contains("saver") {
+        DiagnosticCheck{ label: "Plano de energia".into(), status: "warn".into(), detail: format!("Plano \"{plan_name}\" ativo — limita o desempenho em jogos") }
+    } else {
+        DiagnosticCheck{ label: "Plano de energia".into(), status: "ok".into(), detail: format!("Plano \"{plan_name}\" ativo") }
+    });
+
+    let startup = v["startup"].as_u64().unwrap_or(0);
+    out.push(if startup > 15 {
+        DiagnosticCheck{ label: "Programas na inicialização".into(), status: "warn".into(), detail: format!("{startup} programas abrem junto com o Windows — deixa o boot lento") }
+    } else {
+        DiagnosticCheck{ label: "Programas na inicialização".into(), status: "ok".into(), detail: format!("{startup} programas abrem junto com o Windows") }
+    });
+
+    out.push(match v["defender"].as_bool() {
+        Some(false) => DiagnosticCheck{ label: "Antivírus".into(), status: "warn".into(), detail: "Proteção em tempo real do Windows Defender está desligada".into() },
+        Some(true) => DiagnosticCheck{ label: "Antivírus".into(), status: "ok".into(), detail: "Proteção em tempo real ativa".into() },
+        None => DiagnosticCheck{ label: "Antivírus".into(), status: "ok".into(), detail: "Gerenciado por antivírus de terceiros".into() },
+    });
+    out
+}
+
 #[derive(Serialize)]
 struct DiagnosticCheck {
     label: String,
@@ -1171,42 +1235,40 @@ async fn run_diagnostics(state: State<'_, SysState>) -> Result<DiagnosticReport,
 
     let mut checks = Vec::new();
 
-    // Espaço livre em disco (sysinfo, funciona em qualquer SO)
+    // Carga atual (só alerta se estiver realmente alta — número solto não ajuda)
+    let load_detail = format!("CPU {:.0}% · RAM {:.0}% agora", cpu_percent, ram_percent);
+    checks.push(if cpu_percent >= 90.0 || ram_percent >= 90.0 {
+        DiagnosticCheck{ label: "Carga do sistema".into(), status: "bad".into(), detail: format!("{load_detail} — algo está pesando demais no PC") }
+    } else if cpu_percent >= 75.0 || ram_percent >= 85.0 {
+        DiagnosticCheck{ label: "Carga do sistema".into(), status: "warn".into(), detail: format!("{load_detail} — carga alta") }
+    } else {
+        DiagnosticCheck{ label: "Carga do sistema".into(), status: "ok".into(), detail: format!("{load_detail} — tranquilo") }
+    });
+
+    // Tempo ligado sem reiniciar
+    let up = System::uptime();
+    let days = up / 86400;
+    let hours = (up % 86400) / 3600;
+    checks.push(if days >= 7 {
+        DiagnosticCheck{ label: "Tempo ligado".into(), status: "warn".into(), detail: format!("Ligado há {days} dias — reiniciar libera memória e aplica atualizações pendentes") }
+    } else {
+        DiagnosticCheck{ label: "Tempo ligado".into(), status: "ok".into(), detail: if days > 0 { format!("Ligado há {days}d {hours}h") } else { format!("Ligado há {hours}h") } }
+    });
+
+    // Espaço por disco, com valores reais em GB
     let disks_list = Disks::new_with_refreshed_list();
-    let mut low_space: Vec<String> = Vec::new();
     for d in disks_list.iter() {
         let total = d.total_space() as f64;
         let avail = d.available_space() as f64;
         if total <= 0.0 { continue; }
         let free_pct = (avail / total) * 100.0;
-        if free_pct < 10.0 {
-            let name = d.mount_point().to_string_lossy().to_string();
-            low_space.push(format!("{name} ({:.0}% livre)", free_pct));
-        }
+        let name = d.mount_point().to_string_lossy().to_string();
+        let detail = format!("{:.0} GB livres de {:.0} GB ({:.0}% livre)", avail / 1_073_741_824.0, total / 1_073_741_824.0, free_pct);
+        let status = if free_pct < 5.0 { "bad" } else if free_pct < 12.0 { "warn" } else { "ok" };
+        checks.push(DiagnosticCheck{ label: format!("Espaço em {name}"), status: status.into(), detail });
     }
-    checks.push(if low_space.is_empty() {
-        DiagnosticCheck{ label: "Espaço em disco".into(), status: "ok".into(), detail: "Espaço livre saudável em todos os discos".into() }
-    } else {
-        DiagnosticCheck{ label: "Espaço em disco".into(), status: "warn".into(), detail: format!("Pouco espaço livre: {}", low_space.join(", ")) }
-    });
 
-    // Uso atual de CPU/RAM
-    checks.push(if cpu_percent >= 90.0 {
-        DiagnosticCheck{ label: "Uso de CPU".into(), status: "bad".into(), detail: format!("CPU em {:.0}% agora — algo pode estar travando o sistema", cpu_percent) }
-    } else if cpu_percent >= 75.0 {
-        DiagnosticCheck{ label: "Uso de CPU".into(), status: "warn".into(), detail: format!("CPU em {:.0}% agora", cpu_percent) }
-    } else {
-        DiagnosticCheck{ label: "Uso de CPU".into(), status: "ok".into(), detail: format!("CPU em {:.0}%, dentro do normal", cpu_percent) }
-    });
-    checks.push(if ram_percent >= 90.0 {
-        DiagnosticCheck{ label: "Uso de RAM".into(), status: "bad".into(), detail: format!("RAM em {:.0}% agora — considere fechar programas", ram_percent) }
-    } else if ram_percent >= 80.0 {
-        DiagnosticCheck{ label: "Uso de RAM".into(), status: "warn".into(), detail: format!("RAM em {:.0}% agora", ram_percent) }
-    } else {
-        DiagnosticCheck{ label: "Uso de RAM".into(), status: "ok".into(), detail: format!("RAM em {:.0}%, dentro do normal", ram_percent) }
-    });
-
-    // Checagens específicas do Windows (dispositivos, saúde física dos discos, eventos)
+    // Checagens específicas do Windows
     let (dev_status, dev_detail) = check_device_errors_windows();
     checks.push(DiagnosticCheck{ label: "Dispositivos (drivers)".into(), status: dev_status, detail: dev_detail });
 
@@ -1215,6 +1277,14 @@ async fn run_diagnostics(state: State<'_, SysState>) -> Result<DiagnosticReport,
 
     let (evt_status, evt_detail) = check_recent_critical_events_windows();
     checks.push(DiagnosticCheck{ label: "Erros críticos recentes".into(), status: evt_status, detail: evt_detail });
+
+    #[cfg(target_os = "windows")]
+    {
+        let extra = tauri::async_runtime::spawn_blocking(check_system_extras_windows)
+            .await
+            .unwrap_or_default();
+        checks.extend(extra);
+    }
 
     Ok(DiagnosticReport{ checks })
 }

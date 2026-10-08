@@ -1327,6 +1327,36 @@
   .diag-deepscan{
     margin-top:8px;padding-top:18px;border-top:1px solid var(--border);flex-shrink:0;
   }
+  .diag-summary{
+    display:flex;align-items:center;gap:20px;padding:20px 26px;flex-shrink:0;
+    border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg, color-mix(in srgb, var(--tab-accent) 6%, transparent), transparent);
+  }
+  .diag-summary[hidden]{display:none;}
+  .diag-score{position:relative;width:86px;height:86px;flex-shrink:0;}
+  .diag-score svg{width:86px;height:86px;transform:rotate(-90deg);}
+  .diag-score .bg{fill:none;stroke:var(--border-soft);stroke-width:9;}
+  .diag-score .fg{fill:none;stroke-width:9;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.2,.8,.2,1);}
+  .diag-score.ok .fg{stroke:#4ade80;}.diag-score.warn .fg{stroke:#f5a524;}.diag-score.bad .fg{stroke:#ef5a6f;}
+  .diag-score-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .diag-score-num b{font-size:25px;line-height:1;color:var(--text);}
+  .diag-score-num span{font-size:8.5px;letter-spacing:.1em;color:var(--muted);margin-top:3px;}
+  .diag-summary-text b{display:block;font-size:14px;color:var(--text);margin-bottom:3px;}
+  .diag-summary-text > span{font-size:12px;color:var(--muted);}
+  .diag-pills{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap;}
+  .diag-pill{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:4px 11px;border-radius:999px;border:1px solid var(--border-soft);background:var(--panel);color:var(--muted);}
+  .diag-pill i{width:7px;height:7px;border-radius:50%;display:inline-block;}
+  .diag-pill.ok i{background:#4ade80;}.diag-pill.warn i{background:#f5a524;}.diag-pill.bad i{background:#ef5a6f;}
+  .diag-pill b{color:var(--text);}
+  .diag-group{display:flex;flex-direction:column;gap:8px;}
+  .diag-group + .diag-group{margin-top:8px;}
+  .diag-group-title{
+    display:flex;align-items:center;gap:9px;font-size:10.5px;font-weight:800;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--muted);padding:2px 2px 0;
+  }
+  .diag-group-title::after{content:"";flex:1;height:1px;background:var(--border-soft);}
+  .diag-group-title i{width:7px;height:7px;border-radius:50%;display:inline-block;}
+  .diag-group-title i.ok{background:#4ade80;}.diag-group-title i.warn{background:#f5a524;}.diag-group-title i.bad{background:#ef5a6f;}
   .diag-deepscan-head{display:flex;flex-direction:column;gap:3px;margin-bottom:10px;}
   .diag-deepscan-head b{font-size:12.5px;color:var(--text);}
   .diag-deepscan-head span{font-size:11.3px;color:var(--muted);line-height:1.5;}
@@ -1838,6 +1868,7 @@
       </div>
       <button class="diag-close" id="diagClose">✕</button>
     </div>
+    <div class="diag-summary" id="diagSummary" hidden></div>
     <div class="diag-list" id="diagList"></div>
   </div>
 </div>
@@ -5099,7 +5130,7 @@ function diagIconSvg(status){
   if (status === 'warn') return '<path d="M12 9v4M12 17h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L14.7 3.86a2 2 0 0 0-3.4 0Z"/>';
   return '<circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/>';
 }
-async function runDiagnosticFlow({ loadingTitle, loadingSub, invokeCmd, invokeArgs, notFoundTitle, notFoundSub, verdictOk, verdictWarn, verdictBad, updateScore, showDeepScan }){
+async function runDiagnosticFlow({ loadingTitle, loadingSub, invokeCmd, invokeArgs, notFoundTitle, notFoundSub, verdictOk, verdictWarn, verdictBad, updateScore, showDeepScan, grouped }){
   const modal = document.getElementById('diagModal');
   const list = document.getElementById('diagList');
   const headIcon = document.getElementById('diagHeadIcon');
@@ -5112,6 +5143,8 @@ async function runDiagnosticFlow({ loadingTitle, loadingSub, invokeCmd, invokeAr
   title.textContent = loadingTitle;
   sub.textContent = loadingSub;
   list.innerHTML = '';
+  const summaryEl = document.getElementById('diagSummary');
+  if (summaryEl){ summaryEl.hidden = true; summaryEl.innerHTML = ''; }
 
   if (!window.__TAURI__){
     title.textContent = notFoundTitle;
@@ -5139,12 +5172,62 @@ async function runDiagnosticFlow({ loadingTitle, loadingSub, invokeCmd, invokeAr
     else if (worst === 'warn'){ title.textContent = verdictWarn.title(warn); sub.textContent = verdictWarn.sub; }
     else { title.textContent = verdictBad.title(bad); sub.textContent = verdictBad.sub; }
 
-    list.innerHTML = checks.map((c, i) => `
-      <div class="diag-item ${c.status}" style="animation-delay:${i * 60}ms">
+    const itemHTML = (c, i) => `
+      <div class="diag-item ${c.status}" style="animation-delay:${i * 50}ms">
         <div class="diag-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${diagIconSvg(c.status)}</svg></div>
         <div class="diag-item-text"><b>${c.label}</b><span>${c.detail}</span></div>
-      </div>
-    `).join('');
+      </div>`;
+
+    if (grouped){
+      const GROUPS = [
+        { name:'Sistema', match: l => ['Carga do sistema','Tempo ligado','Reinício pendente','Plano de energia'].includes(l) },
+        { name:'Armazenamento', match: l => l.startsWith('Espaço em') || l === 'Saúde física dos discos' },
+        { name:'Estabilidade', match: l => ['Dispositivos (drivers)','Erros críticos recentes'].includes(l) },
+        { name:'Segurança e inicialização', match: l => ['Antivírus','Programas na inicialização'].includes(l) },
+      ];
+      const used = new Set();
+      const rank = { bad:0, warn:1, ok:2 };
+      let idx = 0;
+      let html = '';
+      const renderGroup = (name, items) => {
+        if (!items.length) return;
+        items.sort((a,b) => rank[a.status] - rank[b.status]);
+        const gw = items.some(c=>c.status==='bad') ? 'bad' : items.some(c=>c.status==='warn') ? 'warn' : 'ok';
+        html += `<div class="diag-group"><div class="diag-group-title"><i class="${gw}"></i>${name}</div>${items.map(c => itemHTML(c, idx++)).join('')}</div>`;
+      };
+      GROUPS.forEach(g => {
+        const items = checks.filter(c => !used.has(c) && g.match(c.label));
+        items.forEach(c => used.add(c));
+        renderGroup(g.name, items);
+      });
+      renderGroup('Outros', checks.filter(c => !used.has(c)));
+      list.innerHTML = html;
+
+      const score = Math.max(0, 100 - bad * 18 - warn * 7);
+      const okCount = checks.length - bad - warn;
+      const circ = 2 * Math.PI * 38;
+      summaryEl.hidden = false;
+      summaryEl.innerHTML = `
+        <div class="diag-score ${worst}">
+          <svg viewBox="0 0 90 90"><circle class="bg" cx="45" cy="45" r="38"/><circle class="fg" cx="45" cy="45" r="38" stroke-dasharray="${circ}" stroke-dashoffset="${circ}" id="diagScoreFg"/></svg>
+          <div class="diag-score-num"><b>${score}</b><span>SAÚDE</span></div>
+        </div>
+        <div class="diag-summary-text">
+          <b>${checks.length} verificações concluídas</b>
+          <span>${worst === 'ok' ? 'Seu PC está em ótimo estado.' : worst === 'warn' ? 'Alguns pontos merecem atenção.' : 'Há problemas que vale resolver logo.'}</span>
+          <div class="diag-pills">
+            <span class="diag-pill ok"><i></i><b>${okCount}</b> ok</span>
+            <span class="diag-pill warn"><i></i><b>${warn}</b> alertas</span>
+            <span class="diag-pill bad"><i></i><b>${bad}</b> problemas</span>
+          </div>
+        </div>`;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const fg = document.getElementById('diagScoreFg');
+        if (fg) fg.style.strokeDashoffset = `${circ * (1 - score / 100)}`;
+      }));
+    } else {
+      list.innerHTML = checks.map(itemHTML).join('');
+    }
 
     if (updateScore) updateHomeScoreRing(100 - bad * 20 - warn * 8);
 
@@ -5209,6 +5292,7 @@ async function runSystemDiagnostics(){
     verdictBad: { title: (n)=>`${n} problema(s) encontrado(s)`, sub: 'Recomendamos resolver o quanto antes' },
     updateScore: true,
     showDeepScan: true,
+    grouped: true,
   });
 }
 
