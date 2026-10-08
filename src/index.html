@@ -1264,7 +1264,8 @@
   #warningModal{z-index:110;}
   #diagModal{
     position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;
-    background:rgba(5,6,10,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+    background:radial-gradient(900px 500px at 50% 0%, color-mix(in srgb, var(--tab-accent) 16%, transparent), transparent 70%), rgba(4,5,9,.55);
+    backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);
     padding:30px;
   }
   #diagModal[hidden]{display:none;}
@@ -1272,10 +1273,11 @@
     width:100%;max-width:560px;max-height:min(720px, calc(100vh - 60px));
     display:flex;flex-direction:column;min-height:0;
     background:
-      linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015)) padding-box,
-      linear-gradient(160deg, rgba(255,255,255,.14), rgba(255,255,255,.02) 45%) border-box;
-    border:1px solid transparent;border-radius:18px;
-    box-shadow:0 2px 4px rgba(0,0,0,.4), 0 30px 70px -24px rgba(0,0,0,.75);
+      linear-gradient(180deg, rgba(24,26,36,.62), rgba(12,13,20,.78)) padding-box,
+      linear-gradient(160deg, color-mix(in srgb, var(--tab-accent) 55%, rgba(255,255,255,.2)), rgba(255,255,255,.05) 45%, color-mix(in srgb, var(--tab-accent) 25%, transparent)) border-box;
+    border:1px solid transparent;border-radius:22px;
+    backdrop-filter:blur(28px) saturate(150%);-webkit-backdrop-filter:blur(28px) saturate(150%);
+    box-shadow:0 2px 4px rgba(0,0,0,.4), 0 40px 90px -24px rgba(0,0,0,.85), 0 0 70px -30px var(--tab-accent), inset 0 1px 0 rgba(255,255,255,.08);
     overflow:hidden;
     animation:cardEnter .35s cubic-bezier(.16,1,.3,1);
   }
@@ -1307,7 +1309,8 @@
   .diag-list{padding:18px 26px 26px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;min-height:0;flex:1;}
   .diag-item{
     display:flex;align-items:flex-start;gap:12px;padding:14px 15px;border-radius:12px;
-    background:var(--item-bg);border:1px solid var(--item-border);
+    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
     opacity:0;transform:translateY(6px);animation:diagItemIn .35s ease forwards;
   }
   @keyframes diagItemIn{to{opacity:1;transform:translateY(0);}}
