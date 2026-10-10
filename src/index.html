@@ -1789,6 +1789,62 @@
     0%{ opacity:0; transform:translateX(-14px) scale(.9); }
     100%{ opacity:1; transform:translateX(0) scale(1); }
   }
+
+  /* ---- Analisar Sistema: paleta mais rica (só cor, layout intacto) ---- */
+  #diagModal{
+    background:
+      radial-gradient(1000px 560px at 50% -10%, color-mix(in srgb, var(--tab-accent) 22%, transparent), transparent 70%),
+      rgba(3,4,8,.66);
+  }
+  #diagModal .diag-card{
+    background:
+      linear-gradient(165deg, color-mix(in srgb, var(--tab-accent) 9%, #0c0e1a) 0%, #080a12 60%, color-mix(in srgb, var(--tab-accent) 5%, #07080f) 100%) padding-box,
+      linear-gradient(160deg, color-mix(in srgb, var(--tab-accent) 60%, transparent), rgba(255,255,255,.04) 42%, color-mix(in srgb, var(--tab-accent) 28%, transparent)) border-box;
+    box-shadow:0 2px 4px rgba(0,0,0,.5), 0 40px 90px -24px rgba(0,0,0,.9), 0 0 90px -34px var(--tab-accent), inset 0 1px 0 rgba(255,255,255,.07);
+  }
+  #diagModal .diag-head{
+    background:linear-gradient(180deg, color-mix(in srgb, var(--tab-accent) 8%, transparent), transparent);
+    border-bottom-color:color-mix(in srgb, var(--tab-accent) 16%, rgba(255,255,255,.06));
+  }
+  #diagModal .diag-summary{
+    background:linear-gradient(180deg, color-mix(in srgb, var(--tab-accent) 11%, transparent), rgba(0,0,0,.2));
+    border-right-color:color-mix(in srgb, var(--tab-accent) 14%, rgba(255,255,255,.06));
+  }
+  #diagModal .diag-score .bg{stroke:rgba(255,255,255,.07);}
+  #diagModal .diag-score.ok .fg{stroke:#34e08f;filter:drop-shadow(0 0 9px rgba(52,224,143,.6));}
+  #diagModal .diag-score.warn .fg{stroke:#ffb020;filter:drop-shadow(0 0 9px rgba(255,176,32,.6));}
+  #diagModal .diag-score.bad .fg{stroke:#ff4d6d;filter:drop-shadow(0 0 9px rgba(255,77,109,.6));}
+  #diagModal .diag-score-num b{
+    background:linear-gradient(180deg,#fff,color-mix(in srgb,#fff 55%, var(--tab-accent)));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  #diagModal .diag-pill{background:rgba(255,255,255,.035);border-color:rgba(255,255,255,.07);}
+  #diagModal .diag-pill.ok i{background:#34e08f;box-shadow:0 0 8px #34e08f;}
+  #diagModal .diag-pill.warn i{background:#ffb020;box-shadow:0 0 8px #ffb020;}
+  #diagModal .diag-pill.bad i{background:#ff4d6d;box-shadow:0 0 8px #ff4d6d;}
+  #diagModal .diag-pill.ok{border-color:rgba(52,224,143,.2);}
+  #diagModal .diag-pill.warn{border-color:rgba(255,176,32,.22);}
+  #diagModal .diag-pill.bad{border-color:rgba(255,77,109,.24);}
+  #diagModal .diag-group-title{color:color-mix(in srgb, var(--tab-accent) 55%, #9aa3b8);}
+  #diagModal .diag-group-title::after{background:linear-gradient(90deg, color-mix(in srgb, var(--tab-accent) 30%, transparent), transparent);}
+  #diagModal .diag-group-title i.ok{background:#34e08f;box-shadow:0 0 7px #34e08f;}
+  #diagModal .diag-group-title i.warn{background:#ffb020;box-shadow:0 0 7px #ffb020;}
+  #diagModal .diag-group-title i.bad{background:#ff4d6d;box-shadow:0 0 7px #ff4d6d;}
+  #diagModal .diag-item{
+    background:linear-gradient(160deg, rgba(255,255,255,.045), rgba(255,255,255,.015));
+    border-color:rgba(255,255,255,.07);
+  }
+  #diagModal .diag-item.ok{border-color:rgba(52,224,143,.16);background:linear-gradient(160deg, rgba(52,224,143,.06), rgba(255,255,255,.012));}
+  #diagModal .diag-item.warn{border-color:rgba(255,176,32,.34);background:linear-gradient(160deg, rgba(255,176,32,.11), rgba(255,176,32,.02));}
+  #diagModal .diag-item.bad{border-color:rgba(255,77,109,.36);background:linear-gradient(160deg, rgba(255,77,109,.12), rgba(255,77,109,.02));}
+  #diagModal .diag-item.ok .diag-item-icon{color:#34e08f;background:rgba(52,224,143,.14);}
+  #diagModal .diag-item.warn .diag-item-icon{color:#ffb020;background:rgba(255,176,32,.16);}
+  #diagModal .diag-item.bad .diag-item-icon{color:#ff4d6d;background:rgba(255,77,109,.16);}
+  #diagModal .diag-head-icon.ok{background:rgba(52,224,143,.15);color:#34e08f;}
+  #diagModal .diag-head-icon.warn{background:rgba(255,176,32,.16);color:#ffb020;}
+  #diagModal .diag-head-icon.bad{background:rgba(255,77,109,.16);color:#ff4d6d;}
+  #diagModal .diag-item-text span{color:#9aa3b8;}
+  #diagModal .diag-rerun{background:color-mix(in srgb, var(--tab-accent) 12%, rgba(255,255,255,.03));border-color:color-mix(in srgb, var(--tab-accent) 35%, transparent);}
 </style>
 </head>
 <body>
