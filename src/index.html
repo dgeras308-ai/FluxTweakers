@@ -1793,29 +1793,29 @@
   /* ---- Analisar Sistema: paleta mais rica (só cor, layout intacto) ---- */
   #diagModal{
     background:
-      radial-gradient(1000px 560px at 50% -10%, color-mix(in srgb, var(--tab-accent) 22%, transparent), transparent 70%),
+      radial-gradient(1000px 560px at 50% -10%, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 22%, transparent), transparent 70%),
       rgba(3,4,8,.66);
   }
   #diagModal .diag-card{
     background:
-      linear-gradient(165deg, color-mix(in srgb, var(--tab-accent) 9%, #0c0e1a) 0%, #080a12 60%, color-mix(in srgb, var(--tab-accent) 5%, #07080f) 100%) padding-box,
-      linear-gradient(160deg, color-mix(in srgb, var(--tab-accent) 60%, transparent), rgba(255,255,255,.04) 42%, color-mix(in srgb, var(--tab-accent) 28%, transparent)) border-box;
-    box-shadow:0 2px 4px rgba(0,0,0,.5), 0 40px 90px -24px rgba(0,0,0,.9), 0 0 90px -34px var(--tab-accent), inset 0 1px 0 rgba(255,255,255,.07);
+      linear-gradient(165deg, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 14%, #0a0d1c) 0%, #080a12 60%, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 5%, #07080f) 100%) padding-box,
+      linear-gradient(160deg, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 60%, transparent), rgba(255,255,255,.04) 42%, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 28%, transparent)) border-box;
+    box-shadow:0 2px 4px rgba(0,0,0,.5), 0 40px 90px -24px rgba(0,0,0,.9), 0 0 90px -34px var(--diag-accent, var(--tab-accent)), inset 0 1px 0 rgba(255,255,255,.07);
   }
   #diagModal .diag-head{
-    background:linear-gradient(180deg, color-mix(in srgb, var(--tab-accent) 8%, transparent), transparent);
-    border-bottom-color:color-mix(in srgb, var(--tab-accent) 16%, rgba(255,255,255,.06));
+    background:linear-gradient(180deg, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 8%, transparent), transparent);
+    border-bottom-color:color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 16%, rgba(255,255,255,.06));
   }
   #diagModal .diag-summary{
-    background:linear-gradient(180deg, color-mix(in srgb, var(--tab-accent) 11%, transparent), rgba(0,0,0,.2));
-    border-right-color:color-mix(in srgb, var(--tab-accent) 14%, rgba(255,255,255,.06));
+    background:linear-gradient(180deg, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 16%, transparent), rgba(0,0,0,.2));
+    border-right-color:color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 14%, rgba(255,255,255,.06));
   }
   #diagModal .diag-score .bg{stroke:rgba(255,255,255,.07);}
   #diagModal .diag-score.ok .fg{stroke:#34e08f;filter:drop-shadow(0 0 9px rgba(52,224,143,.6));}
   #diagModal .diag-score.warn .fg{stroke:#ffb020;filter:drop-shadow(0 0 9px rgba(255,176,32,.6));}
   #diagModal .diag-score.bad .fg{stroke:#ff4d6d;filter:drop-shadow(0 0 9px rgba(255,77,109,.6));}
   #diagModal .diag-score-num b{
-    background:linear-gradient(180deg,#fff,color-mix(in srgb,#fff 55%, var(--tab-accent)));
+    background:linear-gradient(180deg,#fff,color-mix(in srgb,#fff 55%, var(--diag-accent, var(--tab-accent))));
     -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
   }
   #diagModal .diag-pill{background:rgba(255,255,255,.035);border-color:rgba(255,255,255,.07);}
@@ -1825,8 +1825,8 @@
   #diagModal .diag-pill.ok{border-color:rgba(52,224,143,.2);}
   #diagModal .diag-pill.warn{border-color:rgba(255,176,32,.22);}
   #diagModal .diag-pill.bad{border-color:rgba(255,77,109,.24);}
-  #diagModal .diag-group-title{color:color-mix(in srgb, var(--tab-accent) 55%, #9aa3b8);}
-  #diagModal .diag-group-title::after{background:linear-gradient(90deg, color-mix(in srgb, var(--tab-accent) 30%, transparent), transparent);}
+  #diagModal .diag-group-title{color:color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 55%, #9aa3b8);}
+  #diagModal .diag-group-title::after{background:linear-gradient(90deg, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 30%, transparent), transparent);}
   #diagModal .diag-group-title i.ok{background:#34e08f;box-shadow:0 0 7px #34e08f;}
   #diagModal .diag-group-title i.warn{background:#ffb020;box-shadow:0 0 7px #ffb020;}
   #diagModal .diag-group-title i.bad{background:#ff4d6d;box-shadow:0 0 7px #ff4d6d;}
@@ -1844,7 +1844,7 @@
   #diagModal .diag-head-icon.warn{background:rgba(255,176,32,.16);color:#ffb020;}
   #diagModal .diag-head-icon.bad{background:rgba(255,77,109,.16);color:#ff4d6d;}
   #diagModal .diag-item-text span{color:#9aa3b8;}
-  #diagModal .diag-rerun{background:color-mix(in srgb, var(--tab-accent) 12%, rgba(255,255,255,.03));border-color:color-mix(in srgb, var(--tab-accent) 35%, transparent);}
+  #diagModal .diag-rerun{background:color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 12%, rgba(255,255,255,.03));border-color:color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 35%, transparent);}
 </style>
 </head>
 <body>
@@ -5238,6 +5238,21 @@ function diagIconSvg(status){
   if (status === 'warn') return '<path d="M12 9v4M12 17h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L14.7 3.86a2 2 0 0 0-3.4 0Z"/>';
   return '<circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/>';
 }
+// Se o tema é neutro (branco/cinza), o modal ficaria cinza — usa um azul-índigo fixo.
+function setDiagAccent(){
+  const modal = document.getElementById('diagModal');
+  if (!modal) return;
+  let acc = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  const m = /^#([0-9a-f]{6})$/i.exec(acc);
+  let color = '#5b8cff';
+  if (m){
+    const n = parseInt(m[1], 16), r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+    const mx = Math.max(r,g,b), mn = Math.min(r,g,b);
+    const sat = mx === 0 ? 0 : (mx - mn) / mx;
+    if (sat >= 0.3) color = acc;
+  }
+  modal.style.setProperty('--diag-accent', color);
+}
 async function runDiagnosticFlow({ loadingTitle, loadingSub, invokeCmd, invokeArgs, notFoundTitle, notFoundSub, verdictOk, verdictWarn, verdictBad, updateScore, showDeepScan, grouped }){
   const modal = document.getElementById('diagModal');
   const list = document.getElementById('diagList');
@@ -5250,6 +5265,7 @@ async function runDiagnosticFlow({ loadingTitle, loadingSub, invokeCmd, invokeAr
   headIcon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>';
   title.textContent = loadingTitle;
   sub.textContent = loadingSub;
+  setDiagAccent();
   list.innerHTML = '';
   const summaryEl = document.getElementById('diagSummary');
   if (summaryEl){ summaryEl.hidden = true; summaryEl.innerHTML = ''; }
