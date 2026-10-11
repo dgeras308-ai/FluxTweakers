@@ -1845,6 +1845,72 @@
   #diagModal .diag-head-icon.bad{background:rgba(255,77,109,.16);color:#ff4d6d;}
   #diagModal .diag-item-text span{color:#9aa3b8;}
   #diagModal .diag-rerun{background:color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 12%, rgba(255,255,255,.03));border-color:color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 35%, transparent);}
+
+  /* ---- Analisar Sistema: versão clara (temas claros, ex: Branco e Laranja) ---- */
+  :root.light-mode #diagModal{
+    background:
+      radial-gradient(1000px 560px at 50% -10%, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 20%, transparent), transparent 70%),
+      rgba(236,238,245,.62);
+  }
+  :root.light-mode #diagModal .diag-card{
+    background:
+      linear-gradient(165deg, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 9%, #ffffff) 0%, #fafbfe 55%, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 6%, #f4f5fa) 100%) padding-box,
+      linear-gradient(160deg, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 70%, transparent), rgba(0,0,0,.06) 42%, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 35%, transparent)) border-box;
+    box-shadow:0 2px 4px rgba(20,22,40,.12), 0 40px 90px -28px rgba(20,22,40,.35), 0 0 80px -36px var(--diag-accent, var(--tab-accent)), inset 0 1px 0 rgba(255,255,255,.9);
+  }
+  :root.light-mode #diagModal .diag-head{
+    background:linear-gradient(180deg, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 10%, transparent), transparent);
+    border-bottom-color:color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 24%, rgba(0,0,0,.06));
+  }
+  :root.light-mode #diagModal .diag-title,
+  :root.light-mode #diagModal .diag-summary-text b,
+  :root.light-mode #diagModal .diag-item-text b{color:#161a26;}
+  :root.light-mode #diagModal .diag-sub,
+  :root.light-mode #diagModal .diag-summary-text > span,
+  :root.light-mode #diagModal .diag-item-text span{color:#5a6377;}
+  :root.light-mode #diagModal .diag-close{color:#5a6377;}
+  :root.light-mode #diagModal .diag-close:hover{background:rgba(0,0,0,.06);color:#161a26;}
+  :root.light-mode #diagModal .diag-summary{
+    background:linear-gradient(180deg, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 12%, transparent), rgba(0,0,0,.015));
+    border-right-color:color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 22%, rgba(0,0,0,.06));
+  }
+  :root.light-mode #diagModal .diag-score .bg{stroke:rgba(0,0,0,.08);}
+  :root.light-mode #diagModal .diag-score.ok .fg{stroke:#10b26c;filter:drop-shadow(0 0 6px rgba(16,178,108,.4));}
+  :root.light-mode #diagModal .diag-score.warn .fg{stroke:#e39500;filter:drop-shadow(0 0 6px rgba(227,149,0,.4));}
+  :root.light-mode #diagModal .diag-score.bad .fg{stroke:#e5334f;filter:drop-shadow(0 0 6px rgba(229,51,79,.4));}
+  :root.light-mode #diagModal .diag-score-num b{
+    background:linear-gradient(180deg,#171a26,color-mix(in srgb,#171a26 55%, var(--diag-accent, var(--tab-accent))));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  :root.light-mode #diagModal .diag-score-num span{color:#6a7387;}
+  :root.light-mode #diagModal .diag-pill{background:rgba(0,0,0,.03);border-color:rgba(0,0,0,.08);color:#4a5265;}
+  :root.light-mode #diagModal .diag-pill b{color:#161a26;}
+  :root.light-mode #diagModal .diag-pill.ok i{background:#10b26c;box-shadow:0 0 6px rgba(16,178,108,.6);}
+  :root.light-mode #diagModal .diag-pill.warn i{background:#e39500;box-shadow:0 0 6px rgba(227,149,0,.6);}
+  :root.light-mode #diagModal .diag-pill.bad i{background:#e5334f;box-shadow:0 0 6px rgba(229,51,79,.6);}
+  :root.light-mode #diagModal .diag-pill.ok{border-color:rgba(16,178,108,.32);}
+  :root.light-mode #diagModal .diag-pill.warn{border-color:rgba(227,149,0,.38);}
+  :root.light-mode #diagModal .diag-pill.bad{border-color:rgba(229,51,79,.36);}
+  :root.light-mode #diagModal .diag-group-title{color:color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 75%, #2c3246);}
+  :root.light-mode #diagModal .diag-group-title::after{background:linear-gradient(90deg, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 40%, transparent), transparent);}
+  :root.light-mode #diagModal .diag-group-title i.ok{background:#10b26c;box-shadow:none;}
+  :root.light-mode #diagModal .diag-group-title i.warn{background:#e39500;box-shadow:none;}
+  :root.light-mode #diagModal .diag-group-title i.bad{background:#e5334f;box-shadow:none;}
+  :root.light-mode #diagModal .diag-item{background:linear-gradient(160deg,#ffffff,#f6f7fb);border-color:rgba(0,0,0,.08);box-shadow:0 1px 2px rgba(20,22,40,.06);}
+  :root.light-mode #diagModal .diag-item.ok{border-color:rgba(16,178,108,.3);background:linear-gradient(160deg, rgba(16,178,108,.1), #ffffff);}
+  :root.light-mode #diagModal .diag-item.warn{border-color:rgba(227,149,0,.42);background:linear-gradient(160deg, rgba(227,149,0,.14), #ffffff);}
+  :root.light-mode #diagModal .diag-item.bad{border-color:rgba(229,51,79,.42);background:linear-gradient(160deg, rgba(229,51,79,.12), #ffffff);}
+  :root.light-mode #diagModal .diag-item.ok .diag-item-icon{color:#0c9a5b;background:rgba(16,178,108,.16);}
+  :root.light-mode #diagModal .diag-item.warn .diag-item-icon{color:#c27f00;background:rgba(227,149,0,.18);}
+  :root.light-mode #diagModal .diag-item.bad .diag-item-icon{color:#d22a47;background:rgba(229,51,79,.16);}
+  :root.light-mode #diagModal .diag-head-icon.ok{background:rgba(16,178,108,.16);color:#0c9a5b;}
+  :root.light-mode #diagModal .diag-head-icon.warn{background:rgba(227,149,0,.18);color:#c27f00;}
+  :root.light-mode #diagModal .diag-head-icon.bad{background:rgba(229,51,79,.16);color:#d22a47;}
+  :root.light-mode #diagModal .diag-rerun{
+    background:color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 14%, #ffffff);border-color:color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 50%, transparent);color:#161a26;
+  }
+  :root.light-mode #diagModal .diag-rerun:hover{background:color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 24%, #ffffff);}
+  :root.light-mode #diagModal .diag-deepscan{border-top-color:rgba(0,0,0,.08);}
 </style>
 </head>
 <body>
