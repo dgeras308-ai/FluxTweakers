@@ -1911,6 +1911,68 @@
   }
   :root.light-mode #diagModal .diag-rerun:hover{background:color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 24%, #ffffff);}
   :root.light-mode #diagModal .diag-deepscan{border-top-color:rgba(0,0,0,.08);}
+
+  /* ---- Analisar Sistema: versão para temas claros (ex: Branco & Laranja) ---- */
+  :root.light-mode #diagModal{
+    background:
+      radial-gradient(1000px 560px at 50% -10%, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 20%, transparent), transparent 70%),
+      rgba(236,238,245,.58);
+  }
+  :root.light-mode #diagModal .diag-card{
+    background:
+      linear-gradient(165deg, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 9%, #ffffff) 0%, #fbfbfe 55%, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 6%, #f6f7fb) 100%) padding-box,
+      linear-gradient(160deg, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 65%, transparent), rgba(0,0,0,.06) 42%, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 30%, transparent)) border-box;
+    box-shadow:0 2px 4px rgba(20,24,40,.12), 0 40px 80px -28px rgba(20,24,40,.35), 0 0 80px -36px var(--diag-accent, var(--tab-accent)), inset 0 1px 0 rgba(255,255,255,.9);
+  }
+  :root.light-mode #diagModal .diag-head{
+    background:linear-gradient(180deg, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 9%, transparent), transparent);
+    border-bottom-color:color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 22%, rgba(0,0,0,.06));
+  }
+  :root.light-mode #diagModal .diag-summary{
+    background:linear-gradient(180deg, color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 12%, transparent), rgba(0,0,0,.015));
+    border-right-color:color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 20%, rgba(0,0,0,.06));
+  }
+  :root.light-mode #diagModal .diag-title,
+  :root.light-mode #diagModal .diag-summary-text b,
+  :root.light-mode #diagModal .diag-item-text b,
+  :root.light-mode #diagModal .diag-pill b{color:#161a26;}
+  :root.light-mode #diagModal .diag-sub,
+  :root.light-mode #diagModal .diag-summary-text > span,
+  :root.light-mode #diagModal .diag-item-text span,
+  :root.light-mode #diagModal .diag-pill{color:#5a6377;}
+  :root.light-mode #diagModal .diag-close{color:#5a6377;}
+  :root.light-mode #diagModal .diag-close:hover{background:rgba(0,0,0,.06);color:#161a26;}
+  :root.light-mode #diagModal .diag-score .bg{stroke:rgba(0,0,0,.08);}
+  :root.light-mode #diagModal .diag-score.ok .fg{stroke:#12a865;filter:drop-shadow(0 0 6px rgba(18,168,101,.4));}
+  :root.light-mode #diagModal .diag-score.warn .fg{stroke:#e29400;filter:drop-shadow(0 0 6px rgba(226,148,0,.4));}
+  :root.light-mode #diagModal .diag-score.bad .fg{stroke:#e2304d;filter:drop-shadow(0 0 6px rgba(226,48,77,.4));}
+  :root.light-mode #diagModal .diag-score-num b{
+    background:linear-gradient(180deg,#161a26,color-mix(in srgb,#161a26 55%, var(--diag-accent, var(--tab-accent))));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  :root.light-mode #diagModal .diag-score-num span{color:#6a7388;}
+  :root.light-mode #diagModal .diag-pill{background:rgba(0,0,0,.03);border-color:rgba(0,0,0,.08);}
+  :root.light-mode #diagModal .diag-pill.ok{border-color:rgba(18,168,101,.3);}
+  :root.light-mode #diagModal .diag-pill.warn{border-color:rgba(226,148,0,.34);}
+  :root.light-mode #diagModal .diag-pill.bad{border-color:rgba(226,48,77,.32);}
+  :root.light-mode #diagModal .diag-pill.ok i,:root.light-mode #diagModal .diag-group-title i.ok{background:#12a865;box-shadow:0 0 6px rgba(18,168,101,.5);}
+  :root.light-mode #diagModal .diag-pill.warn i,:root.light-mode #diagModal .diag-group-title i.warn{background:#e29400;box-shadow:0 0 6px rgba(226,148,0,.5);}
+  :root.light-mode #diagModal .diag-pill.bad i,:root.light-mode #diagModal .diag-group-title i.bad{background:#e2304d;box-shadow:0 0 6px rgba(226,48,77,.5);}
+  :root.light-mode #diagModal .diag-group-title{color:color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 75%, #3a4156);}
+  :root.light-mode #diagModal .diag-item{background:#ffffff;border-color:rgba(0,0,0,.08);box-shadow:0 1px 2px rgba(20,24,40,.06);}
+  :root.light-mode #diagModal .diag-item.ok{border-color:rgba(18,168,101,.3);background:linear-gradient(160deg, rgba(18,168,101,.09), #ffffff 70%);}
+  :root.light-mode #diagModal .diag-item.warn{border-color:rgba(226,148,0,.4);background:linear-gradient(160deg, rgba(226,148,0,.12), #ffffff 70%);}
+  :root.light-mode #diagModal .diag-item.bad{border-color:rgba(226,48,77,.4);background:linear-gradient(160deg, rgba(226,48,77,.1), #ffffff 70%);}
+  :root.light-mode #diagModal .diag-item.ok .diag-item-icon{color:#12a865;background:rgba(18,168,101,.14);}
+  :root.light-mode #diagModal .diag-item.warn .diag-item-icon{color:#d98a00;background:rgba(226,148,0,.16);}
+  :root.light-mode #diagModal .diag-item.bad .diag-item-icon{color:#e2304d;background:rgba(226,48,77,.14);}
+  :root.light-mode #diagModal .diag-head-icon.ok{background:rgba(18,168,101,.14);color:#12a865;}
+  :root.light-mode #diagModal .diag-head-icon.warn{background:rgba(226,148,0,.16);color:#d98a00;}
+  :root.light-mode #diagModal .diag-head-icon.bad{background:rgba(226,48,77,.14);color:#e2304d;}
+  :root.light-mode #diagModal .diag-rerun{
+    background:color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 12%, #ffffff);color:#161a26;
+    border-color:color-mix(in srgb, var(--diag-accent, var(--tab-accent)) 45%, transparent);
+  }
 </style>
 </head>
 <body>
