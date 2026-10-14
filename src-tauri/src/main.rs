@@ -1269,14 +1269,13 @@ async fn run_diagnostics(state: State<'_, SysState>) -> Result<DiagnosticReport,
     }
 
     // Checagens específicas do Windows
-    let (dev_status, dev_detail) = check_device_errors_windows();
-    checks.push(DiagnosticCheck{ label: "Dispositivos (drivers)".into(), status: dev_status, detail: dev_detail });
+    checks.extend(check_devices_windows());
 
     let (disk_status, disk_detail) = check_disk_health_windows();
     checks.push(DiagnosticCheck{ label: "Saúde física dos discos".into(), status: disk_status, detail: disk_detail });
 
     let (evt_status, evt_detail) = check_recent_critical_events_windows();
-    checks.push(DiagnosticCheck{ label: "Erros críticos recentes".into(), status: evt_status, detail: evt_detail });
+    checks.push(DiagnosticCheck{ label: "Erros do sistema (24h)".into(), status: evt_status, detail: evt_detail });
 
     #[cfg(target_os = "windows")]
     {
@@ -1415,28 +1414,77 @@ fn check_game_gpu_preference_windows(_exe_path: &str) -> (String, String) { ("ok
 #[cfg(not(target_os = "windows"))]
 fn check_game_fso_windows(_exe_path: &str) -> (String, String) { ("ok".to_string(), "Checagem disponível apenas no Windows".to_string()) }
 
+/// Dispositivos com problema. O Windows usa o mesmo "código de erro" pra falha
+/// real (ex: 43, 28) e pra dispositivo DESATIVADO de propósito (código 22) —
+/// por isso a checagem separa os dois. Desativar o HPET ("Timer de eventos de
+/// alta precisão") é um truque comum pra ganhar FPS, não um defeito.
 #[cfg(target_os = "windows")]
-fn check_device_errors_windows() -> (String, String) {
-    // Força saída em UTF-8 — sem isso, nomes com acento (ç, ã, é) vêm
-    // corrompidos (tipo "Virtualiza�o"), porque o PowerShell por padrão
-    // escreve no console usando a página de código antiga do Windows, não
-    // UTF-8, e o Rust lê tudo como UTF-8 sem essa linha.
-    let ps_cmd = "[Console]::OutputEncoding=[Text.Encoding]::UTF8; (Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object { $_.ConfigManagerErrorCode -ne 0 }).FriendlyName -join ', '";
+fn check_devices_windows() -> Vec<DiagnosticCheck> {
+    // Saída em UTF-8 (senão nomes com acento vêm corrompidos).
+    let ps_cmd = r#"
+[Console]::OutputEncoding=[Text.Encoding]::UTF8
+Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object { $_.ConfigManagerErrorCode -ne 0 } | ForEach-Object {
+  $n = if ($_.FriendlyName) { $_.FriendlyName } else { $_.InstanceId }
+  "$($_.ConfigManagerErrorCode)|$n"
+}
+"#;
     let output = Command::new("powershell")
         .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps_cmd])
         .creation_flags(CREATE_NO_WINDOW)
         .output();
-    match output {
-        Ok(o) => {
-            let text = String::from_utf8_lossy(&o.stdout).trim().to_string();
-            if text.is_empty() {
-                ("ok".to_string(), "Nenhum dispositivo com erro de driver".to_string())
-            } else {
-                ("bad".to_string(), format!("Dispositivos com erro: {text}"))
-            }
+    let text = match output {
+        Ok(o) => String::from_utf8_lossy(&o.stdout).to_string(),
+        Err(_) => {
+            return vec![DiagnosticCheck{
+                label: "Dispositivos (drivers)".into(), status: "warn".into(),
+                detail: "Não foi possível checar (permissão ou PowerShell indisponível)".into(),
+            }];
         }
-        Err(_) => ("warn".to_string(), "Não foi possível checar (permissão ou PowerShell indisponível)".to_string()),
+    };
+
+    let mut errors: Vec<String> = Vec::new();
+    let mut disabled: Vec<String> = Vec::new();
+    for line in text.lines() {
+        let line = line.trim();
+        let Some((code, name)) = line.split_once('|') else { continue };
+        let code: u32 = code.trim().parse().unwrap_or(0);
+        let name = name.trim().to_string();
+        if name.is_empty() { continue; }
+        match code {
+            0 | 24 | 45 => {}                       // ok / não presente / desconectado
+            22 => disabled.push(name),              // desativado manualmente
+            _ => errors.push(format!("{name} (cód. {code})")),
+        }
     }
+
+    let mut out = Vec::new();
+    if errors.is_empty() {
+        out.push(DiagnosticCheck{
+            label: "Dispositivos (drivers)".into(), status: "ok".into(),
+            detail: "Nenhum dispositivo com erro de driver".into(),
+        });
+    } else {
+        out.push(DiagnosticCheck{
+            label: "Dispositivos (drivers)".into(), status: "bad".into(),
+            detail: format!("{} com erro de driver||{}", errors.len(), errors.join("||")),
+        });
+    }
+    if !disabled.is_empty() {
+        let hpet = disabled.iter().any(|n| {
+            let l = n.to_lowercase();
+            l.contains("alta precis") || l.contains("high precision")
+        });
+        let head = if hpet {
+            "Desativados manualmente — normal em PC otimizado (o HPET, por exemplo, muita gente desliga pra ganhar FPS)"
+        } else {
+            "Desativados manualmente — não é erro"
+        };
+        out.push(DiagnosticCheck{
+            label: "Dispositivos desativados".into(), status: "ok".into(),
+            detail: format!("{head}||{}", disabled.join("||")),
+        });
+    }
+    out
 }
 
 #[cfg(target_os = "windows")]
@@ -1461,21 +1509,42 @@ fn check_disk_health_windows() -> (String, String) {
 
 #[cfg(target_os = "windows")]
 fn check_recent_critical_events_windows() -> (String, String) {
-    let ps_cmd = "(Get-WinEvent -FilterHashtable @{LogName='System'; Level=1,2; StartTime=(Get-Date).AddHours(-24)} -ErrorAction SilentlyContinue | Measure-Object).Count";
+    let ps_cmd = r#"
+[Console]::OutputEncoding=[Text.Encoding]::UTF8
+$e = Get-WinEvent -FilterHashtable @{LogName='System'; Level=1,2; StartTime=(Get-Date).AddHours(-24)} -ErrorAction SilentlyContinue
+if ($e) { $e | Group-Object ProviderName | Sort-Object Count -Descending | Select-Object -First 4 | ForEach-Object { "$($_.Count)|$($_.Name)" } }
+"#;
     let output = Command::new("powershell")
         .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps_cmd])
         .creation_flags(CREATE_NO_WINDOW)
         .output();
     match output {
         Ok(o) => {
-            let text = String::from_utf8_lossy(&o.stdout).trim().to_string();
-            let count: i64 = text.parse().unwrap_or(0);
-            if count == 0 {
-                ("ok".to_string(), "Nenhum erro crítico nas últimas 24h".to_string())
-            } else if count <= 5 {
-                ("warn".to_string(), format!("{count} erro(s) crítico(s) nas últimas 24h"))
+            let text = String::from_utf8_lossy(&o.stdout).to_string();
+            let mut total: u64 = 0;
+            let mut sources: Vec<String> = Vec::new();
+            let mut hardware = false;
+            for line in text.lines() {
+                let Some((n, name)) = line.trim().split_once('|') else { continue };
+                let n: u64 = n.trim().parse().unwrap_or(0);
+                if n == 0 { continue; }
+                total += n;
+                let short = name.trim().trim_start_matches("Microsoft-Windows-").to_string();
+                let l = short.to_lowercase();
+                if l.contains("disk") || l.contains("ntfs") || l.contains("volmgr") || l.contains("whea") || l.contains("stornvme") {
+                    hardware = true;
+                }
+                sources.push(format!("{short} ({n})"));
+            }
+            let list = if sources.is_empty() { String::new() } else { format!("||{}", sources.join("||")) };
+            if total == 0 {
+                ("ok".to_string(), "Nenhum erro no log do sistema nas últimas 24h".to_string())
+            } else if total >= 30 {
+                ("bad".to_string(), format!("{total} erros nas últimas 24h — vale investigar{list}"))
+            } else if total >= 10 || hardware {
+                ("warn".to_string(), format!("{total} erros nas últimas 24h{list}"))
             } else {
-                ("bad".to_string(), format!("{count} erros críticos nas últimas 24h — vale investigar"))
+                ("ok".to_string(), format!("{total} erros leves nas últimas 24h (normal, nada crítico){list}"))
             }
         }
         Err(_) => ("warn".to_string(), "Não foi possível checar o Log de Eventos".to_string()),
@@ -1483,8 +1552,8 @@ fn check_recent_critical_events_windows() -> (String, String) {
 }
 
 #[cfg(not(target_os = "windows"))]
-fn check_device_errors_windows() -> (String, String) {
-    ("ok".to_string(), "Checagem disponível apenas no Windows".to_string())
+fn check_devices_windows() -> Vec<DiagnosticCheck> {
+    vec![DiagnosticCheck{ label: "Dispositivos (drivers)".into(), status: "ok".into(), detail: "Checagem disponível apenas no Windows".into() }]
 }
 #[cfg(not(target_os = "windows"))]
 fn check_disk_health_windows() -> (String, String) {

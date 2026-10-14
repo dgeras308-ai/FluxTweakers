@@ -1807,6 +1807,13 @@
   .diag-item-text{min-width:0;}
   .diag-item-text b{display:block;font-size:13.3px;font-weight:700;color:var(--dg-text);}
   .diag-item-text span{display:block;font-size:12px;line-height:1.5;color:var(--dg-muted);margin-top:2px;}
+  .diag-item-text .diag-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .diag-chip{
+    font-style:normal;font-size:11.4px;font-weight:600;color:var(--dg-text);padding:4px 10px;border-radius:8px;
+    background:color-mix(in srgb, var(--dg-text) 7%, transparent);border:1px solid var(--dg-line);
+  }
+  .diag-item.bad .diag-chip{border-color:color-mix(in srgb, var(--dg-bad) 35%, var(--dg-line));background:color-mix(in srgb, var(--dg-bad) 9%, transparent);}
+  .diag-item.warn .diag-chip{border-color:color-mix(in srgb, var(--dg-warn) 35%, var(--dg-line));background:color-mix(in srgb, var(--dg-warn) 9%, transparent);}
   .diag-rec{
     display:flex !important;gap:7px;align-items:flex-start;margin-top:7px !important;font-size:11.8px !important;
     padding:7px 10px;border-radius:9px;color:var(--dg-text) !important;
@@ -5281,7 +5288,7 @@ function diagRecommendation(label){
   if (label.startsWith('Espaço em')) return 'Libere espaço: limpe temporários e desinstale o que não usa mais.';
   const map = {
     'Dispositivos (drivers)': 'Atualize ou reinstale esses drivers no Gerenciador de Dispositivos.',
-    'Erros críticos recentes': 'Abra o Visualizador de Eventos (eventvwr) pra ver a origem dos erros.',
+    'Erros do sistema (24h)': 'Abra o Visualizador de Eventos (eventvwr) pra ver a origem dos erros.',
     'Tempo ligado': 'Reinicie o PC pra liberar memória e aplicar atualizações.',
     'Reinício pendente': 'Reinicie o PC pra concluir as atualizações do Windows.',
     'Plano de energia': 'Ative o plano FluxTweakers (aba Energia) ou Alto desempenho.',
@@ -5292,6 +5299,12 @@ function diagRecommendation(label){
   };
   return map[label] || null;
 }
+// Detalhe com lista: "texto||item1||item2" vira o texto + etiquetas (chips).
+function diagDetailHTML(detail){
+  const parts = String(detail ?? '').split('||');
+  if (parts.length < 2) return `<span>${DIAG_ESC(detail)}</span>`;
+  return `<span>${DIAG_ESC(parts[0])}</span><span class="diag-chips">${parts.slice(1).map(x => `<em class="diag-chip">${DIAG_ESC(x)}</em>`).join('')}</span>`;
+}
 function diagItemHTML(c, i){
   const rec = c.status !== 'ok' ? diagRecommendation(c.label) : null;
   const badge = { ok:'OK', warn:'Atenção', bad:'Crítico' }[c.status] || '';
@@ -5299,7 +5312,7 @@ function diagItemHTML(c, i){
   return `
     <div class="diag-item ${c.status}" style="animation-delay:${Math.min(i, 14) * 35}ms">
       <div class="diag-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${diagIconSvg(c.status)}</svg></div>
-      <div class="diag-item-text"><b>${DIAG_ESC(c.label)}</b><span>${DIAG_ESC(c.detail)}</span>${rec ? `<span class="diag-rec">${bulb}${rec}</span>` : ''}</div>
+      <div class="diag-item-text"><b>${DIAG_ESC(c.label)}</b>${diagDetailHTML(c.detail)}${rec ? `<span class="diag-rec">${bulb}${rec}</span>` : ''}</div>
       <span class="diag-badge ${c.status}">${badge}</span>
     </div>`;
 }
@@ -5369,7 +5382,7 @@ async function runDiagnosticFlow({ loadingTitle, loadingSub, invokeCmd, invokeAr
       const DEFS = [
         { name:'Sistema', match: l => ['Carga do sistema','Tempo ligado','Reinício pendente','Plano de energia'].includes(l) },
         { name:'Discos', match: l => l.startsWith('Espaço em') || l === 'Saúde física dos discos' },
-        { name:'Estabilidade', match: l => ['Dispositivos (drivers)','Erros críticos recentes'].includes(l) },
+        { name:'Estabilidade', match: l => ['Dispositivos (drivers)','Dispositivos desativados','Erros do sistema (24h)'].includes(l) },
         { name:'Segurança', match: l => ['Antivírus','Programas na inicialização'].includes(l) },
       ];
       const used = new Set();
