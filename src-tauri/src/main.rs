@@ -2290,6 +2290,449 @@ fn set_autostart_enabled(app: tauri::AppHandle, enabled: bool) -> Result<(), Str
     }
 }
 
+// ===================== App Tuner =====================
+//
+// Otimizações por aplicativo: limpar o cache (navegadores, Discord, Steam,
+// Epic), subir a prioridade de processo (OBS e processo personalizado) e
+// abrir as configurações certas (Modo Jogo do Windows e painel da placa de
+// vídeo). Nada aqui mexe em senha, histórico ou login — só em pastas de cache.
+
+#[derive(Clone, Copy)]
+enum CacheSpec {
+    /// limpa o CONTEÚDO dessa pasta
+    Dir(&'static str),
+    /// apaga as subpastas de <base> cujo nome começa com <prefixo>
+    Prefix(&'static str, &'static str),
+    /// navegador Chromium: limpa as subpastas indicadas de cada perfil
+    Chromium(&'static str, &'static [&'static str]),
+}
+
+struct TunerDef {
+    id: &'static str,
+    name: &'static str,
+    exes: &'static [&'static str],
+    procs: &'static [&'static str],
+    caches: &'static [CacheSpec],
+    cache_label: Option<&'static str>,
+    priority_label: Option<&'static str>,
+}
+
+const CHROMIUM_SUBS: &[&str] = &["Cache", "Code Cache", "GPUCache"];
+
+const TUNER_DEFS: &[TunerDef] = &[
+    TunerDef {
+        id: "chrome", name: "Google Chrome",
+        exes: &["%PF%\\Google\\Chrome\\Application\\chrome.exe", "%PF86%\\Google\\Chrome\\Application\\chrome.exe", "%LOCAL%\\Google\\Chrome\\Application\\chrome.exe"],
+        procs: &["chrome"],
+        caches: &[CacheSpec::Chromium("%LOCAL%\\Google\\Chrome\\User Data", CHROMIUM_SUBS)],
+        cache_label: Some("Otimizar cache"), priority_label: None,
+    },
+    TunerDef {
+        id: "edge", name: "Microsoft Edge",
+        exes: &["%PF86%\\Microsoft\\Edge\\Application\\msedge.exe", "%PF%\\Microsoft\\Edge\\Application\\msedge.exe"],
+        procs: &["msedge"],
+        caches: &[CacheSpec::Chromium("%LOCAL%\\Microsoft\\Edge\\User Data", CHROMIUM_SUBS)],
+        cache_label: Some("Otimizar cache"), priority_label: None,
+    },
+    TunerDef {
+        id: "brave", name: "Brave",
+        exes: &["%PF%\\BraveSoftware\\Brave-Browser\\Application\\brave.exe", "%LOCAL%\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"],
+        procs: &["brave"],
+        caches: &[CacheSpec::Chromium("%LOCAL%\\BraveSoftware\\Brave-Browser\\User Data", CHROMIUM_SUBS)],
+        cache_label: Some("Otimizar cache"), priority_label: None,
+    },
+    TunerDef {
+        id: "discord", name: "Discord",
+        exes: &["%LOCAL%\\Discord\\Update.exe"],
+        procs: &["Discord"],
+        caches: &[CacheSpec::Dir("%ROAM%\\discord\\Cache"), CacheSpec::Dir("%ROAM%\\discord\\Code Cache"), CacheSpec::Dir("%ROAM%\\discord\\GPUCache")],
+        cache_label: Some("Otimizar cache"), priority_label: None,
+    },
+    TunerDef {
+        id: "steam", name: "Steam",
+        exes: &["%PF86%\\Steam\\steam.exe", "%PF%\\Steam\\steam.exe"],
+        procs: &["steam", "steamwebhelper"],
+        caches: &[CacheSpec::Dir("%LOCAL%\\Steam\\htmlcache")],
+        cache_label: Some("Limpar cache web"), priority_label: None,
+    },
+    TunerDef {
+        id: "epic", name: "Epic Games Launcher",
+        exes: &["%PF86%\\Epic Games\\Launcher\\Portal\\Binaries\\Win64\\EpicGamesLauncher.exe", "%PF%\\Epic Games\\Launcher\\Portal\\Binaries\\Win64\\EpicGamesLauncher.exe"],
+        procs: &["EpicGamesLauncher"],
+        caches: &[CacheSpec::Prefix("%LOCAL%\\EpicGamesLauncher\\Saved", "webcache")],
+        cache_label: Some("Limpar webcache"), priority_label: None,
+    },
+    TunerDef {
+        id: "obs", name: "OBS Studio",
+        exes: &["%PF%\\obs-studio\\bin\\64bit\\obs64.exe", "%PF86%\\obs-studio\\bin\\64bit\\obs64.exe"],
+        procs: &["obs64"],
+        caches: &[],
+        cache_label: None, priority_label: Some("Otimizar processo"),
+    },
+];
+
+#[derive(Serialize, Clone)]
+struct TunerAction {
+    id: String,
+    label: String,
+}
+
+#[derive(Serialize, Clone)]
+struct TunerApp {
+    id: String,
+    name: String,
+    installed: bool,
+    running: bool,
+    cache_mb: Option<f64>,
+    actions: Vec<TunerAction>,
+}
+
+#[derive(Serialize)]
+struct TunerOverview {
+    apps: Vec<TunerApp>,
+    gpu_vendor: String,
+    gpu_name: String,
+}
+
+fn tuner_expand(template: &str) -> std::path::PathBuf {
+    let get = |k: &str| std::env::var(k).unwrap_or_default();
+    let s = template
+        .replace("%PF86%", &get("ProgramFiles(x86)"))
+        .replace("%PF%", &get("ProgramFiles"))
+        .replace("%LOCAL%", &get("LOCALAPPDATA"))
+        .replace("%ROAM%", &get("APPDATA"));
+    std::path::PathBuf::from(s)
+}
+
+/// (pasta, apagar_a_pasta_inteira)
+fn tuner_cache_targets(def: &TunerDef) -> Vec<(std::path::PathBuf, bool)> {
+    let mut out: Vec<(std::path::PathBuf, bool)> = Vec::new();
+    for spec in def.caches.iter() {
+        match *spec {
+            CacheSpec::Dir(t) => {
+                let p = tuner_expand(t);
+                if p.is_dir() {
+                    out.push((p, false));
+                }
+            }
+            CacheSpec::Prefix(base, prefix) => {
+                if let Ok(rd) = fs::read_dir(tuner_expand(base)) {
+                    for e in rd.flatten() {
+                        let name = e.file_name().to_string_lossy().to_string();
+                        if name.starts_with(prefix) && e.path().is_dir() {
+                            out.push((e.path(), true));
+                        }
+                    }
+                }
+            }
+            CacheSpec::Chromium(base, subs) => {
+                let b = tuner_expand(base);
+                if let Ok(rd) = fs::read_dir(&b) {
+                    for e in rd.flatten() {
+                        let name = e.file_name().to_string_lossy().to_string();
+                        if name == "Default" || name.starts_with("Profile ") {
+                            for sub in subs.iter() {
+                                let p = e.path().join(sub);
+                                if p.is_dir() {
+                                    out.push((p, false));
+                                }
+                            }
+                        }
+                    }
+                }
+                for extra in ["ShaderCache", "GrShaderCache"] {
+                    let p = b.join(extra);
+                    if p.is_dir() {
+                        out.push((p, false));
+                    }
+                }
+            }
+        }
+    }
+    out
+}
+
+fn tuner_dir_size(p: &std::path::Path) -> u64 {
+    let mut total = 0u64;
+    if let Ok(rd) = fs::read_dir(p) {
+        for e in rd.flatten() {
+            let path = e.path();
+            if let Ok(m) = path.symlink_metadata() {
+                if m.is_dir() {
+                    total += tuner_dir_size(&path);
+                } else if m.is_file() {
+                    total += m.len();
+                }
+            }
+        }
+    }
+    total
+}
+
+fn tuner_clear_dir(p: &std::path::Path) {
+    if let Ok(rd) = fs::read_dir(p) {
+        for e in rd.flatten() {
+            let path = e.path();
+            let is_dir = path.symlink_metadata().map(|m| m.is_dir()).unwrap_or(false);
+            if is_dir {
+                let _ = fs::remove_dir_all(&path);
+            } else {
+                let _ = fs::remove_file(&path);
+            }
+        }
+    }
+}
+
+fn tuner_running_set() -> std::collections::HashSet<String> {
+    let mut sys = System::new();
+    sys.refresh_processes(ProcessesToUpdate::All, true);
+    sys.processes()
+        .values()
+        .map(|p| p.name().to_string_lossy().to_lowercase())
+        .collect()
+}
+
+fn tuner_is_running(def: &TunerDef, running: &std::collections::HashSet<String>) -> bool {
+    def.procs
+        .iter()
+        .any(|p| running.contains(&format!("{}.exe", p.to_lowercase())))
+}
+
+#[cfg(target_os = "windows")]
+fn tuner_gpu_info() -> (String, String) {
+    let ps = "[Console]::OutputEncoding=[Text.Encoding]::UTF8; (Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue).Name -join '|'";
+    let output = Command::new("powershell")
+        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
+    let names = match output {
+        Ok(o) => String::from_utf8_lossy(&o.stdout).trim().to_string(),
+        Err(_) => String::new(),
+    };
+    let l = names.to_lowercase();
+    let vendor = if l.contains("nvidia") {
+        "nvidia"
+    } else if l.contains("amd") || l.contains("radeon") {
+        "amd"
+    } else if l.contains("intel") {
+        "intel"
+    } else {
+        "unknown"
+    };
+    (vendor.to_string(), names.replace('|', " + "))
+}
+
+#[cfg(not(target_os = "windows"))]
+fn tuner_gpu_info() -> (String, String) {
+    ("unknown".to_string(), String::new())
+}
+
+/// Lista os apps suportados: instalado, aberto agora, tamanho do cache e
+/// quais ações cada um oferece.
+#[tauri::command]
+async fn apptuner_overview() -> Result<TunerOverview, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        let running = tuner_running_set();
+        let mut apps: Vec<TunerApp> = Vec::new();
+        for def in TUNER_DEFS.iter() {
+            let targets = tuner_cache_targets(def);
+            let installed = def.exes.iter().any(|e| tuner_expand(e).exists()) || !targets.is_empty();
+            let cache_mb = if def.cache_label.is_some() && installed {
+                let bytes: u64 = targets.iter().map(|(p, _)| tuner_dir_size(p)).sum();
+                Some(((bytes as f64) / 1_048_576.0 * 10.0).round() / 10.0)
+            } else {
+                None
+            };
+            let mut actions: Vec<TunerAction> = Vec::new();
+            if let Some(l) = def.cache_label {
+                actions.push(TunerAction { id: "cache".to_string(), label: l.to_string() });
+            }
+            if let Some(l) = def.priority_label {
+                actions.push(TunerAction { id: "priority".to_string(), label: l.to_string() });
+            }
+            apps.push(TunerApp {
+                id: def.id.to_string(),
+                name: def.name.to_string(),
+                installed,
+                running: tuner_is_running(def, &running),
+                cache_mb,
+                actions,
+            });
+        }
+        let (gpu_vendor, gpu_name) = tuner_gpu_info();
+        TunerOverview { apps, gpu_vendor, gpu_name }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))
+}
+
+#[cfg(target_os = "windows")]
+fn tuner_set_priority(process: &str, level: &str) -> Result<u32, String> {
+    let ps = format!(
+        "$c=0; Get-Process -Name '{process}' -ErrorAction SilentlyContinue | ForEach-Object {{ try {{ $_.PriorityClass='{level}'; $c++ }} catch {{}} }}; $c"
+    );
+    let output = Command::new("powershell")
+        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output()
+        .map_err(|e| format!("Não consegui alterar a prioridade: {e}"))?;
+    let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    Ok(text.parse::<u32>().unwrap_or(0))
+}
+
+#[cfg(not(target_os = "windows"))]
+fn tuner_set_priority(_process: &str, _level: &str) -> Result<u32, String> {
+    Err("Disponível apenas no Windows".to_string())
+}
+
+/// Ações de um app: "cache" (limpa o cache) e "priority" (prioridade alta).
+/// Se o app estiver aberto, o cache só é limpo com `close_first = true`
+/// (fecha o app antes — os arquivos ficam travados enquanto ele roda).
+#[tauri::command]
+async fn apptuner_action(app_id: String, action: String, close_first: bool) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
+        let def = TUNER_DEFS
+            .iter()
+            .find(|d| d.id == app_id)
+            .ok_or_else(|| "App desconhecido".to_string())?;
+        let running = tuner_is_running(def, &tuner_running_set());
+
+        match action.as_str() {
+            "cache" => {
+                if def.cache_label.is_none() {
+                    return Err("Esse app não tem limpeza de cache".to_string());
+                }
+                if running {
+                    if !close_first {
+                        return Err("APP_ABERTO".to_string());
+                    }
+                    #[cfg(target_os = "windows")]
+                    {
+                        for p in def.procs.iter() {
+                            let _ = Command::new("taskkill")
+                                .args(["/F", "/IM", &format!("{p}.exe")])
+                                .creation_flags(CREATE_NO_WINDOW)
+                                .output();
+                        }
+                        std::thread::sleep(std::time::Duration::from_millis(900));
+                    }
+                }
+                let targets = tuner_cache_targets(def);
+                let before: u64 = targets.iter().map(|(p, _)| tuner_dir_size(p)).sum();
+                for (path, whole) in targets.iter() {
+                    if *whole {
+                        let _ = fs::remove_dir_all(path);
+                    } else {
+                        tuner_clear_dir(path);
+                    }
+                }
+                let after: u64 = targets.iter().filter(|(p, _)| p.exists()).map(|(p, _)| tuner_dir_size(p)).sum();
+                let freed_mb = (before.saturating_sub(after) as f64) / 1_048_576.0;
+                Ok(format!("{}: {:.0} MB de cache liberados", def.name, freed_mb))
+            }
+            "priority" => {
+                if def.priority_label.is_none() {
+                    return Err("Esse app não tem ajuste de prioridade".to_string());
+                }
+                if !running {
+                    return Err(format!("Abra o {} primeiro — a prioridade só vale com ele aberto", def.name));
+                }
+                let mut changed = 0u32;
+                for p in def.procs.iter() {
+                    changed += tuner_set_priority(p, "High")?;
+                }
+                if changed == 0 {
+                    Err(format!("Não consegui alterar o {} (tente abrir o FluxTweakers como administrador)", def.name))
+                } else {
+                    Ok(format!("{}: prioridade alta aplicada em {} processo(s) — vale até fechar o app", def.name, changed))
+                }
+            }
+            _ => Err("Ação desconhecida".to_string()),
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+/// Prioridade de um processo qualquer, pelo nome (ex: "cs2" ou "cs2.exe").
+#[tauri::command]
+async fn apptuner_set_priority(process: String, level: String) -> Result<String, String> {
+    let name = process.trim().trim_end_matches(".exe").trim_end_matches(".EXE").to_string();
+    let valid = !name.is_empty()
+        && name.len() <= 64
+        && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.');
+    if !valid {
+        return Err("Nome de processo inválido (use só letras, números, ponto, - e _)".to_string());
+    }
+    let lvl = match level.as_str() {
+        "Normal" => "Normal",
+        "AboveNormal" => "AboveNormal",
+        "High" => "High",
+        _ => return Err("Prioridade inválida".to_string()),
+    };
+    tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
+        let changed = tuner_set_priority(&name, lvl)?;
+        if changed == 0 {
+            Err(format!("Nenhum processo \"{name}\" encontrado — abra o programa primeiro"))
+        } else {
+            Ok(format!("{name}: prioridade {lvl} aplicada em {changed} processo(s) — vale até fechar o app"))
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+#[cfg(target_os = "windows")]
+fn tuner_start(target: &str) -> Result<(), String> {
+    Command::new("cmd")
+        .args(["/C", "start", "", target])
+        .creation_flags(CREATE_NO_WINDOW)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| format!("Não consegui abrir: {e}"))
+}
+
+#[cfg(not(target_os = "windows"))]
+fn tuner_start(_target: &str) -> Result<(), String> {
+    Err("Disponível apenas no Windows".to_string())
+}
+
+/// "gamemode" abre o Modo Jogo do Windows; "gpu" abre o painel da placa de
+/// vídeo (NVIDIA App / AMD Software), conforme a placa detectada.
+#[tauri::command]
+async fn apptuner_open(target: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
+        match target.as_str() {
+            "gamemode" => {
+                tuner_start("ms-settings:gaming-gamemode")?;
+                Ok("Abrindo o Modo Jogo do Windows".to_string())
+            }
+            "gpu" => {
+                let (vendor, _) = tuner_gpu_info();
+                let candidates: &[&str] = match vendor.as_str() {
+                    "nvidia" => &[
+                        "%PF%\\NVIDIA Corporation\\NVIDIA app\\CEF\\NVIDIA App.exe",
+                        "%PF%\\NVIDIA Corporation\\Control Panel Client\\nvcplui.exe",
+                    ],
+                    "amd" => &["%PF%\\AMD\\CNext\\CNext\\RadeonSoftware.exe"],
+                    _ => &[],
+                };
+                for c in candidates.iter() {
+                    let p = tuner_expand(c);
+                    if p.exists() {
+                        tuner_start(&p.to_string_lossy())?;
+                        return Ok("Abrindo o painel da placa de vídeo".to_string());
+                    }
+                }
+                Err("Não encontrei o painel da placa de vídeo instalado".to_string())
+            }
+            _ => Err("Destino desconhecido".to_string()),
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
 fn main() {
     #[cfg(target_os = "windows")]
     {
@@ -2305,7 +2748,7 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
         .manage(PdhState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));

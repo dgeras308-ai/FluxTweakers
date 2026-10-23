@@ -1862,6 +1862,54 @@
     .diag-item{grid-template-columns:34px 1fr;}
     .diag-badge{display:none;}
   }
+
+  /* =====================  APP TUNER  ===================== */
+  aside#tabs button .count:empty{display:none;}
+  .at-root{padding:4px 2px 24px;}
+  .at-loading{padding:40px 10px;text-align:center;color:var(--muted);font-size:13px;}
+  .at-hint{
+    font-size:12px;color:var(--muted);margin:0 0 16px;padding:11px 14px;border-radius:12px;
+    background:var(--item-bg);border:1px solid var(--item-border);
+  }
+  .at-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;}
+  .at-card{
+    display:flex;flex-direction:column;gap:16px;padding:18px;border-radius:16px;
+    background:linear-gradient(175deg, var(--item-bg), color-mix(in srgb, var(--item-bg) 92%, #000));
+    border:1px solid var(--item-border);box-shadow:0 1px 2px rgba(0,0,0,.25), 0 10px 24px -16px rgba(0,0,0,.55);
+    transition:transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+  }
+  .at-card:hover{transform:translateY(-2px);border-color:color-mix(in srgb, var(--tab-accent) 40%, var(--item-border));}
+  .at-card-top{display:flex;align-items:center;gap:13px;min-width:0;}
+  .at-avatar{
+    width:46px;height:46px;border-radius:13px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:14px;letter-spacing:-.02em;color:#fff;
+    background:linear-gradient(145deg, var(--c), color-mix(in srgb, var(--c) 55%, #000));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 6px 16px -8px var(--c);
+  }
+  .at-card-title{min-width:0;}
+  .at-card-title b{display:block;font-size:14px;font-weight:700;color:var(--text);}
+  .at-status{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.4;}
+  .at-status i.on{width:7px;height:7px;border-radius:50%;background:#34e08f;box-shadow:0 0 7px #34e08f;flex-shrink:0;}
+  .at-actions{display:flex;flex-direction:column;gap:8px;margin-top:auto;}
+  .at-btn{
+    font-family:inherit;font-size:12.5px;font-weight:700;color:var(--text);cursor:pointer;padding:11px 14px;border-radius:11px;
+    background:color-mix(in srgb, var(--tab-accent) 11%, var(--panel));
+    border:1px solid color-mix(in srgb, var(--tab-accent) 32%, var(--border-soft));
+    transition:background .15s, transform .15s, border-color .15s;
+  }
+  .at-btn:hover:not(:disabled){background:color-mix(in srgb, var(--tab-accent) 20%, var(--panel));transform:translateY(-1px);}
+  .at-btn:active:not(:disabled){transform:translateY(0) scale(.98);}
+  .at-btn:disabled{opacity:.5;cursor:default;}
+  .at-btn.confirm{background:var(--off);border-color:var(--off);color:#fff;}
+  .at-custom{display:flex;gap:8px;}
+  .at-custom input,.at-custom select{
+    font-family:inherit;font-size:12.5px;color:var(--text);padding:10px 12px;border-radius:10px;
+    background:var(--panel);border:1px solid var(--border-soft);outline:none;min-width:0;
+  }
+  .at-custom input{flex:1;}
+  .at-custom input:focus,.at-custom select:focus{border-color:var(--tab-accent);}
+  .at-missing{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:18px;font-size:11.5px;color:var(--muted);}
+  .at-missing em{font-style:normal;padding:4px 10px;border-radius:999px;background:var(--item-bg);border:1px solid var(--item-border);}
 </style>
 </head>
 <body>
@@ -3332,6 +3380,7 @@ const ICONS = {
   startup: lineIcon(startupLine()),
   windows: lineIcon(windowsLine()),
 };
+ICONS.apptuner = lineIcon('<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>');
 const CHEVRON = `<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`;
 
 const DATA = {
@@ -4002,6 +4051,7 @@ const VENDOR_INFO = {
 
 const tabsEl = document.getElementById('tabs');
 const panelsEl = document.getElementById('panels');
+DATA.apptuner = { label:"App Tuner", desc:"Otimizações por aplicativo: limpar cache, subir a prioridade e abrir as configurações certas.", special:"apptuner", items:[] };
 const catIds = Object.keys(DATA);
 
 // ---------- índice de busca global (todas as categorias) ----------
@@ -4156,7 +4206,7 @@ function showToast(message){
 
 const CAT_COLORS = {
   cpu:"#43c9e5", gpu:"#43c9e5", ram:"#43c9e5", storage:"#43c9e5",
-  mouse:"#43c9e5", power:"#43c9e5", network:"#43c9e5", system:"#43c9e5", monitor:"#43c9e5", games:"#43c9e5", windows:"#43c9e5"
+  mouse:"#43c9e5", power:"#43c9e5", network:"#43c9e5", system:"#43c9e5", monitor:"#43c9e5", games:"#43c9e5", windows:"#43c9e5", apptuner:"#43c9e5"
 };
 
 const THEME_COLORS = {
@@ -5651,7 +5701,7 @@ const TAB_GROUPS = [
   { label: "Sistema", cats: ["power","network","system","startup"] },
   { label: "Windows", cats: ["windows"] },
   { label: "Periféricos", cats: ["mouse","monitor"] },
-  { label: "Jogos", cats: ["games"] },
+  { label: "Jogos", cats: ["games","apptuner"] },
 ];
 
 // Garante que qualquer categoria nova que a gente adicionar no futuro e
@@ -5674,7 +5724,7 @@ TAB_GROUPS.forEach(group => {
   validCats.forEach(catId => {
     const i = catIds.indexOf(catId);
     const btn = document.createElement('button');
-    btn.innerHTML = `${ICONS[catId]}<span class="label">${DATA[catId].label}</span><span class="count">${catItemCount(catId)}</span>`;
+    btn.innerHTML = `${ICONS[catId]}<span class="label">${DATA[catId].label}</span><span class="count">${catId === 'apptuner' ? '' : catItemCount(catId)}</span>`;
     btn.dataset.cat = catId;
     btn.style.setProperty('--btn-color', CAT_COLORS[catId]);
     btn.style.setProperty('--btn-bg', CAT_COLORS[catId] + '22');
@@ -5843,7 +5893,7 @@ function computeTotalItems(){
 }
 function renderStats(){
   document.getElementById('statsRow').innerHTML =
-    `<b>${computeTotalItems()}</b> ajustes em <b>${catIds.length}</b> categorias`;
+    `<b>${computeTotalItems()}</b> ajustes em <b>${catIds.filter(c => c !== 'apptuner').length}</b> categorias`;
 }
 renderStats();
 renderRestoreWidget();
@@ -6182,7 +6232,7 @@ function animateOverallNumber(el, from, to, duration){
 
 function renderScoreBoard(){
   let totalChecked = 0, totalAll = 0;
-  const cards = catIds.map((catId,i)=>{
+  const cards = catIds.filter(c => c !== 'apptuner').map((catId,i)=>{
     const total = catItemCount(catId);
     const checked = document.querySelectorAll(`#panel-${catId} input[type=checkbox]:checked`).length;
     totalChecked += checked; totalAll += total;
@@ -6220,13 +6270,27 @@ function renderScoreBoard(){
 function refreshSidebarCounts(){
   document.querySelectorAll('#tabs button').forEach(b=>{
     const span = b.querySelector('.count');
-    if(span) span.textContent = catItemCount(b.dataset.cat);
+    if(span) span.textContent = b.dataset.cat === 'apptuner' ? '' : catItemCount(b.dataset.cat);
   });
 }
 
 function renderPanel(catId){
   const cat = DATA[catId];
   const panel = document.getElementById('panel-'+catId);
+
+  if (catId === 'apptuner'){
+    panel.innerHTML = `<div class="panel-head">
+      <div class="panel-head-left">
+        <div class="panel-icon-badge">${ICONS[catId]}</div>
+        <div><h2>${cat.label}</h2><p class="panel-desc">${cat.desc}</p></div>
+      </div>
+      <div class="panel-head-actions"><button class="tab-selectall" id="atRefresh">atualizar lista</button></div>
+    </div>
+    <div class="at-root" id="atRoot"><div class="at-loading">Procurando seus aplicativos...</div></div>`;
+    document.getElementById('atRefresh').addEventListener('click', () => refreshAppTuner());
+    panel.addEventListener('click', appTunerClick);
+    return;
+  }
 
   let html = `<div class="panel-head">
     <div class="panel-head-left">
@@ -6573,6 +6637,155 @@ function updateRamSummary(){
   document.getElementById('ramSummary').innerHTML =
     `Com <b>${ramGB} GB</b>: compressão de memória deve <b>${action}</b>. Arquivo de paginação sugerido — Inicial: <b>${initial} MB</b> · Máximo: <b>${max} MB</b> (ajuste manual em Configurações Avançadas do Sistema).`;
 }
+
+
+// ===================== App Tuner (aba) =====================
+const AT_META = {
+  chrome:  { color:'#4285f4', abbr:'Cr' },
+  edge:    { color:'#0f9d8a', abbr:'Ed' },
+  brave:   { color:'#fb542b', abbr:'Br' },
+  discord: { color:'#5865f2', abbr:'Di' },
+  steam:   { color:'#1b6fa8', abbr:'St' },
+  epic:    { color:'#3a3d46', abbr:'Ep' },
+  obs:     { color:'#4b4f5c', abbr:'OB' },
+};
+let __atData = null;
+let __atBusy = false;
+
+async function refreshAppTuner(){
+  const root = document.getElementById('atRoot');
+  if (!root) return;
+  if (!window.__TAURI__){
+    root.innerHTML = '<div class="at-loading">O App Tuner só funciona no app instalado.</div>';
+    return;
+  }
+  try{
+    __atData = await window.__TAURI__.core.invoke('apptuner_overview');
+    renderAppTuner();
+  }catch(err){
+    root.innerHTML = `<div class="at-loading">Não consegui listar os aplicativos: ${DIAG_ESC(err)}</div>`;
+  }
+}
+
+function atCard({ key, color, abbr, name, status, running, actions, off }){
+  return `
+    <div class="at-card${off ? ' off' : ''}" data-key="${key}">
+      <div class="at-card-top">
+        <div class="at-avatar" style="--c:${color}">${abbr}</div>
+        <div class="at-card-title">
+          <b>${DIAG_ESC(name)}</b>
+          <span class="at-status">${running ? '<i class="on"></i>' : ''}${DIAG_ESC(status)}</span>
+        </div>
+      </div>
+      <div class="at-actions">${actions}</div>
+    </div>`;
+}
+function atBtn(app, act, label, disabled){
+  return `<button class="at-btn" data-app="${app}" data-act="${act}" ${disabled ? 'disabled' : ''}>${DIAG_ESC(label)}</button>`;
+}
+
+function renderAppTuner(){
+  const root = document.getElementById('atRoot');
+  if (!root || !__atData) return;
+  const d = __atData;
+  const installed = d.apps.filter(a => a.installed);
+  const missing = d.apps.filter(a => !a.installed);
+
+  let cards = installed.map(a => {
+    const meta = AT_META[a.id] || { color:'#5b8cff', abbr:a.name.slice(0,2) };
+    const parts = [a.running ? 'Aberto agora' : 'Instalado'];
+    if (a.cache_mb !== null && a.cache_mb !== undefined) parts.push(`cache ${a.cache_mb >= 1024 ? (a.cache_mb/1024).toFixed(1)+' GB' : Math.round(a.cache_mb)+' MB'}`);
+    return atCard({
+      key:a.id, color:meta.color, abbr:meta.abbr, name:a.name, status:parts.join(' · '), running:a.running,
+      actions: a.actions.map(x => atBtn(a.id, x.id, x.label, false)).join(''),
+    });
+  }).join('');
+
+  const vendorLabel = { nvidia:'Abrir NVIDIA App', amd:'Abrir AMD Software' }[d.gpu_vendor];
+  const gpuColor = d.gpu_vendor === 'nvidia' ? '#76b900' : d.gpu_vendor === 'amd' ? '#ed1c24' : '#5b8cff';
+  cards += atCard({
+    key:'gpu', color:gpuColor, abbr:'GPU', name:'Painel da placa de vídeo',
+    status: d.gpu_name || 'Placa não identificada', running:false,
+    actions: vendorLabel ? atBtn('gpu','open', vendorLabel, false) : atBtn('gpu','open','Painel não encontrado', true),
+  });
+  cards += atCard({
+    key:'gamemode', color:'#7c5cff', abbr:'GM', name:'Modo Jogo do Windows',
+    status:'Prioriza o jogo e segura atualizações em segundo plano', running:false,
+    actions: atBtn('gamemode','open','Abrir Modo Jogo', false),
+  });
+  cards += `
+    <div class="at-card" data-key="custom">
+      <div class="at-card-top">
+        <div class="at-avatar" style="--c:var(--accent,#5b8cff)">Ex</div>
+        <div class="at-card-title"><b>Processo personalizado</b><span class="at-status">Defina a prioridade de qualquer programa aberto</span></div>
+      </div>
+      <div class="at-custom">
+        <input id="atCustomName" type="text" placeholder="ex: cs2.exe" spellcheck="false" autocomplete="off">
+        <select id="atCustomLevel">
+          <option value="High">Alta</option>
+          <option value="AboveNormal">Acima do normal</option>
+          <option value="Normal">Normal</option>
+        </select>
+      </div>
+      <div class="at-actions"><button class="at-btn" data-app="custom" data-act="custom">Aplicar prioridade</button></div>
+    </div>`;
+
+  root.innerHTML = `
+    <div class="at-hint">Nada aqui mexe em senhas, histórico ou login — só em arquivos de cache e na prioridade do processo.</div>
+    <div class="at-grid">${cards}</div>
+    ${missing.length ? `<div class="at-missing"><span>Não encontrados neste PC:</span>${missing.map(a => `<em>${DIAG_ESC(a.name)}</em>`).join('')}</div>` : ''}`;
+}
+
+async function appTunerClick(e){
+  const btn = e.target.closest('.at-btn');
+  if (!btn || btn.disabled || __atBusy) return;
+  const app = btn.dataset.app, act = btn.dataset.act;
+  const { invoke } = window.__TAURI__.core;
+  const appInfo = __atData?.apps.find(a => a.id === app);
+
+  // Limpar cache com o app aberto: pede confirmação (vai fechar o app).
+  if (act === 'cache' && appInfo?.running && !btn.classList.contains('confirm')){
+    btn.classList.add('confirm');
+    btn.dataset.label = btn.textContent;
+    btn.textContent = `Fechar ${appInfo.name} e limpar?`;
+    clearTimeout(btn.__t);
+    btn.__t = setTimeout(() => { if (btn.isConnected){ btn.classList.remove('confirm'); btn.textContent = btn.dataset.label; } }, 4500);
+    return;
+  }
+
+  clearTimeout(btn.__t);
+  __atBusy = true;
+  const original = btn.dataset.label || btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Aguarde...';
+  try{
+    let msg;
+    if (act === 'cache' || act === 'priority'){
+      msg = await invoke('apptuner_action', { appId: app, action: act, closeFirst: btn.classList.contains('confirm') });
+    } else if (act === 'open'){
+      msg = await invoke('apptuner_open', { target: app });
+    } else if (act === 'custom'){
+      const name = document.getElementById('atCustomName').value;
+      const level = document.getElementById('atCustomLevel').value;
+      msg = await invoke('apptuner_set_priority', { process: name, level });
+    }
+    showToast(msg);
+  }catch(err){
+    showToast(err === 'APP_ABERTO' ? 'Feche o app antes de limpar o cache' : String(err));
+  }
+  __atBusy = false;
+  if (act === 'cache' || act === 'priority') refreshAppTuner();
+  else if (btn.isConnected){ btn.disabled = false; btn.textContent = original; }
+}
+
+// ao abrir a aba App Tuner, atualiza a lista
+(function(){
+  const _switch = switchTab;
+  switchTab = function(id){
+    _switch.apply(this, arguments);
+    if (id === 'apptuner') refreshAppTuner();
+  };
+})();
 
 catIds.forEach(renderPanel);
 
