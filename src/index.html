@@ -1886,6 +1886,8 @@
     background:linear-gradient(145deg, var(--c), color-mix(in srgb, var(--c) 55%, #000));
     box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 6px 16px -8px var(--c);
   }
+  .at-avatar.has-icon{background:rgba(255,255,255,.07);border:1px solid var(--border-soft);box-shadow:inset 0 1px 0 rgba(255,255,255,.08);}
+  .at-avatar.has-icon img{width:30px;height:30px;object-fit:contain;image-rendering:auto;}
   .at-card-title{min-width:0;}
   .at-card-title b{display:block;font-size:14px;font-weight:700;color:var(--text);}
   .at-status{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.4;}
@@ -6648,8 +6650,12 @@ const AT_META = {
   steam:   { color:'#1b6fa8', abbr:'St' },
   epic:    { color:'#3a3d46', abbr:'Ep' },
   obs:     { color:'#4b4f5c', abbr:'OB' },
+  firefox: { color:'#e66000', abbr:'Fx' },
+  spotify: { color:'#1db954', abbr:'Sp' },
 };
 let __atData = null;
+let __atIcons = null;      // id -> data URL (logo real extraído do .exe)
+let __atIconsLoading = false;
 let __atBusy = false;
 
 async function refreshAppTuner(){
@@ -6662,16 +6668,27 @@ async function refreshAppTuner(){
   try{
     __atData = await window.__TAURI__.core.invoke('apptuner_overview');
     renderAppTuner();
+    loadAppTunerIcons();
   }catch(err){
     root.innerHTML = `<div class="at-loading">Não consegui listar os aplicativos: ${DIAG_ESC(err)}</div>`;
   }
+}
+
+async function loadAppTunerIcons(){
+  if (__atIcons || __atIconsLoading || !window.__TAURI__) return;
+  __atIconsLoading = true;
+  try{
+    __atIcons = await window.__TAURI__.core.invoke('apptuner_icons');
+    renderAppTuner();
+  }catch(err){ __atIcons = {}; }
+  __atIconsLoading = false;
 }
 
 function atCard({ key, color, abbr, name, status, running, actions, off }){
   return `
     <div class="at-card${off ? ' off' : ''}" data-key="${key}">
       <div class="at-card-top">
-        <div class="at-avatar" style="--c:${color}">${abbr}</div>
+        ${(__atIcons && __atIcons[key]) ? `<div class="at-avatar has-icon"><img src="${__atIcons[key]}" alt=""></div>` : `<div class="at-avatar" style="--c:${color}">${abbr}</div>`}
         <div class="at-card-title">
           <b>${DIAG_ESC(name)}</b>
           <span class="at-status">${running ? '<i class="on"></i>' : ''}${DIAG_ESC(status)}</span>
@@ -6716,8 +6733,8 @@ function renderAppTuner(){
   cards += `
     <div class="at-card" data-key="custom">
       <div class="at-card-top">
-        <div class="at-avatar" style="--c:var(--accent,#5b8cff)">Ex</div>
-        <div class="at-card-title"><b>Processo personalizado</b><span class="at-status">Defina a prioridade de qualquer programa aberto</span></div>
+        <div class="at-avatar" style="--c:#7c5cff">Ex</div>
+        <div class="at-card-title"><b>Executável personalizado</b><span class="at-status" id="atCustomInfo">Escolha um programa ou digite o nome dele</span></div>
       </div>
       <div class="at-custom">
         <input id="atCustomName" type="text" placeholder="ex: cs2.exe" spellcheck="false" autocomplete="off">
@@ -6727,7 +6744,10 @@ function renderAppTuner(){
           <option value="Normal">Normal</option>
         </select>
       </div>
-      <div class="at-actions"><button class="at-btn" data-app="custom" data-act="custom">Aplicar prioridade</button></div>
+      <div class="at-actions">
+        <button class="at-btn" data-app="custom" data-act="pick">Escolher programa (.exe)</button>
+        <button class="at-btn" data-app="custom" data-act="custom">Aplicar prioridade</button>
+      </div>
     </div>`;
 
   root.innerHTML = `
@@ -6764,6 +6784,17 @@ async function appTunerClick(e){
       msg = await invoke('apptuner_action', { appId: app, action: act, closeFirst: btn.classList.contains('confirm') });
     } else if (act === 'open'){
       msg = await invoke('apptuner_open', { target: app });
+    } else if (act === 'pick'){
+      const path = await invoke('apptuner_pick_exe');
+      if (path){
+        const file = path.split(/[\\/]/).pop();
+        document.getElementById('atCustomName').value = file;
+        const info = document.getElementById('atCustomInfo');
+        if (info) info.textContent = path;
+        msg = `Programa escolhido: ${file}`;
+      } else {
+        msg = 'Nenhum programa escolhido';
+      }
     } else if (act === 'custom'){
       const name = document.getElementById('atCustomName').value;
       const level = document.getElementById('atCustomLevel').value;

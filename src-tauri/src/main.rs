@@ -2305,6 +2305,8 @@ enum CacheSpec {
     Prefix(&'static str, &'static str),
     /// navegador Chromium: limpa as subpastas indicadas de cada perfil
     Chromium(&'static str, &'static [&'static str]),
+    /// limpa <sub> dentro de CADA subpasta de <base> (ex: perfis do Firefox)
+    Under(&'static str, &'static str),
 }
 
 struct TunerDef {
@@ -2339,6 +2341,20 @@ const TUNER_DEFS: &[TunerDef] = &[
         exes: &["%PF%\\BraveSoftware\\Brave-Browser\\Application\\brave.exe", "%LOCAL%\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"],
         procs: &["brave"],
         caches: &[CacheSpec::Chromium("%LOCAL%\\BraveSoftware\\Brave-Browser\\User Data", CHROMIUM_SUBS)],
+        cache_label: Some("Otimizar cache"), priority_label: None,
+    },
+    TunerDef {
+        id: "firefox", name: "Mozilla Firefox",
+        exes: &["%PF%\\Mozilla Firefox\\firefox.exe", "%PF86%\\Mozilla Firefox\\firefox.exe"],
+        procs: &["firefox"],
+        caches: &[CacheSpec::Under("%LOCAL%\\Mozilla\\Firefox\\Profiles", "cache2")],
+        cache_label: Some("Otimizar cache"), priority_label: None,
+    },
+    TunerDef {
+        id: "spotify", name: "Spotify",
+        exes: &["%ROAM%\\Spotify\\Spotify.exe"],
+        procs: &["Spotify"],
+        caches: &[CacheSpec::Dir("%LOCAL%\\Spotify\\Data"), CacheSpec::Dir("%LOCAL%\\Spotify\\Storage")],
         cache_label: Some("Otimizar cache"), priority_label: None,
     },
     TunerDef {
@@ -2421,6 +2437,16 @@ fn tuner_cache_targets(def: &TunerDef) -> Vec<(std::path::PathBuf, bool)> {
                         let name = e.file_name().to_string_lossy().to_string();
                         if name.starts_with(prefix) && e.path().is_dir() {
                             out.push((e.path(), true));
+                        }
+                    }
+                }
+            }
+            CacheSpec::Under(base, sub) => {
+                if let Ok(rd) = fs::read_dir(tuner_expand(base)) {
+                    for e in rd.flatten() {
+                        let p = e.path().join(sub);
+                        if p.is_dir() {
+                            out.push((p, false));
                         }
                     }
                 }
@@ -2709,14 +2735,7 @@ async fn apptuner_open(target: String) -> Result<String, String> {
             }
             "gpu" => {
                 let (vendor, _) = tuner_gpu_info();
-                let candidates: &[&str] = match vendor.as_str() {
-                    "nvidia" => &[
-                        "%PF%\\NVIDIA Corporation\\NVIDIA app\\CEF\\NVIDIA App.exe",
-                        "%PF%\\NVIDIA Corporation\\Control Panel Client\\nvcplui.exe",
-                    ],
-                    "amd" => &["%PF%\\AMD\\CNext\\CNext\\RadeonSoftware.exe"],
-                    _ => &[],
-                };
+                let candidates = tuner_gpu_candidates(&vendor);
                 for c in candidates.iter() {
                     let p = tuner_expand(c);
                     if p.exists() {
@@ -2727,6 +2746,94 @@ async fn apptuner_open(target: String) -> Result<String, String> {
                 Err("Não encontrei o painel da placa de vídeo instalado".to_string())
             }
             _ => Err("Destino desconhecido".to_string()),
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+fn tuner_gpu_candidates(vendor: &str) -> &'static [&'static str] {
+    match vendor {
+        "nvidia" => &[
+            "%PF%\\NVIDIA Corporation\\NVIDIA app\\CEF\\NVIDIA App.exe",
+            "%PF%\\NVIDIA Corporation\\Control Panel Client\\nvcplui.exe",
+        ],
+        "amd" => &["%PF%\\AMD\\CNext\\CNext\\RadeonSoftware.exe"],
+        _ => &[],
+    }
+}
+
+/// Logos reais dos programas, extraídos dos próprios .exe instalados no PC
+/// (um único PowerShell pra todos). Devolve id -> data URL PNG.
+#[tauri::command]
+async fn apptuner_icons() -> Result<std::collections::HashMap<String, String>, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        let mut items: Vec<(String, String)> = Vec::new();
+        for def in TUNER_DEFS.iter() {
+            if let Some(p) = def.exes.iter().map(|e| tuner_expand(e)).find(|p| p.exists()) {
+                items.push((def.id.to_string(), p.to_string_lossy().to_string()));
+            }
+        }
+        let (vendor, _) = tuner_gpu_info();
+        if let Some(p) = tuner_gpu_candidates(&vendor).iter().map(|e| tuner_expand(e)).find(|p| p.exists()) {
+            items.push(("gpu".to_string(), p.to_string_lossy().to_string()));
+        }
+        let mut map = std::collections::HashMap::new();
+        if items.is_empty() {
+            return map;
+        }
+        let list: Vec<String> = items
+            .iter()
+            .map(|(id, path)| format!("'{}|{}'", id, path.replace('\'', "''")))
+            .collect();
+        let ps = format!(
+            "Add-Type -AssemblyName System.Drawing; $items = @({}); foreach($it in $items){{ $p = $it.Split('|',2); try {{ $ic = [System.Drawing.Icon]::ExtractAssociatedIcon($p[1]); $b = $ic.ToBitmap(); $ms = New-Object System.IO.MemoryStream; $b.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png); $p[0] + '|' + [Convert]::ToBase64String($ms.ToArray()) }} catch {{}} }}",
+            list.join(",")
+        );
+        #[cfg(target_os = "windows")]
+        {
+            let output = Command::new("powershell")
+                .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps])
+                .creation_flags(CREATE_NO_WINDOW)
+                .output();
+            if let Ok(o) = output {
+                for line in String::from_utf8_lossy(&o.stdout).lines() {
+                    if let Some((id, b64)) = line.trim().split_once('|') {
+                        if !b64.is_empty() {
+                            map.insert(id.to_string(), format!("data:image/png;base64,{b64}"));
+                        }
+                    }
+                }
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = ps;
+        }
+        map
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))
+}
+
+/// Abre a janela de escolher arquivo do Windows pra selecionar um .exe.
+/// Devolve o caminho escolhido (vazio se o usuário cancelar).
+#[tauri::command]
+async fn apptuner_pick_exe() -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(|| -> Result<String, String> {
+        #[cfg(target_os = "windows")]
+        {
+            let ps = "[Console]::OutputEncoding=[Text.Encoding]::UTF8; Add-Type -AssemblyName System.Windows.Forms; $d = New-Object System.Windows.Forms.OpenFileDialog; $d.Filter = 'Programas (*.exe)|*.exe'; $d.Title = 'Escolha o programa'; $f = New-Object System.Windows.Forms.Form; $f.TopMost = $true; if ($d.ShowDialog($f) -eq 'OK') { $d.FileName }";
+            let output = Command::new("powershell")
+                .args(["-NoProfile", "-STA", "-WindowStyle", "Hidden", "-Command", ps])
+                .creation_flags(CREATE_NO_WINDOW)
+                .output()
+                .map_err(|e| format!("Não consegui abrir o seletor: {e}"))?;
+            Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            Err("Disponível apenas no Windows".to_string())
         }
     })
     .await
@@ -2748,7 +2855,7 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
         .manage(PdhState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));
