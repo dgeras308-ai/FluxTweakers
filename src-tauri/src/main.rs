@@ -2385,6 +2385,76 @@ const TUNER_DEFS: &[TunerDef] = &[
         caches: &[],
         cache_label: None, priority_label: Some("Otimizar processo"),
     },
+    TunerDef {
+        id: "streamlabs", name: "Streamlabs",
+        exes: &["%PF%\\Streamlabs Desktop\\Streamlabs Desktop.exe", "%PF%\\Streamlabs OBS\\Streamlabs OBS.exe"],
+        procs: &["Streamlabs Desktop", "Streamlabs OBS"],
+        caches: &[],
+        cache_label: None, priority_label: Some("Otimizar processo"),
+    },
+    TunerDef {
+        id: "operagx", name: "Opera GX",
+        exes: &["%LOCAL%\\Programs\\Opera GX\\opera.exe", "%PF%\\Opera GX\\opera.exe"],
+        procs: &["opera"],
+        caches: &[CacheSpec::Dir("%LOCAL%\\Opera Software\\Opera GX Stable\\Cache"), CacheSpec::Dir("%LOCAL%\\Opera Software\\Opera GX Stable\\Code Cache"), CacheSpec::Dir("%LOCAL%\\Opera Software\\Opera GX Stable\\GPUCache")],
+        cache_label: Some("Otimizar cache"), priority_label: None,
+    },
+    TunerDef {
+        id: "opera", name: "Opera",
+        exes: &["%LOCAL%\\Programs\\Opera\\opera.exe", "%PF%\\Opera\\opera.exe"],
+        procs: &["opera"],
+        caches: &[CacheSpec::Dir("%LOCAL%\\Opera Software\\Opera Stable\\Cache"), CacheSpec::Dir("%LOCAL%\\Opera Software\\Opera Stable\\Code Cache"), CacheSpec::Dir("%LOCAL%\\Opera Software\\Opera Stable\\GPUCache")],
+        cache_label: Some("Otimizar cache"), priority_label: None,
+    },
+    TunerDef {
+        id: "vivaldi", name: "Vivaldi",
+        exes: &["%LOCAL%\\Vivaldi\\Application\\vivaldi.exe", "%PF%\\Vivaldi\\Application\\vivaldi.exe"],
+        procs: &["vivaldi"],
+        caches: &[CacheSpec::Chromium("%LOCAL%\\Vivaldi\\User Data", CHROMIUM_SUBS)],
+        cache_label: Some("Otimizar cache"), priority_label: None,
+    },
+    TunerDef {
+        id: "telegram", name: "Telegram",
+        exes: &["%ROAM%\\Telegram Desktop\\Telegram.exe"],
+        procs: &["Telegram"],
+        caches: &[CacheSpec::Dir("%ROAM%\\Telegram Desktop\\tdata\\user_data\\cache"), CacheSpec::Dir("%ROAM%\\Telegram Desktop\\tdata\\user_data\\media_cache")],
+        cache_label: Some("Otimizar cache"), priority_label: None,
+    },
+    TunerDef {
+        id: "battlenet", name: "Battle.net",
+        exes: &["%PF86%\\Battle.net\\Battle.net Launcher.exe", "%PF86%\\Battle.net\\Battle.net.exe", "%PF%\\Battle.net\\Battle.net Launcher.exe"],
+        procs: &["Battle.net"],
+        caches: &[CacheSpec::Dir("%LOCAL%\\Battle.net\\Cache")],
+        cache_label: Some("Limpar cache"), priority_label: None,
+    },
+    TunerDef {
+        id: "ea", name: "EA app",
+        exes: &["%PF%\\Electronic Arts\\EA Desktop\\EA Desktop\\EADesktop.exe"],
+        procs: &["EADesktop"],
+        caches: &[CacheSpec::Dir("%LOCAL%\\Electronic Arts\\EA Desktop\\Cache")],
+        cache_label: Some("Limpar cache"), priority_label: None,
+    },
+    TunerDef {
+        id: "ubisoft", name: "Ubisoft Connect",
+        exes: &["%PF86%\\Ubisoft\\Ubisoft Game Launcher\\UbisoftConnect.exe", "%PF%\\Ubisoft\\Ubisoft Game Launcher\\UbisoftConnect.exe"],
+        procs: &["UbisoftConnect"],
+        caches: &[CacheSpec::Dir("%LOCAL%\\Ubisoft Game Launcher\\cache")],
+        cache_label: Some("Limpar cache"), priority_label: None,
+    },
+    TunerDef {
+        id: "gog", name: "GOG Galaxy",
+        exes: &["%PF86%\\GOG Galaxy\\GalaxyClient.exe", "%PF%\\GOG Galaxy\\GalaxyClient.exe"],
+        procs: &["GalaxyClient"],
+        caches: &[CacheSpec::Dir("%LOCAL%\\GOG.com\\Galaxy\\webcache")],
+        cache_label: Some("Limpar cache"), priority_label: None,
+    },
+    TunerDef {
+        id: "riot", name: "Riot Client",
+        exes: &["C:\\Riot Games\\Riot Client\\RiotClientServices.exe"],
+        procs: &["RiotClientServices", "RiotClientUx"],
+        caches: &[],
+        cache_label: None, priority_label: Some("Otimizar processo"),
+    },
 ];
 
 #[derive(Serialize, Clone)]
@@ -2413,6 +2483,7 @@ struct TunerOverview {
 fn tuner_expand(template: &str) -> std::path::PathBuf {
     let get = |k: &str| std::env::var(k).unwrap_or_default();
     let s = template
+        .replace("%PD%", &get("ProgramData"))
         .replace("%PF86%", &get("ProgramFiles(x86)"))
         .replace("%PF%", &get("ProgramFiles"))
         .replace("%LOCAL%", &get("LOCALAPPDATA"))
@@ -2732,6 +2803,15 @@ async fn apptuner_open(target: String) -> Result<String, String> {
             "gamemode" => {
                 tuner_start("ms-settings:gaming-gamemode")?;
                 Ok("Abrindo o Modo Jogo do Windows".to_string())
+            }
+            "nvcp" => {
+                let classic = tuner_expand("%PF%\\NVIDIA Corporation\\Control Panel Client\\nvcplui.exe");
+                if classic.exists() {
+                    tuner_start(&classic.to_string_lossy())?;
+                } else {
+                    tuner_start("shell:AppsFolder\\NVIDIACorp.NVIDIAControlPanel_56jybvy8sckqj!NVIDIACorp.NVIDIAControlPanel")?;
+                }
+                Ok("Abrindo o Painel de Controle NVIDIA (Gerenciar configurações 3D)".to_string())
             }
             "gpu" => {
                 let (vendor, _) = tuner_gpu_info();

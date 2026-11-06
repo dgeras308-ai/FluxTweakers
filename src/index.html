@@ -1911,6 +1911,7 @@
   .at-custom input{flex:1;}
   .at-custom input:focus,.at-custom select:focus{border-color:var(--tab-accent);}
   .at-missing{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:18px;font-size:11.5px;color:var(--muted);}
+  .at-missing em img{width:16px;height:16px;border-radius:4px;vertical-align:-3px;margin-right:6px;}
   .at-missing em{font-style:normal;padding:4px 10px;border-radius:999px;background:var(--item-bg);border:1px solid var(--item-border);}
 </style>
 </head>
@@ -6652,7 +6653,19 @@ const AT_META = {
   obs:     { color:'#4b4f5c', abbr:'OB' },
   firefox: { color:'#e66000', abbr:'Fx' },
   spotify: { color:'#1db954', abbr:'Sp' },
+  streamlabs: { color:'#31c3a2', abbr:'SL' },
+  operagx: { color:'#fa1e4e', abbr:'GX' },
+  opera:   { color:'#ff1b2d', abbr:'Op' },
+  vivaldi: { color:'#ef3939', abbr:'Vi' },
+  telegram:{ color:'#26a5e4', abbr:'Tg' },
+  battlenet:{ color:'#148eff', abbr:'Bn' },
+  ea:      { color:'#ff4747', abbr:'EA' },
+  ubisoft: { color:'#0070ff', abbr:'Ub' },
+  gog:     { color:'#86328a', abbr:'GOG' },
+  riot:    { color:'#d32936', abbr:'Rg' },
 };
+// logo embutido no app (funciona mesmo com o programa não instalado)
+const AT_LOGO = (id) => `assets/apps/${id}.svg`;
 let __atData = null;
 let __atIcons = null;      // id -> data URL (logo real extraído do .exe)
 let __atIconsLoading = false;
@@ -6684,11 +6697,11 @@ async function loadAppTunerIcons(){
   __atIconsLoading = false;
 }
 
-function atCard({ key, color, abbr, name, status, running, actions, off }){
+function atCard({ key, color, abbr, name, status, running, actions, off, logo }){
   return `
     <div class="at-card${off ? ' off' : ''}" data-key="${key}">
       <div class="at-card-top">
-        ${(__atIcons && __atIcons[key]) ? `<div class="at-avatar has-icon"><img src="${__atIcons[key]}" alt=""></div>` : `<div class="at-avatar" style="--c:${color}">${abbr}</div>`}
+        <div class="at-avatar has-icon"><img src="${(__atIcons && __atIcons[key]) ? __atIcons[key] : AT_LOGO(logo || key)}" alt="" onerror="this.parentNode.className='at-avatar';this.parentNode.style.setProperty('--c','${color}');this.parentNode.textContent='${abbr}'"></div>
         <div class="at-card-title">
           <b>${DIAG_ESC(name)}</b>
           <span class="at-status">${running ? '<i class="on"></i>' : ''}${DIAG_ESC(status)}</span>
@@ -6720,20 +6733,27 @@ function renderAppTuner(){
 
   const vendorLabel = { nvidia:'Abrir NVIDIA App', amd:'Abrir AMD Software' }[d.gpu_vendor];
   const gpuColor = d.gpu_vendor === 'nvidia' ? '#76b900' : d.gpu_vendor === 'amd' ? '#ed1c24' : '#5b8cff';
+  if (d.gpu_vendor === 'nvidia'){
+    cards += atCard({
+      key:'nvcp', logo:'nvidia', color:'#76b900', abbr:'NV', name:'NVIDIA Painel de Controle',
+      status:'Gerenciar configurações 3D (modo de energia, latência, filtragem)', running:false,
+      actions: atBtn('nvcp','open','Abrir configurações 3D', false),
+    });
+  }
   cards += atCard({
-    key:'gpu', color:gpuColor, abbr:'GPU', name:'Painel da placa de vídeo',
+    key:'gpu', logo: d.gpu_vendor === 'nvidia' ? 'nvidia' : d.gpu_vendor === 'amd' ? 'amd' : 'gpu', color:gpuColor, abbr:'GPU', name:'Painel da placa de vídeo',
     status: d.gpu_name || 'Placa não identificada', running:false,
     actions: vendorLabel ? atBtn('gpu','open', vendorLabel, false) : atBtn('gpu','open','Painel não encontrado', true),
   });
   cards += atCard({
-    key:'gamemode', color:'#7c5cff', abbr:'GM', name:'Modo Jogo do Windows',
+    key:'gamemode', logo:'gamemode', color:'#7c5cff', abbr:'GM', name:'Modo Jogo do Windows',
     status:'Prioriza o jogo e segura atualizações em segundo plano', running:false,
     actions: atBtn('gamemode','open','Abrir Modo Jogo', false),
   });
   cards += `
     <div class="at-card" data-key="custom">
       <div class="at-card-top">
-        <div class="at-avatar" style="--c:#7c5cff">Ex</div>
+        <div class="at-avatar has-icon"><img src="assets/apps/custom.svg" alt=""></div>
         <div class="at-card-title"><b>Executável personalizado</b><span class="at-status" id="atCustomInfo">Escolha um programa ou digite o nome dele</span></div>
       </div>
       <div class="at-custom">
@@ -6753,7 +6773,7 @@ function renderAppTuner(){
   root.innerHTML = `
     <div class="at-hint">Nada aqui mexe em senhas, histórico ou login — só em arquivos de cache e na prioridade do processo.</div>
     <div class="at-grid">${cards}</div>
-    ${missing.length ? `<div class="at-missing"><span>Não encontrados neste PC:</span>${missing.map(a => `<em>${DIAG_ESC(a.name)}</em>`).join('')}</div>` : ''}`;
+    ${missing.length ? `<div class="at-missing"><span>Não encontrados neste PC:</span>${missing.map(a => `<em><img src="${AT_LOGO(a.id)}" alt="" onerror="this.remove()">${DIAG_ESC(a.name)}</em>`).join('')}</div>` : ''}`;
 }
 
 async function appTunerClick(e){
