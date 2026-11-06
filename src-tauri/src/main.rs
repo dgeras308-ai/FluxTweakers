@@ -2920,6 +2920,126 @@ async fn apptuner_pick_exe() -> Result<String, String> {
     .map_err(|e| format!("Falha interna: {e}"))?
 }
 
+#[derive(Serialize)]
+struct TunerStepResult {
+    message: String,
+    done: u32,
+    total: u32,
+}
+
+/// Apps de segundo plano (sincronização e launchers) que não precisam de
+/// prioridade enquanto você joga: vão pra prioridade "abaixo do normal".
+const TUNER_BG_PROCS: &[&str] = &[
+    "OneDrive", "Teams", "ms-teams", "Dropbox", "GoogleDriveFS",
+    "EpicGamesLauncher", "EpicWebHelper", "Battle.net", "UbisoftConnect", "upc",
+    "EADesktop", "EABackgroundService", "GalaxyClient", "GalaxyCommunication",
+];
+
+/// Pastas de cache de shaders (recriadas sozinhas pelos jogos/drivers).
+const TUNER_SHADER_DIRS: &[&str] = &[
+    "%LOCAL%\\NVIDIA\\DXCache",
+    "%LOCAL%\\NVIDIA\\GLCache",
+    "%LOCAL%\\AMD\\DxCache",
+    "%LOCAL%\\AMD\\GLCache",
+    "%LOCAL%\\D3DSCache",
+];
+
+/// Roda UMA etapa da otimização geral (o front chama uma por vez pra animar
+/// o passo a passo): "background", "cache" ou "shaders".
+#[tauri::command]
+async fn apptuner_optimize_step(step: String) -> Result<TunerStepResult, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<TunerStepResult, String> {
+        match step.as_str() {
+            "background" => {
+                let running = tuner_running_set();
+                let mut total = 0u32;
+                let mut done = 0u32;
+                for p in TUNER_BG_PROCS.iter() {
+                    if running.contains(&format!("{}.exe", p.to_lowercase())) {
+                        total += 1;
+                        if tuner_set_priority(p, "BelowNormal").unwrap_or(0) > 0 {
+                            done += 1;
+                        }
+                    }
+                }
+                let message = if total == 0 {
+                    "Nenhum app de segundo plano aberto".to_string()
+                } else {
+                    format!("{done} app(s) de segundo plano com prioridade reduzida")
+                };
+                Ok(TunerStepResult { message, done, total })
+            }
+            "cache" => {
+                let running = tuner_running_set();
+                let mut total = 0u32;
+                let mut done = 0u32;
+                let mut freed: u64 = 0;
+                for def in TUNER_DEFS.iter() {
+                    if def.cache_label.is_none() {
+                        continue;
+                    }
+                    let targets = tuner_cache_targets(def);
+                    if targets.is_empty() {
+                        continue;
+                    }
+                    total += 1;
+                    if tuner_is_running(def, &running) {
+                        continue;
+                    }
+                    let before: u64 = targets.iter().map(|(p, _)| tuner_dir_size(p)).sum();
+                    for (path, whole) in targets.iter() {
+                        if *whole {
+                            let _ = fs::remove_dir_all(path);
+                        } else {
+                            tuner_clear_dir(path);
+                        }
+                    }
+                    let after: u64 = targets.iter().filter(|(p, _)| p.exists()).map(|(p, _)| tuner_dir_size(p)).sum();
+                    freed += before.saturating_sub(after);
+                    done += 1;
+                }
+                let mb = (freed as f64) / 1_048_576.0;
+                let skipped = total - done;
+                let message = if total == 0 {
+                    "Nenhum app com cache encontrado".to_string()
+                } else if skipped > 0 {
+                    format!("{mb:.0} MB liberados ({skipped} app(s) abertos foram pulados)")
+                } else {
+                    format!("{mb:.0} MB de cache liberados")
+                };
+                Ok(TunerStepResult { message, done, total })
+            }
+            "shaders" => {
+                let mut total = 0u32;
+                let mut done = 0u32;
+                let mut freed: u64 = 0;
+                for d in TUNER_SHADER_DIRS.iter() {
+                    let p = tuner_expand(d);
+                    if !p.is_dir() {
+                        continue;
+                    }
+                    total += 1;
+                    let before = tuner_dir_size(&p);
+                    tuner_clear_dir(&p);
+                    let after = tuner_dir_size(&p);
+                    freed += before.saturating_sub(after);
+                    done += 1;
+                }
+                let mb = (freed as f64) / 1_048_576.0;
+                let message = if total == 0 {
+                    "Nenhum cache de shaders encontrado".to_string()
+                } else {
+                    format!("{mb:.0} MB de cache de shaders liberados")
+                };
+                Ok(TunerStepResult { message, done, total })
+            }
+            _ => Err("Etapa desconhecida".to_string()),
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
 fn main() {
     #[cfg(target_os = "windows")]
     {
@@ -2935,7 +3055,7 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
         .manage(PdhState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));
