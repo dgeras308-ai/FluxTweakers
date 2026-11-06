@@ -2449,6 +2449,27 @@ const TUNER_DEFS: &[TunerDef] = &[
         cache_label: Some("Limpar cache"), priority_label: None,
     },
     TunerDef {
+        id: "zoom", name: "Zoom",
+        exes: &["%ROAM%\\Zoom\\bin\\Zoom.exe", "%PF%\\Zoom\\bin\\Zoom.exe"],
+        procs: &["Zoom"],
+        caches: &[],
+        cache_label: None, priority_label: Some("Otimizar processo"),
+    },
+    TunerDef {
+        id: "slack", name: "Slack",
+        exes: &["%LOCAL%\\slack\\slack.exe", "%PF%\\Slack\\slack.exe"],
+        procs: &["slack"],
+        caches: &[CacheSpec::Dir("%ROAM%\\Slack\\Cache"), CacheSpec::Dir("%ROAM%\\Slack\\Code Cache"), CacheSpec::Dir("%ROAM%\\Slack\\GPUCache")],
+        cache_label: Some("Otimizar cache"), priority_label: None,
+    },
+    TunerDef {
+        id: "vscode", name: "Visual Studio Code",
+        exes: &["%LOCAL%\\Programs\\Microsoft VS Code\\Code.exe", "%PF%\\Microsoft VS Code\\Code.exe"],
+        procs: &["Code"],
+        caches: &[CacheSpec::Dir("%ROAM%\\Code\\Cache"), CacheSpec::Dir("%ROAM%\\Code\\CachedData"), CacheSpec::Dir("%ROAM%\\Code\\GPUCache")],
+        cache_label: Some("Otimizar cache"), priority_label: None,
+    },
+    TunerDef {
         id: "riot", name: "Riot Client",
         exes: &["C:\\Riot Games\\Riot Client\\RiotClientServices.exe"],
         procs: &["RiotClientServices", "RiotClientUx"],
@@ -3040,6 +3061,142 @@ async fn apptuner_optimize_step(step: String) -> Result<TunerStepResult, String>
     .map_err(|e| format!("Falha interna: {e}"))?
 }
 
+#[derive(Serialize)]
+struct StartupItem {
+    name: String,
+    command: String,
+    enabled: bool,
+}
+
+const STARTUP_RUN: &str = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+const STARTUP_APPROVED: &str = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run";
+
+/// Programas que iniciam com o Windows (só os do usuário atual — não precisa
+/// de administrador pra ligar/desligar).
+#[tauri::command]
+async fn apptuner_startup_list() -> Result<Vec<StartupItem>, String> {
+    tauri::async_runtime::spawn_blocking(|| -> Result<Vec<StartupItem>, String> {
+        #[cfg(target_os = "windows")]
+        {
+            let ps = format!(
+                "[Console]::OutputEncoding=[Text.Encoding]::UTF8; $run='{STARTUP_RUN}'; $ap='{STARTUP_APPROVED}'; $items=Get-ItemProperty $run -ErrorAction SilentlyContinue; if($items){{ foreach($n in $items.PSObject.Properties.Name){{ if($n -like 'PS*'){{continue}}; $en=1; try{{ $b=(Get-ItemProperty $ap -ErrorAction Stop).$n; if($b -and (($b[0] % 2) -eq 1)){{$en=0}} }}catch{{}}; $n + '|' + $en + '|' + $items.$n }} }}"
+            );
+            let output = Command::new("powershell")
+                .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps])
+                .creation_flags(CREATE_NO_WINDOW)
+                .output()
+                .map_err(|e| format!("Não consegui listar a inicialização: {e}"))?;
+            let mut out: Vec<StartupItem> = Vec::new();
+            for line in String::from_utf8_lossy(&output.stdout).lines() {
+                let mut parts = line.trim().splitn(3, '|');
+                let name = parts.next().unwrap_or("").to_string();
+                let en = parts.next().unwrap_or("1");
+                let command = parts.next().unwrap_or("").to_string();
+                if !name.is_empty() {
+                    out.push(StartupItem { name, command, enabled: en == "1" });
+                }
+            }
+            Ok(out)
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+/// Liga/desliga um programa da inicialização (mesmo mecanismo do
+/// Gerenciador de Tarefas > Inicializar; não apaga nada).
+#[tauri::command]
+async fn apptuner_startup_toggle(name: String, enable: bool) -> Result<String, String> {
+    if name.trim().is_empty() || name.len() > 200 || name.chars().any(|c| c.is_control()) {
+        return Err("Nome inválido".to_string());
+    }
+    tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
+        #[cfg(target_os = "windows")]
+        {
+            let safe = name.replace('\'', "''");
+            let first = if enable { 2 } else { 3 };
+            let ps = format!(
+                "$ap='{STARTUP_APPROVED}'; if(-not (Test-Path $ap)){{ New-Item $ap -Force | Out-Null }}; $b=[byte[]]({first},0,0,0,0,0,0,0,0,0,0,0); Set-ItemProperty -Path $ap -Name '{safe}' -Value $b -Type Binary"
+            );
+            let output = Command::new("powershell")
+                .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps])
+                .creation_flags(CREATE_NO_WINDOW)
+                .output()
+                .map_err(|e| format!("Não consegui alterar a inicialização: {e}"))?;
+            if !output.status.success() {
+                return Err("Não consegui alterar esse item da inicialização".to_string());
+            }
+            Ok(if enable {
+                format!("{name}: vai iniciar com o Windows")
+            } else {
+                format!("{name}: não inicia mais com o Windows")
+            })
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = (&name, enable);
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+/// Afinidade de CPU de um processo: "all", "first" (1ª metade dos núcleos)
+/// ou "second" (2ª metade). Vale até o programa fechar.
+#[tauri::command]
+async fn apptuner_set_affinity(process: String, mode: String) -> Result<String, String> {
+    let name = process.trim().trim_end_matches(".exe").trim_end_matches(".EXE").to_string();
+    let valid = !name.is_empty()
+        && name.len() <= 64
+        && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.');
+    if !valid {
+        return Err("Nome de processo inválido (use só letras, números, ponto, - e _)".to_string());
+    }
+    let cores = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(1).min(63) as u32;
+    if cores < 2 {
+        return Err("Esse PC tem só um núcleo lógico — nada pra separar".to_string());
+    }
+    let half = cores / 2;
+    let all: u64 = (1u64 << cores) - 1;
+    let (mask, label): (u64, &str) = match mode.as_str() {
+        "all" => (all, "todos os núcleos"),
+        "first" => ((1u64 << half) - 1, "1ª metade dos núcleos"),
+        "second" => (all & !((1u64 << half) - 1), "2ª metade dos núcleos"),
+        _ => return Err("Modo de núcleos inválido".to_string()),
+    };
+    tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
+        #[cfg(target_os = "windows")]
+        {
+            let ps = format!(
+                "$c=0; Get-Process -Name '{name}' -ErrorAction SilentlyContinue | ForEach-Object {{ try {{ $_.ProcessorAffinity=[IntPtr]{mask}; $c++ }} catch {{}} }}; $c"
+            );
+            let output = Command::new("powershell")
+                .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps])
+                .creation_flags(CREATE_NO_WINDOW)
+                .output()
+                .map_err(|e| format!("Não consegui alterar os núcleos: {e}"))?;
+            let n = String::from_utf8_lossy(&output.stdout).trim().parse::<u32>().unwrap_or(0);
+            if n == 0 {
+                Err(format!("Nenhum processo \"{name}\" encontrado — abra o programa primeiro"))
+            } else {
+                Ok(format!("{name}: usando {label} em {n} processo(s) — vale até fechar o app"))
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = (&name, mask, label);
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
 fn main() {
     #[cfg(target_os = "windows")]
     {
@@ -3055,7 +3212,7 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
         .manage(PdhState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));

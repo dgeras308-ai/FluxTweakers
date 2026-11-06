@@ -1891,6 +1891,16 @@
   @keyframes atdot{from{left:0}to{left:100%}}
   @keyframes atpulse{50%{box-shadow:0 0 0 1px #3b82f6,0 0 30px rgba(59,130,246,.8)}}
   .at-pipe-msg{margin-top:14px;font-size:12px;color:var(--muted);min-height:16px;}
+  .at-su{margin-top:20px;padding:18px;border-radius:16px;background:var(--item-bg);border:1px solid var(--item-border);}
+  .at-su h3{margin:0 0 4px;font-size:14px;font-weight:700;color:var(--text);}
+  .at-su p{margin:0 0 12px;font-size:12px;color:var(--muted);}
+  .at-su-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 0;border-top:1px solid var(--item-border);}
+  .at-su-info{min-width:0;}
+  .at-su-info b{display:block;font-size:13px;color:var(--text);}
+  .at-su-info span{display:block;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52vw;}
+  .at-su-btn{min-width:104px;}
+  .at-su-btn.off{opacity:.7;border-color:var(--item-border);background:transparent;}
+  .at-custom select{flex:1;}
   .at-loading{padding:40px 10px;text-align:center;color:var(--muted);font-size:13px;}
   .at-hint{
     font-size:12px;color:var(--muted);margin:0 0 16px;padding:11px 14px;border-radius:12px;
@@ -6690,6 +6700,9 @@ const AT_META = {
   ubisoft: { color:'#0070ff', abbr:'Ub' },
   gog:     { color:'#86328a', abbr:'GOG' },
   riot:    { color:'#d32936', abbr:'Rg' },
+  zoom:    { color:'#0b5cff', abbr:'Zm' },
+  slack:   { color:'#4a154b', abbr:'Sl' },
+  vscode:  { color:'#007acc', abbr:'VS' },
 };
 // logo embutido no app (funciona mesmo com o programa não instalado)
 const AT_LOGO = (id) => `assets/apps/${id}.svg`;
@@ -6770,6 +6783,7 @@ async function atRunAll(){
 }
 
 let __atData = null;
+let __atStartup = null;   // programas que iniciam com o Windows
 let __atIcons = null;      // id -> data URL (logo real extraído do .exe)
 let __atIconsLoading = false;
 let __atBusy = false;
@@ -6785,9 +6799,18 @@ async function refreshAppTuner(){
     __atData = await window.__TAURI__.core.invoke('apptuner_overview');
     renderAppTuner();
     loadAppTunerIcons();
+    loadAppTunerStartup();
   }catch(err){
     root.innerHTML = `<div class="at-loading">Não consegui listar os aplicativos: ${DIAG_ESC(err)}</div>`;
   }
+}
+
+async function loadAppTunerStartup(){
+  if (!window.__TAURI__) return;
+  try{
+    __atStartup = await window.__TAURI__.core.invoke('apptuner_startup_list');
+  }catch(err){ __atStartup = []; }
+  if (!__atBusy) renderAppTuner();
 }
 
 async function loadAppTunerIcons(){
@@ -6815,6 +6838,20 @@ function atCard({ key, color, abbr, name, status, running, actions, off, logo })
 }
 function atBtn(app, act, label, disabled){
   return `<button class="at-btn" data-app="${app}" data-act="${act}" ${disabled ? 'disabled' : ''}>${DIAG_ESC(label)}</button>`;
+}
+
+function atStartupHtml(){
+  if (!__atStartup) return '';
+  const rows = __atStartup.length ? __atStartup.map((it, i) => `
+      <div class="at-su-row">
+        <div class="at-su-info"><b>${DIAG_ESC(it.name)}</b><span title="${DIAG_ESC(it.command).replace(/"/g,'&quot;')}">${DIAG_ESC(it.command)}</span></div>
+        <button class="at-btn at-su-btn${it.enabled ? '' : ' off'}" data-app="startup" data-act="startup" data-idx="${i}">${it.enabled ? 'Ligado' : 'Desligado'}</button>
+      </div>`).join('') : '<div class="at-su-row"><div class="at-su-info"><span>Nenhum programa do seu usuário na inicialização.</span></div></div>';
+  return `<div class="at-su">
+    <h3>Programas que iniciam com o Windows</h3>
+    <p>Desligar não desinstala nada — o programa só deixa de abrir sozinho quando você liga o PC. Dá pra religar quando quiser.</p>
+    ${rows}
+  </div>`;
 }
 
 function renderAppTuner(){
@@ -6867,15 +6904,24 @@ function renderAppTuner(){
           <option value="Normal">Normal</option>
         </select>
       </div>
+      <div class="at-custom">
+        <select id="atCustomCores">
+          <option value="all">Núcleos: todos</option>
+          <option value="first">Núcleos: 1ª metade</option>
+          <option value="second">Núcleos: 2ª metade</option>
+        </select>
+      </div>
       <div class="at-actions">
         <button class="at-btn" data-app="custom" data-act="pick">Escolher programa (.exe)</button>
         <button class="at-btn" data-app="custom" data-act="custom">Aplicar prioridade</button>
+        <button class="at-btn" data-app="custom" data-act="affinity">Aplicar núcleos</button>
       </div>
     </div>`;
 
   root.innerHTML = `
     <div class="at-hint">Nada aqui mexe em senhas, histórico ou login — só em arquivos de cache e na prioridade do processo.</div>
     <div class="at-grid">${cards}</div>
+    ${atStartupHtml()}
     ${missing.length ? `<div class="at-missing"><span>Não encontrados neste PC:</span>${missing.map(a => `<em><img src="${AT_LOGO(a.id)}" alt="" onerror="this.remove()">${DIAG_ESC(a.name)}</em>`).join('')}</div>` : ''}`;
 }
 
@@ -6884,6 +6930,18 @@ async function appTunerClick(e){
   if (!btn || btn.disabled || __atBusy) return;
   const app = btn.dataset.app, act = btn.dataset.act;
   const { invoke } = window.__TAURI__.core;
+  if (act === 'startup'){
+    const item = __atStartup && __atStartup[+btn.dataset.idx];
+    if (!item) return;
+    __atBusy = true; btn.disabled = true; btn.textContent = 'Aguarde...';
+    try{
+      const m = await invoke('apptuner_startup_toggle', { name: item.name, enable: !item.enabled });
+      item.enabled = !item.enabled;
+      showToast(m);
+    }catch(err){ showToast(String(err)); }
+    __atBusy = false; renderAppTuner();
+    return;
+  }
   const appInfo = __atData?.apps.find(a => a.id === app);
 
   // Limpar cache com o app aberto: pede confirmação (vai fechar o app).
@@ -6922,6 +6980,10 @@ async function appTunerClick(e){
       const name = document.getElementById('atCustomName').value;
       const level = document.getElementById('atCustomLevel').value;
       msg = await invoke('apptuner_set_priority', { process: name, level });
+    } else if (act === 'affinity'){
+      const name = document.getElementById('atCustomName').value;
+      const mode = document.getElementById('atCustomCores').value;
+      msg = await invoke('apptuner_set_affinity', { process: name, mode });
     }
     showToast(msg);
   }catch(err){
