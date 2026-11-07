@@ -3527,6 +3527,25 @@ async fn dns_restore(app: tauri::AppHandle, flush: bool) -> Result<String, Strin
     .map_err(|e| format!("Falha interna: {e}"))?
 }
 
+/// ID curto deste PC (12 hex do MachineGuid do Windows), usado pra vincular keys.
+#[tauri::command]
+fn get_machine_id() -> Result<String, String> {
+    #[cfg(target_os = "windows")]
+    {
+        let guid = reg_query_value("HKLM\\SOFTWARE\\Microsoft\\Cryptography", "MachineGuid")
+            .ok_or_else(|| "Não consegui ler o ID deste PC".to_string())?;
+        let hex: String = guid.chars().filter(|c| c.is_ascii_hexdigit()).collect::<String>().to_uppercase();
+        if hex.len() < 12 {
+            return Err("ID do PC inválido".to_string());
+        }
+        Ok(format!("{}-{}-{}", &hex[0..4], &hex[4..8], &hex[8..12]))
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Err("Disponível apenas no Windows".to_string())
+    }
+}
+
 fn main() {
     #[cfg(target_os = "windows")]
     {
@@ -3542,7 +3561,7 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
         .manage(PdhState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));

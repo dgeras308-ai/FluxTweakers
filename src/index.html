@@ -1630,6 +1630,79 @@
   .admin-legend .dot.offline{margin-left:8px;}
   .u-status{display:flex;align-items:center;font-size:10.5px;color:var(--muted);gap:4px;white-space:nowrap;}
   .admin-btn-delete{background:rgba(239,90,111,.15);color:#ef5a6f;}
+  /* ---- aba Keys (painel do dono) ---- */
+  .ks-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:2px 0 16px;}
+  .ks-stat{padding:14px 16px;border-radius:14px;background:var(--item-bg);border:1px solid var(--item-border);}
+  .ks-stat span{display:block;font-size:11.5px;color:var(--muted);font-weight:600;}
+  .ks-stat b{display:block;margin-top:6px;font-size:26px;font-weight:800;color:var(--text);letter-spacing:-.02em;}
+  .ks-grid{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;margin-bottom:14px;align-items:start;}
+  .ks-card{padding:18px;border-radius:16px;background:var(--item-bg);border:1px solid var(--item-border);margin-bottom:14px;}
+  .ks-grid .ks-card{margin-bottom:0;}
+  .ks-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+  .ks-head h3{margin:0;font-size:14.5px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:9px;}
+  .ks-head h3 svg{width:17px;height:17px;color:var(--tab-accent,var(--accent));flex-shrink:0;}
+  .ks-head p{margin:4px 0 0;font-size:12px;color:var(--muted);line-height:1.45;max-width:520px;}
+  .ks-count{display:inline-flex;min-width:22px;height:20px;padding:0 7px;align-items:center;justify-content:center;border-radius:999px;font-size:11px;font-weight:800;color:var(--text);background:rgba(255,255,255,.08);}
+  .ks-label{display:block;margin:0 0 7px;font-size:11.5px;font-weight:700;color:var(--muted);}
+  .ks-field{margin-bottom:14px;}
+  .ks-seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+  .ks-seg button{font-family:inherit;padding:10px 6px;border-radius:10px;border:1px solid var(--item-border);background:transparent;color:var(--muted);font-size:12.5px;font-weight:700;cursor:pointer;transition:all .15s;}
+  .ks-seg button small{display:block;font-size:10.5px;font-weight:600;opacity:.75;margin-top:1px;}
+  .ks-seg button:hover{border-color:var(--accent);color:var(--text);}
+  .ks-seg button.on{background:color-mix(in srgb,var(--accent) 16%,transparent);border-color:var(--accent);color:var(--text);}
+  .ks-row2{display:grid;grid-template-columns:130px 1fr;gap:10px;}
+  .ks-in{width:100%;box-sizing:border-box;font-family:inherit;font-size:13px;padding:10px 12px;border-radius:10px;border:1px solid var(--item-border);background:rgba(0,0,0,.18);color:var(--text);outline:none;transition:border-color .15s;}
+  .ks-in:focus{border-color:var(--accent);}
+  .ks-in.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px;}
+  textarea.ks-in{resize:vertical;min-height:64px;}
+  .ks-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:inherit;font-size:12.5px;font-weight:700;padding:10px 16px;border-radius:10px;border:1px solid var(--item-border);background:transparent;color:var(--text);cursor:pointer;transition:all .15s;white-space:nowrap;}
+  .ks-btn:hover:not(:disabled){border-color:var(--accent);transform:translateY(-1px);}
+  .ks-btn:disabled{opacity:.5;cursor:default;}
+  .ks-btn.primary{background:var(--accent);border-color:transparent;color:#08101c;}
+  .ks-btn.primary:hover:not(:disabled){filter:brightness(1.08);}
+  .ks-btn.danger{color:var(--off);}
+  .ks-btn.danger:hover:not(:disabled){border-color:var(--off);}
+  .ks-btn.sm{padding:6px 11px;font-size:11.5px;border-radius:8px;}
+  .ks-btn.wide{width:100%;}
+  .ks-btn[hidden],.ks-note[hidden],.ks-made[hidden],.ks-master[hidden]{display:none !important;}
+  .ks-hint{margin:8px 0 0;font-size:11.5px;color:var(--muted);line-height:1.45;}
+  .ks-note{margin-top:12px;padding:10px 12px;border-radius:10px;font-size:12px;line-height:1.45;background:rgba(255,255,255,.04);border:1px solid var(--item-border);color:var(--muted);}
+  .ks-note.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 35%,transparent);background:color-mix(in srgb,var(--ok) 8%,transparent);}
+  .ks-note.err{color:var(--off);border-color:color-mix(in srgb,var(--off) 35%,transparent);background:color-mix(in srgb,var(--off) 8%,transparent);}
+  .ks-note.warn{color:#f5c542;border-color:rgba(245,197,66,.35);background:rgba(245,197,66,.07);}
+  .ks-made{margin-top:14px;padding:12px;border-radius:12px;border:1px solid color-mix(in srgb,var(--ok) 35%,transparent);background:color-mix(in srgb,var(--ok) 6%,transparent);}
+  .ks-made-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;font-size:12px;font-weight:700;color:var(--ok);}
+  .ks-made code{display:block;padding:8px 10px;margin-top:6px;border-radius:8px;background:rgba(0,0,0,.25);font-family:ui-monospace,Consolas,monospace;font-size:11px;color:var(--text);word-break:break-all;line-height:1.4;user-select:all;}
+  .ks-master{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:11px;background:rgba(0,0,0,.16);border:1px solid var(--item-border);font-size:12.5px;font-weight:700;color:var(--text);}
+  .ks-master i{width:9px;height:9px;border-radius:50%;background:var(--off);flex-shrink:0;}
+  .ks-master.ok i{background:var(--ok);}
+  .ks-search{display:flex;gap:8px;margin-bottom:12px;}
+  .ks-list{border:1px solid var(--item-border);border-radius:12px;overflow:hidden;max-height:380px;overflow-y:auto;background:rgba(0,0,0,.1);}
+  .ks-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--item-border);}
+  .ks-row:last-child{border-bottom:0;}
+  .ks-row:hover{background:var(--item-bg-hover);}
+  .ks-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:800;color:var(--text);background:color-mix(in srgb,var(--accent) 18%,transparent);border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);position:relative;}
+  .ks-avatar em{position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border-radius:50%;background:var(--muted2);border:2px solid var(--bg);}
+  .ks-avatar em.on{background:var(--ok);}
+  .ks-main{flex:1;min-width:0;}
+  .ks-main b{display:block;font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ks-main code{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;letter-spacing:.01em;}
+  .ks-main span{display:block;margin-top:2px;font-size:11.3px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ks-pill{font-size:10.5px;font-weight:800;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.08);color:var(--muted);white-space:nowrap;}
+  .ks-pill.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent);}
+  .ks-pill.warn{color:#f5c542;background:rgba(245,197,66,.14);}
+  .ks-pill.info{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);}
+  .ks-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+  .ks-actions input{width:54px;box-sizing:border-box;padding:6px 8px;border-radius:8px;border:1px solid var(--item-border);background:rgba(0,0,0,.18);color:var(--text);font-family:inherit;font-size:11.5px;text-align:center;}
+  .ks-empty{padding:30px 16px;text-align:center;font-size:12.5px;color:var(--muted);}
+  .ks-legend{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px;}
+  .ks-legend i{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block;}
+  .ks-legend i.off{background:var(--muted2);margin-left:8px;}
+  .redeem-pcid{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:10.5px;color:var(--muted);}
+  .redeem-pcid code{font-family:ui-monospace,Consolas,monospace;color:var(--text);font-size:10.5px;}
+  .redeem-pcid button{margin-left:auto;font-family:inherit;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;border:1px solid var(--border-soft);background:transparent;color:var(--muted);cursor:pointer;}
+  .redeem-pcid button:hover{color:var(--text);border-color:var(--accent);}
+  @media (max-width:1000px){.ks-grid{grid-template-columns:1fr;}.ks-stats{grid-template-columns:repeat(2,1fr);}.ks-row{flex-wrap:wrap;}}
   .redeem-key-box{margin-top:8px;padding:8px;border-radius:10px;background:rgba(255,255,255,.03);border:1px dashed var(--border-soft);}
   .redeem-key-msg{font-size:10.5px;margin:6px 2px 0;color:var(--muted);}
   .redeem-key-msg.ok{color:#7be08b;}
@@ -2399,6 +2472,7 @@
             <button type="button" id="redeemKeyBtn" class="login-btn" style="margin:0;padding:8px 12px;font-size:11px;">Ativar</button>
           </div>
           <p id="redeemKeyMsg" class="redeem-key-msg" hidden></p>
+          <div class="redeem-pcid"><span>ID deste PC:</span><code id="redeemPcId">...</code><button type="button" id="redeemPcCopy" title="Copiar o ID deste PC">copiar</button></div>
         </div>
       </div>
       <div class="sidebar-block">
@@ -3065,10 +3139,14 @@ function bindRedeemKey(){
   const btn = document.getElementById('redeemKeyBtn');
   if(!btn || btn.dataset.bound) return;
   btn.dataset.bound = '1';
-  const doRedeem = ()=>{
+  const pcEl = document.getElementById('redeemPcId');
+  getMachineId().then(id => { if(pcEl) pcEl.textContent = id; }).catch(() => { if(pcEl) pcEl.textContent = 'indisponível'; });
+  const pcCopy = document.getElementById('redeemPcCopy');
+  if(pcCopy) pcCopy.addEventListener('click', async () => { const ok = await copyText(await getMachineId()); flashBtn(pcCopy, ok ? 'copiado' : 'falhou'); });
+  const doRedeem = async ()=>{
     const input = document.getElementById('redeemKeyInput');
     const msg = document.getElementById('redeemKeyMsg');
-    const res = redeemKey(input.value);
+    const res = await redeemKey(input.value);
     msg.textContent = res.msg;
     msg.hidden = false;
     msg.classList.toggle('ok', res.ok);
@@ -3120,45 +3198,38 @@ function fmtDateTime(ts){
 
 function renderAdminUsers(){
   const list = document.getElementById('adminUsersList');
-  const users = getUsers();
-  const entries = Object.entries(users).sort((a,b)=> (b[1].lastSeen||b[1].createdAt||0)-(a[1].lastSeen||a[1].createdAt||0));
-  document.getElementById('adminUserCount').textContent = entries.length;
-  if(entries.length === 0){
-    list.innerHTML = '<div class="admin-empty">Nenhuma conta criada ainda.</div>';
-    return;
-  }
+  if(!list) return;
+  const q = (document.getElementById('ksUserSearch')?.value || '').trim().toLowerCase();
+  const all = Object.entries(getUsers()).sort((a,b)=> (b[1].lastSeen||b[1].createdAt||0)-(a[1].lastSeen||a[1].createdAt||0));
+  const entries = q ? all.filter(([k,acc]) => (acc.username||k).toLowerCase().includes(q)) : all;
+  const cnt = document.getElementById('adminUserCount'); if(cnt) cnt.textContent = all.length;
+  renderOwnerStats();
+  if(all.length === 0){ list.innerHTML = '<div class="ks-empty">Nenhuma conta criada neste PC ainda.</div>'; return; }
+  if(entries.length === 0){ list.innerHTML = '<div class="ks-empty">Nenhuma conta encontrada nessa busca.</div>'; return; }
   list.innerHTML = entries.map(([uKey,acc])=>{
     const isExpiredPaid = acc.plan==='paid' && acc.expiresAt && Date.now()>acc.expiresAt;
     const planNow = isExpiredPaid ? 'free' : acc.plan;
-    let planLabel = 'Grátis';
-    let planClass = '';
-    if(planNow === 'paid'){
-      planLabel = 'Pago';
-      planClass = 'paid';
-    } else if(acc.requestedPaid){
-      planLabel = 'Pendente';
-      planClass = 'pending';
-    }
-    const diasRestantes = (planNow==='paid' && acc.expiresAt) ? Math.max(0, Math.ceil((acc.expiresAt-Date.now())/86400000))+'d restantes · ' : '';
+    let planLabel = 'Grátis', planClass = '';
+    if(planNow === 'paid'){ planLabel = 'Pago'; planClass = 'ok'; }
+    else if(acc.requestedPaid){ planLabel = 'Pendente'; planClass = 'warn'; }
+    const dias = (planNow==='paid' && acc.expiresAt) ? Math.max(0, Math.ceil((acc.expiresAt-Date.now())/86400000)) + 'd restantes · ' : '';
     const online = isOnline(acc);
-    return `<div class="admin-user-row" data-u="${uKey}">
-      <div class="u-info">
-        <div class="u-name">${acc.username}</div>
-        <div class="u-meta">${diasRestantes}criado em ${new Date(acc.createdAt).toLocaleDateString('pt-BR')}</div>
-        <div class="u-meta">último login: ${fmtDateTime(acc.lastLogin)}</div>
-      </div>
-      <div class="u-status"><i class="dot ${online?'online':'offline'}"></i>${online?'online':'offline'}</div>
-      <span class="u-plan ${planClass}">${planLabel}</span>
-      <div class="admin-row-actions">
+    const name = acc.username || uKey;
+    return `<div class="ks-row" data-u="${ksEsc(uKey)}">
+      <div class="ks-avatar">${ksEsc(name.charAt(0).toUpperCase())}<em class="${online ? 'on' : ''}"></em></div>
+      <div class="ks-main"><b>${ksEsc(name)}</b>
+        <span>${dias}criado em ${new Date(acc.createdAt).toLocaleDateString('pt-BR')} · último login ${fmtDateTime(acc.lastLogin)}</span></div>
+      <span class="ks-pill ${planClass}">${planLabel}</span>
+      <div class="ks-actions">
         <input type="number" min="1" value="30" title="dias" class="admin-days-input">
-        <button type="button" class="admin-btn-approve" data-action="approve">Liberar</button>
-        <button type="button" class="admin-btn-revoke" data-action="revoke">Grátis</button>
-        <button type="button" class="admin-btn-delete" data-action="delete">Excluir</button>
+        <button type="button" class="ks-btn sm primary" data-action="approve">Liberar</button>
+        <button type="button" class="ks-btn sm" data-action="revoke">Grátis</button>
+        <button type="button" class="ks-btn sm danger" data-action="delete">Excluir</button>
       </div>
     </div>`;
   }).join('');
 
-  list.querySelectorAll('.admin-user-row').forEach(row=>{
+  list.querySelectorAll('.ks-row').forEach(row=>{
     const uKey = row.dataset.u;
     row.querySelector('[data-action="approve"]').addEventListener('click', ()=>{
       const days = parseInt(row.querySelector('.admin-days-input').value,10) || 30;
@@ -3238,60 +3309,161 @@ function bindAdminNewClientForm(){
 
 let adminRefreshTimer = null;
 
-/* ---------- geração de keys ---------- */
+/* ---------- keys assinadas: valem em QUALQUER PC, sem servidor ----------
+   A key leva dentro dias, data, número de série e (opcional) o ID de um PC, assinados
+   com a chave mestra do dono (ECDSA P-256). O app só carrega a chave PÚBLICA, que
+   confere a assinatura mas não consegue criar keys novas. */
+const FX_PUB = { kty:'EC', crv:'P-256', ext:true, x:'JpNsEKQ6oMqMpXSmAlHXIUlYQSaeDYbO-obX3FhYnAE', y:'6PmjyyMvjOq5xoVIUwaTUL3jZuzj2M0-Sys8dHFfq5s' };
+const FX_KEY_PREFIX = 'FX1.';
+const ksEsc = t => String(t ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fxB64 = {
+  enc(bytes){ let s=''; bytes.forEach(b=>{ s += String.fromCharCode(b); }); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); },
+  dec(str){ const p = str.replace(/-/g,'+').replace(/_/g,'/'); return Uint8Array.from(atob(p + '='.repeat((4 - p.length % 4) % 4)), c => c.charCodeAt(0)); }
+};
+function fxHex(bytes){ return [...bytes].map(b => b.toString(16).padStart(2,'0')).join('').toUpperCase(); }
+
 function getKeys(){
   try{ return JSON.parse(safeLocalGetKey('dgeras_gen_keys')||'[]'); }catch(e){ return []; }
 }
 function saveKeys(keys){ safeLocalSetKey('dgeras_gen_keys', JSON.stringify(keys)); }
+function getRedeemed(){ try{ return JSON.parse(safeLocalGetKey('dgeras_redeemed')||'[]'); }catch(e){ return []; } }
+function saveRedeemed(list){ safeLocalSetKey('dgeras_redeemed', JSON.stringify(list)); }
+function getMasterJwk(){ try{ return JSON.parse(safeLocalGetKey('dgeras_master_key')||'null'); }catch(e){ return null; } }
 
-function generateKeyCode(){
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-  const block = ()=>{ let s=''; for(let i=0;i<5;i++) s += chars[Math.floor(Math.random()*chars.length)]; return s; };
-  return `${block()}-${block()}-${block()}`;
+// ID deste PC (12 hex do Windows); no navegador de teste cai num ID aleatório salvo
+var __machineId = null; // var: o bindRedeemKey() roda antes desta linha no arquivo
+async function getMachineId(){
+  if(__machineId) return __machineId;
+  try{ if(window.__TAURI__) __machineId = await window.__TAURI__.core.invoke('get_machine_id'); }catch(e){}
+  if(!__machineId){
+    let v = safeLocalGetKey('dgeras_pc_id');
+    if(!v){ v = fxHex(crypto.getRandomValues(new Uint8Array(6))).replace(/(.{4})(.{4})(.{4})/, '$1-$2-$3'); safeLocalSetKey('dgeras_pc_id', v); }
+    __machineId = v;
+  }
+  return __machineId;
+}
+function machineTag(id){
+  const hex = (id||'').replace(/[^0-9a-fA-F]/g,'').toUpperCase();
+  if(hex.length !== 12) return null;
+  const b = new Uint8Array(6);
+  for(let i=0;i<6;i++) b[i] = parseInt(hex.substr(i*2,2),16);
+  return b;
+}
+
+async function fxVerifyKey(raw){
+  const code = (raw||'').trim().replace(/\s+/g,'');
+  if(!code.startsWith(FX_KEY_PREFIX)) return { ok:false, reason:'format' };
+  let bytes;
+  try{ bytes = fxB64.dec(code.slice(FX_KEY_PREFIX.length)); }catch(e){ return { ok:false, reason:'format' }; }
+  if(bytes.length !== 81 || bytes[0] !== 1) return { ok:false, reason:'format' };
+  if(!(window.crypto && crypto.subtle)) return { ok:false, reason:'nocrypto' };
+  let valid = false;
+  try{
+    const key = await crypto.subtle.importKey('jwk', FX_PUB, { name:'ECDSA', namedCurve:'P-256' }, false, ['verify']);
+    valid = await crypto.subtle.verify({ name:'ECDSA', hash:'SHA-256' }, key, bytes.slice(17), bytes.slice(0,17));
+  }catch(e){ return { ok:false, reason:'nocrypto' }; }
+  if(!valid) return { ok:false, reason:'signature' };
+  const dv = new DataView(bytes.buffer, bytes.byteOffset);
+  const tag = bytes.slice(11,17);
+  return { ok:true, code, days: dv.getUint16(1), issuedAt: dv.getUint32(3) * 1000, serial: fxHex(bytes.slice(7,11)), bound: tag.some(b => b !== 0), tagHex: fxHex(tag) };
+}
+
+async function fxSignKey(days, tag){
+  const jwk = getMasterJwk();
+  if(!jwk) throw new Error('Importe a chave mestra antes de gerar keys.');
+  const key = await crypto.subtle.importKey('jwk', jwk, { name:'ECDSA', namedCurve:'P-256' }, false, ['sign']);
+  const payload = new Uint8Array(17);
+  const dv = new DataView(payload.buffer);
+  payload[0] = 1;
+  dv.setUint16(1, days);
+  dv.setUint32(3, Math.floor(Date.now()/1000));
+  crypto.getRandomValues(payload.subarray(7,11));
+  if(tag) payload.set(tag, 11);
+  const sig = new Uint8Array(await crypto.subtle.sign({ name:'ECDSA', hash:'SHA-256' }, key, payload));
+  const all = new Uint8Array(81);
+  all.set(payload, 0); all.set(sig, 17);
+  return FX_KEY_PREFIX + fxB64.enc(all);
+}
+
+async function importMasterKey(text){
+  let jwk;
+  try{ jwk = JSON.parse(text); }catch(e){ throw new Error('Esse texto não é uma chave mestra válida.'); }
+  if(!jwk || jwk.kty !== 'EC' || jwk.crv !== 'P-256' || !jwk.d) throw new Error('Esse texto não é uma chave mestra válida.');
+  if(jwk.x !== FX_PUB.x || jwk.y !== FX_PUB.y) throw new Error('Essa chave mestra não pertence a este app.');
+  const clean = { kty:jwk.kty, crv:jwk.crv, x:jwk.x, y:jwk.y, d:jwk.d };
+  await crypto.subtle.importKey('jwk', clean, { name:'ECDSA', namedCurve:'P-256' }, false, ['sign']);
+  safeLocalSetKey('dgeras_master_key', JSON.stringify(clean));
+}
+
+function generateKeyCode(){ return ''; } // legado (não usado mais)
+
+async function copyText(text){
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){ await navigator.clipboard.writeText(text); return true; }
+  }catch(e){}
+  try{ const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); const ok=document.execCommand('copy'); ta.remove(); return ok; }catch(e){ return false; }
+}
+function flashBtn(btn, txt){ const old = btn.textContent; btn.textContent = txt; setTimeout(()=>{ btn.textContent = old; }, 1300); }
+
+function ksShortKey(code){ return code.length > 34 ? code.slice(0,14) + '…' + code.slice(-8) : code; }
+
+function renderOwnerStats(){
+  const set = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+  const users = Object.values(getUsers());
+  set('ksStatKeys', getKeys().length);
+  set('ksStatUsers', users.length);
+  set('ksStatOnline', users.filter(isOnline).length);
+  set('ksStatPaid', users.filter(a => a.plan === 'paid' && a.expiresAt && a.expiresAt > Date.now()).length);
+}
+
+function renderMasterStatus(){
+  const box = document.getElementById('ksMaster');
+  if(!box) return;
+  const has = !!getMasterJwk();
+  box.className = 'ks-master' + (has ? ' ok' : '');
+  box.innerHTML = `<i></i><span>${has ? 'Chave mestra carregada neste PC' : 'Chave mestra não encontrada neste PC'}</span>`;
+  const imp = document.getElementById('ksImportWrap');
+  const bak = document.getElementById('ksBackupBtn');
+  if(imp) imp.hidden = has;
+  if(bak) bak.hidden = !has;
+  const gen = document.getElementById('genKeyBtn');
+  if(gen) gen.disabled = !has;
 }
 
 function renderGenKeys(){
   const list = document.getElementById('genKeysList');
   if(!list) return;
-  const keys = getKeys().sort((a,b)=> b.createdAt - a.createdAt);
-  document.getElementById('genKeyCount').textContent = keys.length;
-  if(keys.length === 0){
-    list.innerHTML = '<div class="admin-empty">Nenhuma key gerada ainda.</div>';
-    return;
-  }
-  list.innerHTML = keys.map(k=>{
-    const statusLabel = k.used ? `usada por ${k.usedBy||'?'}` : 'disponível';
-    const statusClass = k.used ? '' : 'paid';
-    return `<div class="admin-user-row" data-code="${k.code}">
-      <div class="u-info">
-        <div class="u-name" style="font-family:monospace;letter-spacing:.03em;">${k.code}</div>
-        <div class="u-meta">${k.days} dias · gerada em ${new Date(k.createdAt).toLocaleDateString('pt-BR')} · ${statusLabel}</div>
-      </div>
-      <span class="u-plan ${statusClass}">${k.used?'Usada':'Livre'}</span>
-      <div class="admin-row-actions">
-        <button type="button" class="admin-btn-revoke" data-action="copy">Copiar</button>
-        <button type="button" class="admin-btn-delete" data-action="delete-key">Excluir</button>
+  const q = (document.getElementById('ksKeySearch')?.value || '').trim().toLowerCase();
+  const all = getKeys().sort((a,b)=> b.createdAt - a.createdAt);
+  const cnt = document.getElementById('genKeyCount'); if(cnt) cnt.textContent = all.length;
+  const keys = q ? all.filter(k => (k.code + ' ' + k.days + ' ' + (k.machine||'') + ' ' + (k.usedBy||'')).toLowerCase().includes(q)) : all;
+  renderOwnerStats();
+  if(all.length === 0){ list.innerHTML = '<div class="ks-empty">Nenhuma key emitida ainda. Gere a primeira no quadro acima.</div>'; return; }
+  if(keys.length === 0){ list.innerHTML = '<div class="ks-empty">Nenhuma key encontrada nessa busca.</div>'; return; }
+  list.innerHTML = keys.map(k => {
+    const signed = !!k.signed;
+    const pill = k.used ? `<span class="ks-pill warn">Usada neste PC</span>` : signed ? `<span class="ks-pill info">Emitida</span>` : `<span class="ks-pill">Antiga</span>`;
+    const where = signed ? (k.machine ? `só no PC ${ksEsc(k.machine)}` : 'qualquer PC') : 'só neste PC (key antiga)';
+    return `<div class="ks-row" data-code="${ksEsc(k.code)}">
+      <div class="ks-main"><b><code title="${ksEsc(k.code)}">${signed && k.serial ? 'FX1 · ' + ksEsc(k.serial) : ksEsc(ksShortKey(k.code))}</code></b>
+        <span>${k.days} dias · emitida em ${new Date(k.createdAt).toLocaleDateString('pt-BR')} · ${where}${k.used && k.usedBy ? ' · por ' + ksEsc(k.usedBy) : ''}</span></div>
+      ${pill}
+      <div class="ks-actions">
+        <button type="button" class="ks-btn sm" data-action="copy">Copiar</button>
+        <button type="button" class="ks-btn sm danger" data-action="delete-key">Excluir</button>
       </div>
     </div>`;
   }).join('');
-
-  list.querySelectorAll('.admin-user-row').forEach(row=>{
+  list.querySelectorAll('.ks-row').forEach(row => {
     const code = row.dataset.code;
-    row.querySelector('[data-action="copy"]').addEventListener('click', (e)=>{
-      const btn = e.currentTarget;
-      const done = ()=>{ const old = btn.textContent; btn.textContent='Copiado!'; setTimeout(()=>btn.textContent=old, 1200); };
-      if(navigator.clipboard && navigator.clipboard.writeText){
-        navigator.clipboard.writeText(code).then(done).catch(()=>{
-          const ta=document.createElement('textarea'); ta.value=code; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done();
-        });
-      } else {
-        const ta=document.createElement('textarea'); ta.value=code; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done();
-      }
+    row.querySelector('[data-action="copy"]').addEventListener('click', async e => {
+      const ok = await copyText(code); flashBtn(e.currentTarget, ok ? 'Copiado!' : 'Falhou');
     });
-    row.querySelector('[data-action="delete-key"]').addEventListener('click', ()=>{
-      const keys2 = getKeys().filter(k=>k.code!==code);
-      saveKeys(keys2);
-      renderGenKeys();
+    const del = row.querySelector('[data-action="delete-key"]');
+    del.addEventListener('click', () => {
+      if(del.dataset.confirm === '1'){ saveKeys(getKeys().filter(k => k.code !== code)); renderGenKeys(); return; }
+      del.dataset.confirm = '1'; del.textContent = 'Confirmar?';
+      setTimeout(() => { del.dataset.confirm = ''; del.textContent = 'Excluir'; }, 3000);
     });
   });
 }
@@ -3300,63 +3472,143 @@ function bindGenKeyForm(){
   const btn = document.getElementById('genKeyBtn');
   if(!btn || btn.dataset.bound) return;
   btn.dataset.bound = '1';
-  btn.addEventListener('click', ()=>{
-    const days = parseInt(document.getElementById('genKeyDays').value,10) || 30;
-    const keys = getKeys();
-    let code;
-    do{ code = generateKeyCode(); } while(keys.some(k=>k.code===code));
-    keys.push({ code, days, createdAt: Date.now(), used:false, usedBy:null });
-    saveKeys(keys);
-    renderGenKeys();
+
+  // período (botões de seleção)
+  const seg = document.getElementById('genKeySeg');
+  const hidden = document.getElementById('genKeyDays');
+  seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    hidden.value = b.dataset.days;
+  }));
+
+  const note = document.getElementById('genKeyNote');
+  const setNote = (cls, txt) => { note.hidden = !txt; note.className = 'ks-note ' + cls; note.textContent = txt || ''; };
+
+  btn.addEventListener('click', async () => {
+    setNote('', '');
+    const days = parseInt(hidden.value, 10) || 30;
+    const qty = parseInt(document.getElementById('genKeyQty').value, 10) || 1;
+    const pcRaw = document.getElementById('genKeyPc').value.trim();
+    let tag = null;
+    if(pcRaw){
+      tag = machineTag(pcRaw);
+      if(!tag){ setNote('err', 'ID do PC inválido. Use o formato XXXX-XXXX-XXXX (o cliente copia ele no app, no campo "ID deste PC").'); return; }
+    }
+    if(!(window.crypto && crypto.subtle)){ setNote('err', 'Este sistema não suporta a geração segura de keys.'); return; }
+    btn.disabled = true;
+    try{
+      const keys = getKeys();
+      const made = [];
+      for(let i=0;i<qty;i++){
+        const code = await fxSignKey(days, tag);
+        const v = await fxVerifyKey(code);
+        keys.push({ code, days, createdAt: Date.now(), signed:true, serial: v.serial, machine: tag ? fxHex(tag).replace(/(.{4})(.{4})(.{4})/, '$1-$2-$3') : null, used:false, usedBy:null });
+        made.push(code);
+      }
+      saveKeys(keys);
+      renderGenKeys();
+      const box = document.getElementById('genKeyMade');
+      box.hidden = false;
+      box.innerHTML = `<div class="ks-made-top"><span>${made.length} key${made.length>1?'s':''} gerada${made.length>1?'s':''} · ${days} dias${tag ? ' · vinculada a 1 PC' : ''}</span><button type="button" class="ks-btn sm" id="genKeyCopyAll">Copiar ${made.length>1?'todas':'key'}</button></div>` + made.map(c => `<code>${ksEsc(c)}</code>`).join('');
+      document.getElementById('genKeyCopyAll').addEventListener('click', async e => { const ok = await copyText(made.join('\n')); flashBtn(e.currentTarget, ok ? 'Copiado!' : 'Falhou'); });
+    }catch(err){
+      setNote('err', err.message || 'Não consegui gerar a key.');
+    }
+    btn.disabled = false;
+    renderMasterStatus();
   });
 
+  // chave mestra
+  document.getElementById('ksImportBtn').addEventListener('click', async () => {
+    const ta = document.getElementById('ksImportText');
+    const msg = document.getElementById('ksMasterNote');
+    msg.hidden = false;
+    try{
+      await importMasterKey(ta.value.trim());
+      ta.value = '';
+      msg.className = 'ks-note ok'; msg.textContent = 'Chave mestra importada. Já pode gerar keys neste PC.';
+      renderMasterStatus();
+    }catch(err){ msg.className = 'ks-note err'; msg.textContent = err.message || 'Não consegui importar.'; }
+  });
+  document.getElementById('ksBackupBtn').addEventListener('click', async e => {
+    const ok = await copyText(safeLocalGetKey('dgeras_master_key') || '');
+    flashBtn(e.currentTarget, ok ? 'Backup copiado!' : 'Falhou');
+  });
+
+  // verificar key
   const checkBtn = document.getElementById('checkKeyBtn');
-  if(checkBtn && !checkBtn.dataset.bound){
-    checkBtn.dataset.bound = '1';
-    checkBtn.addEventListener('click', ()=>{
-      const raw = document.getElementById('checkKeyInput').value.trim().replace(/\s+/g,'');
-      const msg = document.getElementById('checkKeyMsg');
-      msg.hidden = false;
-      const totalKeys = getKeys().length;
-      if(!raw){ msg.textContent = `Digite uma key. (Total de keys salvas nesse navegador: ${totalKeys})`; return; }
-      const found = getKeys().find(k => k.code.toLowerCase() === raw.toLowerCase());
-      if(!found){
-        msg.textContent = `❌ Essa key NÃO existe nesse navegador. (Total de keys salvas aqui: ${totalKeys}). Ela foi gerada em outro arquivo/computador.`;
-      } else if(found.used){
-        msg.textContent = `⚠️ Essa key existe mas já foi usada por "${found.usedBy}".`;
-      } else {
-        msg.textContent = `✅ Key encontrada e livre! Código real salvo: ${found.code} · ${found.days} dias.`;
-      }
-    });
-  }
+  checkBtn.addEventListener('click', async () => {
+    const raw = document.getElementById('checkKeyInput').value.trim().replace(/\s+/g,'');
+    const msg = document.getElementById('checkKeyMsg');
+    msg.hidden = false;
+    if(!raw){ msg.className = 'ks-note warn'; msg.textContent = 'Cole uma key pra conferir.'; return; }
+    if(raw.startsWith(FX_KEY_PREFIX)){
+      const v = await fxVerifyKey(raw);
+      if(!v.ok){ msg.className = 'ks-note err'; msg.textContent = v.reason === 'signature' ? 'Assinatura inválida: essa key NÃO foi emitida por você (ou foi alterada).' : 'Formato inválido: a key está cortada ou incompleta.'; return; }
+      const used = getRedeemed().includes(v.serial);
+      msg.className = 'ks-note ' + (used ? 'warn' : 'ok');
+      msg.textContent = `${used ? 'Válida, mas já foi usada neste PC' : 'Válida'} · ${v.days} dias · emitida em ${new Date(v.issuedAt).toLocaleDateString('pt-BR')} · ${v.bound ? 'vinculada ao PC ' + v.tagHex.replace(/(.{4})(.{4})(.{4})/, '$1-$2-$3') : 'serve em qualquer PC'}.`;
+      return;
+    }
+    const found = getKeys().find(k => k.code.toLowerCase() === raw.toLowerCase());
+    if(!found){ msg.className = 'ks-note err'; msg.textContent = 'Key não reconhecida. Keys novas começam com "FX1." — keys antigas só existem no PC onde foram geradas.'; }
+    else if(found.used){ msg.className = 'ks-note warn'; msg.textContent = `Key antiga, já usada por "${found.usedBy}".`; }
+    else { msg.className = 'ks-note ok'; msg.textContent = `Key antiga encontrada e livre (${found.days} dias). Ela só funciona neste PC.`; }
+  });
+
+  document.getElementById('ksKeySearch').addEventListener('input', renderGenKeys);
+  renderMasterStatus();
 }
 
 /* ---------- resgate de key pelo cliente ---------- */
-function redeemKey(codeRaw){
-  const code = (codeRaw||'').trim().replace(/\s+/g,'');
-  if(!code) return { ok:false, msg:'Digite uma key.' };
-  const keys = getKeys();
-  const key = keys.find(k=>k.code.toLowerCase() === code.toLowerCase());
-  if(!key) return { ok:false, msg:`Key inválida. (Esse navegador tem ${keys.length} key(s) salva(s) no total). Confira se é o mesmo navegador/janela onde a key foi gerada — janelas anônimas/privadas ou outro navegador não compartilham essa informação.` };
-  if(key.used) return { ok:false, msg:'Essa key já foi usada.' };
-
-  const u = safeSessionGet('dgeras_active_user');
-  if(!u) return { ok:false, msg:'Faça login antes de usar uma key.' };
+function applyPaidDays(username, days){
   const users = getUsers();
-  const acc = users[u];
-  if(!acc) return { ok:false, msg:'Conta não encontrada.' };
-
+  const acc = users[username];
+  if(!acc) return false;
   const base = (acc.plan==='paid' && acc.expiresAt && acc.expiresAt>Date.now()) ? acc.expiresAt : Date.now();
   acc.plan = 'paid';
   acc.requestedPaid = false;
-  acc.expiresAt = base + key.days*24*60*60*1000;
-  users[u] = acc;
+  acc.expiresAt = base + days*24*60*60*1000;
+  users[username] = acc;
   saveUsers(users);
+  return acc;
+}
 
-  key.used = true;
-  key.usedBy = acc.username;
-  saveKeys(keys);
+async function redeemKey(codeRaw){
+  const code = (codeRaw||'').trim().replace(/\s+/g,'');
+  if(!code) return { ok:false, msg:'Digite uma key.' };
+  const u = safeSessionGet('dgeras_active_user');
 
+  if(code.startsWith(FX_KEY_PREFIX)){
+    const v = await fxVerifyKey(code);
+    if(!v.ok){
+      if(v.reason === 'nocrypto') return { ok:false, msg:'Este sistema não conseguiu verificar a key. Atualize o app e tente de novo.' };
+      return { ok:false, msg:'Key inválida. Confira se copiou ela inteira, sem cortar o começo ("FX1.") nem o final.' };
+    }
+    if(v.bound){
+      const mine = machineTag(await getMachineId());
+      if(!mine || fxHex(mine) !== v.tagHex) return { ok:false, msg:'Essa key foi feita pra outro PC. Peça ao vendedor uma key com o ID deste computador (aparece logo abaixo, em "ID deste PC").' };
+    }
+    const used = getRedeemed();
+    if(used.includes(v.serial)) return { ok:false, msg:'Essa key já foi usada neste PC.' };
+    if(!u) return { ok:false, msg:'Faça login antes de usar uma key.' };
+    const acc = applyPaidDays(u, v.days);
+    if(!acc) return { ok:false, msg:'Conta não encontrada.' };
+    used.push(v.serial); saveRedeemed(used);
+    const keys = getKeys(); const mine = keys.find(k => k.serial === v.serial);
+    if(mine){ mine.used = true; mine.usedBy = acc.username; saveKeys(keys); }
+    return { ok:true, msg:`Key ativada! Plano Pago liberado por ${v.days} dias.` };
+  }
+
+  // keys antigas (guardadas só no navegador onde foram geradas)
+  const keys = getKeys();
+  const key = keys.find(k => k.code.toLowerCase() === code.toLowerCase());
+  if(!key) return { ok:false, msg:'Key inválida. Confira se copiou ela inteira (keys novas começam com "FX1.").' };
+  if(key.used) return { ok:false, msg:'Essa key já foi usada.' };
+  if(!u) return { ok:false, msg:'Faça login antes de usar uma key.' };
+  const acc = applyPaidDays(u, key.days);
+  if(!acc) return { ok:false, msg:'Conta não encontrada.' };
+  key.used = true; key.usedBy = acc.username; saveKeys(keys);
   return { ok:true, msg:`Key ativada! Plano Pago liberado por ${key.days} dias.` };
 }
 
@@ -5999,74 +6251,108 @@ TAB_GROUPS.forEach(group => {
     <div class="panel-head">
       <div class="panel-head-left">
         <div class="panel-icon-badge admin-icon-badge">${lineIcon(keyLine())}</div>
-        <div><h2>Keys · Painel do Dono</h2><p class="panel-desc">Cadastre clientes, aprove pedidos de plano pago e acompanhe quem está online.</p></div>
+        <div><h2>Keys · Painel do Dono</h2><p class="panel-desc">Gere keys, libere planos e acompanhe as contas.</p></div>
       </div>
     </div>
 
-    <div class="admin-section">
-      <div class="admin-section-head">
-        <div class="admin-section-title">${lineIcon(keyLine())}<h3>Gerar key</h3></div>
-        <span class="admin-section-sub">Cria um código de ativação pra vender/repassar</span>
-      </div>
-      <div class="admin-new-row">
-        <select id="genKeyDays" class="login-input">
-          <option value="7">7 dias</option>
-          <option value="30" selected>30 dias (mensal)</option>
-          <option value="90">90 dias (trimestral)</option>
-          <option value="365">365 dias (anual)</option>
-        </select>
-        <button type="button" id="genKeyBtn" class="login-btn admin-btn-solid" style="margin:0;">+ Gerar key</button>
-      </div>
+    <div class="ks-stats">
+      <div class="ks-stat"><span>Keys emitidas</span><b id="ksStatKeys">0</b></div>
+      <div class="ks-stat"><span>Contas neste PC</span><b id="ksStatUsers">0</b></div>
+      <div class="ks-stat"><span>Online agora</span><b id="ksStatOnline">0</b></div>
+      <div class="ks-stat"><span>Planos pagos ativos</span><b id="ksStatPaid">0</b></div>
     </div>
 
-    <div class="admin-section">
-      <div class="admin-list-head">
-        <div class="admin-section-title" style="margin:0;">${lineIcon(keyLine())}<h3 style="margin:0;">Keys geradas</h3><span class="acc-badge">${'<span id="genKeyCount">0</span>'}</span></div>
-      </div>
-      <div id="genKeysList" class="admin-users"></div>
+    <div class="ks-grid">
+      <section class="ks-card">
+        <div class="ks-head"><div><h3>${lineIcon(keyLine())}Gerar key</h3><p>A key funciona em qualquer PC — quem recebe só cola em "Tenho uma key". Nada fica preso a este computador.</p></div></div>
+        <div class="ks-field">
+          <span class="ks-label">Período</span>
+          <input type="hidden" id="genKeyDays" value="30">
+          <div class="ks-seg" id="genKeySeg">
+            <button type="button" data-days="7">7 dias<small>semanal</small></button>
+            <button type="button" data-days="30" class="on">30 dias<small>mensal</small></button>
+            <button type="button" data-days="90">90 dias<small>trimestral</small></button>
+            <button type="button" data-days="365">365 dias<small>anual</small></button>
+          </div>
+        </div>
+        <div class="ks-field">
+          <div class="ks-row2">
+            <div><span class="ks-label">Quantidade</span>
+              <select id="genKeyQty" class="ks-in"><option value="1">1 key</option><option value="5">5 keys</option><option value="10">10 keys</option></select></div>
+            <div><span class="ks-label">ID do PC do cliente <small style="font-weight:600;opacity:.7">(opcional)</small></span>
+              <input type="text" id="genKeyPc" class="ks-in mono" placeholder="XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false"></div>
+          </div>
+          <p class="ks-hint">Com o ID do PC preenchido, a key só funciona naquele computador — impede o cliente de repassar. O cliente copia o ID no app, na caixa "Tenho uma key".</p>
+        </div>
+        <button type="button" id="genKeyBtn" class="ks-btn primary wide">Gerar key</button>
+        <div id="genKeyNote" class="ks-note" hidden></div>
+        <div id="genKeyMade" class="ks-made" hidden></div>
+      </section>
+
+      <section class="ks-card">
+        <div class="ks-head"><div><h3>${lineIcon(shieldLine())}Chave mestra</h3><p>É ela que assina as keys. Fica só no seu PC e nunca vai pro app dos clientes.</p></div></div>
+        <div id="ksMaster" class="ks-master"><i></i><span>Verificando...</span></div>
+        <div id="ksImportWrap" hidden>
+          <p class="ks-hint">Cole aqui a chave mestra que você guardou (texto que começa com <b>{"kty":"EC"</b>).</p>
+          <textarea id="ksImportText" class="ks-in mono" placeholder='{"kty":"EC","crv":"P-256",...}' spellcheck="false"></textarea>
+          <button type="button" id="ksImportBtn" class="ks-btn wide" style="margin-top:8px;">Importar chave mestra</button>
+        </div>
+        <button type="button" id="ksBackupBtn" class="ks-btn wide" style="margin-top:10px;" hidden>Copiar backup da chave</button>
+        <div id="ksMasterNote" class="ks-note" hidden></div>
+        <p class="ks-hint">Guarde uma cópia em lugar seguro. Quem tiver essa chave consegue gerar keys.</p>
+      </section>
     </div>
 
-    <div class="admin-section">
-      <div class="admin-section-head">
-        <div class="admin-section-title">${lineIcon(shieldLine())}<h3>Verificar key</h3></div>
-        <span class="admin-section-sub">Diagnóstico — confere se uma key existe e o status dela</span>
+    <section class="ks-card">
+      <div class="ks-head">
+        <div><h3>${lineIcon(keyLine())}Keys emitidas <span class="ks-count" id="genKeyCount">0</span></h3>
+          <p>O app não sabe se uma key foi usada em outro PC — "Usada" aparece só quando foi ativada aqui.</p></div>
       </div>
-      <div class="admin-new-row">
-        <input type="text" id="checkKeyInput" class="login-input" placeholder="Cole a key aqui pra checar" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false">
-        <button type="button" id="checkKeyBtn" class="login-btn login-btn-secondary" style="margin:0;">Checar</button>
+      <div class="ks-search"><input type="text" id="ksKeySearch" class="ks-in" placeholder="Buscar key, dias ou PC..." autocomplete="off"></div>
+      <div id="genKeysList" class="ks-list"></div>
+    </section>
+
+    <section class="ks-card">
+      <div class="ks-head"><div><h3>${lineIcon(shieldLine())}Verificar key</h3><p>Cole uma key pra ver se é verdadeira, quantos dias tem e se está presa a algum PC.</p></div></div>
+      <div class="ks-search" style="margin-bottom:0;">
+        <input type="text" id="checkKeyInput" class="ks-in mono" placeholder="Cole a key aqui" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false">
+        <button type="button" id="checkKeyBtn" class="ks-btn">Verificar</button>
       </div>
-      <p id="checkKeyMsg" class="login-error" hidden></p>
+      <div id="checkKeyMsg" class="ks-note" hidden></div>
+    </section>
+
+    <div class="ks-grid">
+      <section class="ks-card">
+        <div class="ks-head"><div><h3>${lineIcon(personLine())}Novo cliente</h3><p>Cadastro manual: cria a conta aqui neste PC, sem key.</p></div></div>
+        <div class="ks-field"><div class="ks-row2" style="grid-template-columns:1fr 1fr;">
+          <div><span class="ks-label">Usuário</span><input type="text" id="adminNewUser" class="ks-in" placeholder="Usuário"></div>
+          <div><span class="ks-label">Senha</span><input type="text" id="adminNewPass" class="ks-in" placeholder="Senha"></div>
+        </div></div>
+        <div class="ks-field"><span class="ks-label">Plano</span>
+          <select id="adminNewPlan" class="ks-in">
+            <option value="0">Grátis</option>
+            <option value="7">Pago · 7 dias</option>
+            <option value="30" selected>Pago · 30 dias (mensal)</option>
+            <option value="90">Pago · 90 dias (trimestral)</option>
+            <option value="365">Pago · 365 dias (anual)</option>
+          </select></div>
+        <button type="button" id="adminNewClientBtn" class="ks-btn primary wide">Cadastrar cliente</button>
+        <p class="login-error" id="adminNewError" hidden></p>
+      </section>
+      <section class="ks-card">
+        <div class="ks-head"><div><h3>${lineIcon(shieldLine())}Como funciona</h3></div></div>
+        <p class="ks-hint" style="margin-top:0;">1. Gere a key aqui e mande pro cliente.<br>2. Ele cola em <b>"Tenho uma key"</b> no app, em qualquer PC.<br>3. O app confere a assinatura e libera o plano — sem internet e sem servidor.<br><br>As contas e o "online" abaixo são só deste PC: cada computador guarda as suas próprias contas.</p>
+      </section>
     </div>
 
-    <div class="admin-section">
-      <div class="admin-section-head">
-        <div class="admin-section-title">${lineIcon(personLine())}<h3>Novo cliente</h3></div>
-        <span class="admin-section-sub">Cadastro manual direto, sem precisar de key</span>
+    <section class="ks-card">
+      <div class="ks-head">
+        <div><h3>${lineIcon(personLine())}Contas <span class="ks-count" id="adminUserCount">0</span></h3></div>
+        <span class="ks-legend"><i></i>online <i class="off"></i>offline</span>
       </div>
-      <div class="admin-new-row">
-        <input type="text" id="adminNewUser" class="login-input" placeholder="Usuário">
-        <input type="text" id="adminNewPass" class="login-input" placeholder="Senha">
-      </div>
-      <div class="admin-new-row">
-        <select id="adminNewPlan" class="login-input">
-          <option value="0">Grátis</option>
-          <option value="7">Pago · 7 dias</option>
-          <option value="30" selected>Pago · 30 dias (mensal)</option>
-          <option value="90">Pago · 90 dias (trimestral)</option>
-          <option value="365">Pago · 365 dias (anual)</option>
-        </select>
-        <button type="button" id="adminNewClientBtn" class="login-btn admin-btn-solid" style="margin:0;">Cadastrar</button>
-      </div>
-      <p class="login-error" id="adminNewError" hidden></p>
-    </div>
-
-    <div class="admin-section">
-      <div class="admin-list-head">
-        <div class="admin-section-title" style="margin:0;">${lineIcon(personLine())}<h3 style="margin:0;">Contas</h3><span class="acc-badge">${'<span id="adminUserCount">0</span>'}</span></div>
-        <span class="admin-legend"><i class="dot online"></i> online <i class="dot offline"></i> offline</span>
-      </div>
-      <div id="adminUsersList" class="admin-users"></div>
-    </div>
+      <div class="ks-search"><input type="text" id="ksUserSearch" class="ks-in" placeholder="Buscar conta..." autocomplete="off"></div>
+      <div id="adminUsersList" class="ks-list"></div>
+    </section>
   `;
   panelsEl.appendChild(panel);
 
@@ -6074,6 +6360,7 @@ TAB_GROUPS.forEach(group => {
   bindAdminNewClientForm();
   bindGenKeyForm();
   renderGenKeys();
+  document.getElementById('ksUserSearch').addEventListener('input', () => { if(typeof renderAdminUsers === 'function') renderAdminUsers(); });
 })();
 
 function updateOwnerTabVisibility(){
