@@ -3343,6 +3343,25 @@ fn dns_measure(ip: &str) -> Option<f64> {
     Some(times[times.len() / 2])
 }
 
+/// Mede UM provedor (o front chama um por vez pra animar o teste).
+#[tauri::command]
+async fn dns_probe_provider(id: String) -> Result<DnsBenchResult, String> {
+    let found = DNS_PROVIDERS.iter().find(|p| p.0 == id.as_str()).copied();
+    let (pid, name, primary, secondary) = found.ok_or_else(|| "Provedor desconhecido".to_string())?;
+    tauri::async_runtime::spawn_blocking(move || -> Result<DnsBenchResult, String> {
+        let ms = dns_measure(primary).or_else(|| dns_measure(secondary));
+        Ok(DnsBenchResult {
+            id: pid.to_string(),
+            name: name.to_string(),
+            primary: primary.to_string(),
+            secondary: secondary.to_string(),
+            ms: ms.map(|m| (m * 10.0).round() / 10.0),
+        })
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
 /// Mede a latência real de cada provedor (mediana de 5 consultas).
 #[tauri::command]
 async fn dns_benchmark() -> Result<Vec<DnsBenchResult>, String> {
@@ -3374,39 +3393,72 @@ async fn dns_benchmark() -> Result<Vec<DnsBenchResult>, String> {
     .map_err(|e| format!("Falha interna: {e}"))?
 }
 
-/// Roda um script PowerShell elevado (pede UAC). Códigos: 0 ok, 1 falhou, 99 permissão negada.
+/// Roda um script PowerShell elevado (pede UAC) e repassa pro front, em tempo
+/// real, cada marcador que o script grava ("started", "applied", ...).
+/// Códigos de saída: 0 ok, 1 falhou, 99 permissão negada.
 #[cfg(target_os = "windows")]
-fn dns_run_elevated(script: &str) -> Result<i32, String> {
-    let path = std::env::temp_dir().join(format!("dgeras-dns-{}.ps1", uuid_like()));
-    fs::write(&path, script).map_err(|e| format!("Falha ao gravar script: {e}"))?;
-    let p = path.to_string_lossy().replace('\'', "''");
+fn dns_run_elevated(app: &tauri::AppHandle, script_body: &str) -> Result<i32, String> {
+    let id = uuid_like();
+    let tmp = std::env::temp_dir();
+    let script_path = tmp.join(format!("dgeras-dns-{id}.ps1"));
+    let prog_path = tmp.join(format!("dgeras-dns-{id}.log"));
+    fs::write(&prog_path, "").map_err(|e| format!("Falha ao preparar a execução: {e}"))?;
+    let prog_ps = prog_path.to_string_lossy().replace('\'', "''");
+    let full = format!("$pf='{prog_ps}'\nfunction P($m){{ Add-Content -Path $pf -Value $m }}\n{script_body}");
+    // BOM UTF-8: o PowerShell 5 só lê acentos do caminho (ex.: C:\Users\João) direito com ele
+    let mut bytes: Vec<u8> = vec![0xEF, 0xBB, 0xBF];
+    bytes.extend_from_slice(full.as_bytes());
+    fs::write(&script_path, bytes).map_err(|e| format!("Falha ao gravar script: {e}"))?;
+    let sp = script_path.to_string_lossy().replace('\'', "''");
     let launcher = format!(
-        "try {{ $p = Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','\"{p}\"' -Verb RunAs -WindowStyle Hidden -Wait -PassThru -ErrorAction Stop; exit $p.ExitCode }} catch {{ exit 99 }}"
+        "try {{ $p = Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','\"{sp}\"' -Verb RunAs -WindowStyle Hidden -Wait -PassThru -ErrorAction Stop; exit $p.ExitCode }} catch {{ exit 99 }}"
     );
-    let out = Command::new("powershell")
+    let mut child = Command::new("powershell")
         .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &launcher])
         .creation_flags(CREATE_NO_WINDOW)
-        .output()
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
         .map_err(|e| format!("Falha ao pedir permissão: {e}"))?;
-    let _ = fs::remove_file(&path);
-    Ok(out.status.code().unwrap_or(1))
+    let mut seen = 0usize;
+    let emit_new = |seen: &mut usize| {
+        if let Ok(txt) = fs::read_to_string(&prog_path) {
+            let lines: Vec<&str> = txt.lines().map(|l| l.trim()).filter(|l| !l.is_empty()).collect();
+            while *seen < lines.len() {
+                let _ = app.emit("dns-progress", lines[*seen]);
+                *seen += 1;
+            }
+        }
+    };
+    let code = loop {
+        emit_new(&mut seen);
+        match child.try_wait() {
+            Ok(Some(st)) => break st.code().unwrap_or(1),
+            Ok(None) => std::thread::sleep(std::time::Duration::from_millis(120)),
+            Err(_) => break 1,
+        }
+    };
+    emit_new(&mut seen);
+    let _ = fs::remove_file(&script_path);
+    let _ = fs::remove_file(&prog_path);
+    Ok(code)
 }
 
 #[cfg(target_os = "windows")]
 fn dns_after_script(flush: bool, renew: bool) -> String {
     let mut s = String::new();
     if flush {
-        s.push_str("  Clear-DnsClientCache\n");
+        s.push_str("  Clear-DnsClientCache\n  P 'flushed'\n");
     }
     if renew {
-        s.push_str("  ipconfig /renew | Out-Null\n");
+        s.push_str("  ipconfig /renew | Out-Null\n  P 'renewed'\n");
     }
     s
 }
 
 /// Troca o DNS do adaptador ativo (só o DNS; reversível pro automático).
 #[tauri::command]
-async fn dns_apply(primary: String, secondary: String, flush: bool, renew: bool) -> Result<String, String> {
+async fn dns_apply(app: tauri::AppHandle, primary: String, secondary: String, flush: bool, renew: bool) -> Result<String, String> {
     let p: std::net::Ipv4Addr = primary.trim().parse().map_err(|_| "DNS primário inválido".to_string())?;
     let sec = secondary.trim().to_string();
     let s2: Option<std::net::Ipv4Addr> = if sec.is_empty() {
@@ -3425,11 +3477,11 @@ async fn dns_apply(primary: String, secondary: String, flush: bool, renew: bool)
                 Some(b) => format!("'{p}','{b}'"),
                 None => format!("'{p}'"),
             };
-            let mut script = String::from("$ErrorActionPreference='Stop'\ntry {\n");
-            script.push_str(&format!("  Set-DnsClientServerAddress -InterfaceIndex {} -ServerAddresses ({addrs})\n", ov.if_index));
+            let mut script = String::from("$ErrorActionPreference='Stop'\ntry {\n  P 'started'\n");
+            script.push_str(&format!("  Set-DnsClientServerAddress -InterfaceIndex {} -ServerAddresses ({addrs})\n  P 'applied'\n", ov.if_index));
             script.push_str(&dns_after_script(flush, renew));
             script.push_str("  exit 0\n} catch { exit 1 }\n");
-            match dns_run_elevated(&script)? {
+            match dns_run_elevated(&app, &script)? {
                 0 => Ok(format!("DNS alterado para {p} em \"{}\"", ov.alias)),
                 99 => Err("Permissão de administrador negada — nada foi alterado".to_string()),
                 _ => Err("O Windows recusou a troca de DNS".to_string()),
@@ -3437,7 +3489,7 @@ async fn dns_apply(primary: String, secondary: String, flush: bool, renew: bool)
         }
         #[cfg(not(target_os = "windows"))]
         {
-            let _ = (p, s2, flush, renew);
+            let _ = (&app, p, s2, flush, renew);
             Err("Disponível apenas no Windows".to_string())
         }
     })
@@ -3447,7 +3499,7 @@ async fn dns_apply(primary: String, secondary: String, flush: bool, renew: bool)
 
 /// Volta o DNS do adaptador ativo pro automático (DHCP).
 #[tauri::command]
-async fn dns_restore(flush: bool) -> Result<String, String> {
+async fn dns_restore(app: tauri::AppHandle, flush: bool) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
         #[cfg(target_os = "windows")]
         {
@@ -3455,11 +3507,11 @@ async fn dns_restore(flush: bool) -> Result<String, String> {
             if !ov.connected || ov.if_index == 0 {
                 return Err("Nenhuma conexão ativa encontrada".to_string());
             }
-            let mut script = String::from("$ErrorActionPreference='Stop'\ntry {\n");
-            script.push_str(&format!("  Set-DnsClientServerAddress -InterfaceIndex {} -ResetServerAddresses\n", ov.if_index));
+            let mut script = String::from("$ErrorActionPreference='Stop'\ntry {\n  P 'started'\n");
+            script.push_str(&format!("  Set-DnsClientServerAddress -InterfaceIndex {} -ResetServerAddresses\n  P 'applied'\n", ov.if_index));
             script.push_str(&dns_after_script(flush, false));
             script.push_str("  exit 0\n} catch { exit 1 }\n");
-            match dns_run_elevated(&script)? {
+            match dns_run_elevated(&app, &script)? {
                 0 => Ok(format!("DNS de \"{}\" voltou pro automático (DHCP)", ov.alias)),
                 99 => Err("Permissão de administrador negada — nada foi alterado".to_string()),
                 _ => Err("O Windows recusou a restauração do DNS".to_string()),
@@ -3467,7 +3519,7 @@ async fn dns_restore(flush: bool) -> Result<String, String> {
         }
         #[cfg(not(target_os = "windows"))]
         {
-            let _ = flush;
+            let _ = (&app, flush);
             Err("Disponível apenas no Windows".to_string())
         }
     })
@@ -3490,7 +3542,7 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
         .manage(PdhState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_apply, dns_restore])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));

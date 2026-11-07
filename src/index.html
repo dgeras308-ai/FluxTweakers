@@ -2001,6 +2001,21 @@
   .dns-opt b u{text-decoration:none;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent);}
   .dns-opt b u.opt{color:var(--muted);background:color-mix(in srgb,var(--text) 8%,transparent);}
   .dns-opt span{display:block;margin-top:3px;font-size:12px;color:var(--muted);line-height:1.4;}
+  .dns-msg{margin-top:16px;display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--muted);min-height:18px;}
+  .dns-msg i{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);flex-shrink:0;}
+  .dns-msg.live i{animation:dnsblink 1s ease-in-out infinite;}
+  .dns-msg b{color:var(--text);font-weight:700;}
+  @keyframes dnsblink{50%{opacity:.25}}
+  .dns-row.pend{opacity:.5;}
+  .dns-row.pend .ms{color:var(--muted);}
+  .dns-row.run{border-color:color-mix(in srgb,var(--accent) 60%,transparent);background:color-mix(in srgb,var(--accent) 9%,transparent);}
+  .dns-row.run .dns-bar i{width:35% !important;background:linear-gradient(90deg,var(--accent),var(--accent2));animation:dnsscan 1s ease-in-out infinite;}
+  .dns-row.run .ms{color:var(--accent);font-size:12px;}
+  .dns-row.fresh{animation:dnspop .7s ease-out;}
+  .dns-row.fresh .dns-bar i{animation:dnsgrow .8s cubic-bezier(.2,.8,.2,1);}
+  @keyframes dnspop{0%{background:color-mix(in srgb,var(--ok) 22%,transparent);transform:scale(1.015)}100%{transform:none}}
+  @keyframes dnsgrow{from{width:0}}
+  .dns-node-cnt{max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   @media (max-width:1000px){.dns-hero,.dns-lower{grid-template-columns:1fr;}}
   .at-su{margin-top:20px;padding:18px;border-radius:16px;background:var(--item-bg);border:1px solid var(--item-border);}
   .at-su h3{margin:0 0 4px;font-size:14px;font-weight:700;color:var(--text);}
@@ -6467,7 +6482,7 @@ function renderPanel(catId){
   }
 
   if(catId === 'network'){
-    html += `<div id="dnsRoot"></div>`;
+    html += `<div class="dns-wrap"><div id="dnsHero"></div><div id="dnsPipeRoot"></div><div id="dnsLower"></div></div>`;
   }
 
   if(catId === 'power'){
@@ -6849,50 +6864,86 @@ const DNS_ICON = {
   eyeoff: '<svg viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 6.1A9.8 9.8 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4M6.5 6.8C3.8 8.6 2 12 2 12s3.5 7 10 7c1.6 0 3-.4 4.2-1M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>',
   check:  '<svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/></svg>',
 };
-const DNS = { overview:null, results:null, selected:null, flush:true, renew:false, testing:false, busy:false, hideIp:true, hideGw:true, error:'' };
+// ícones do pipeline do DNS (traços de 24px)
+const DNS_PIPE_SVG = {
+  click:  '<path d="M6 3l13 7-5.5 2L11 18z"/>',
+  net:    '<path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><path d="M12 19.5h.01"/>',
+  radar:  '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12l6-6"/>',
+  rank:   '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H4v1a3 3 0 0 0 4 3M16 6h4v1a3 3 0 0 1-4 3M12 13v4M8 21h8M10 17h4"/>',
+  lock:   '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  shield: '<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/>',
+  trash:  '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/>',
+  renew:  '<path d="M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.2L3 16M3 21v-5h5"/>',
+  verify: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  screen: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+  bolt:   '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+  check:  '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  cross:  '<path d="M6 6l12 12M18 6L6 18"/>',
+};
+const DNS_LIST = [
+  { id:'cloudflare',    name:'Cloudflare',    primary:'1.1.1.1',        secondary:'1.0.0.1' },
+  { id:'google',        name:'Google',        primary:'8.8.8.8',        secondary:'8.8.4.4' },
+  { id:'adguard',       name:'AdGuard',       primary:'94.140.14.14',   secondary:'94.140.15.15' },
+  { id:'opendns',       name:'OpenDNS',       primary:'208.67.222.222', secondary:'208.67.220.220' },
+  { id:'quad9',         name:'Quad9',         primary:'9.9.9.9',        secondary:'149.112.112.112' },
+  { id:'cleanbrowsing', name:'CleanBrowsing', primary:'185.228.168.9',  secondary:'185.228.169.9' },
+  { id:'controld',      name:'Control D',     primary:'76.76.2.0',      secondary:'76.76.10.0' },
+  { id:'dnssb',         name:'DNS.SB',        primary:'185.222.222.222',secondary:'45.11.45.11' },
+];
+const DNS_COUNT = DNS_LIST.length;
+const DNS = { overview:null, results:null, partial:{}, current:null, fresh:null, selected:null, flush:true, renew:false, testing:false, busy:false, hideIp:true, hideGw:true, error:'' };
+const dnsSleep = ms => new Promise(r => setTimeout(r, ms));
+const dnsPsvg = k => `<svg viewBox="0 0 24 24">${DNS_PIPE_SVG[k]}</svg>`;
 
 function dnsMs(v){ return v >= 100 ? Math.round(v) : (Math.round(v * 10) / 10).toString().replace('.', ','); }
+const dnsBarW = ms => Math.max(6, Math.round(100 / (1 + ms / 40)));
 
-function dnsRender(){
-  const root = document.getElementById('dnsRoot');
-  if (!root) return;
-  const ov = DNS.overview;
+function dnsStats(){
   const ok = (DNS.results || []).filter(r => r.ms != null).sort((a, b) => a.ms - b.ms);
   const best = ok[0] || null;
   const avg = ok.length ? ok.reduce((t, r) => t + r.ms, 0) / ok.length : 0;
-  const sel = (DNS.results || []).find(r => r.id === DNS.selected) || best;
-  const gain = best && avg ? avg / best.ms : 0;
-  const cur = ov && ov.dns ? ov.dns : [];
-  const curProv = (DNS.results || []).find(r => cur.includes(r.primary) || cur.includes(r.secondary));
+  return { ok, best, avg, gain: best && avg ? avg / best.ms : 0 };
+}
 
-  // --- hero ---
+function dnsRenderHero(){
+  const root = document.getElementById('dnsHero');
+  if (!root) return;
+  const ov = DNS.overview;
+  const { ok, best, avg, gain } = dnsStats();
+  const sel = (DNS.results || []).find(r => r.id === DNS.selected) || best;
+  const cur = ov && ov.dns ? ov.dns : [];
+  const curProv = DNS_LIST.find(r => cur.includes(r.primary) || cur.includes(r.secondary));
+  const gTxt = gain >= 10 ? Math.round(gain) : gain.toFixed(1).replace('.', ',');
+
   let head;
   if (DNS.testing){
     head = `<div class="dns-big">Testando provedores...</div>
-      <div class="dns-sub">Mandando consultas DNS de verdade pra cada provedor e medindo o tempo de resposta.</div>
+      <div class="dns-sub">Mandando consultas DNS de verdade pra cada provedor e medindo o tempo de resposta — acompanhe o passo a passo logo abaixo.</div>
       <div class="dns-scan"><i></i></div>`;
   } else if (best){
     head = `<div class="dns-big">${dnsMs(best.ms)} ms <small>no DNS mais rápido pra você</small></div>
-      <div class="dns-sub"><b>${DIAG_ESC(best.name)}</b> (${best.primary}) foi o mais rápido dos ${ok.length} testados${gain >= 1.3 ? ` — <em>${gain >= 10 ? Math.round(gain) : gain.toFixed(1).replace('.', ',')}× mais rápido</em> que a média` : ''}.${curProv ? ` Hoje você usa <b>${DIAG_ESC(curProv.name)}</b>.` : ''}</div>
+      <div class="dns-sub"><b>${DIAG_ESC(best.name)}</b> (${best.primary}) foi o mais rápido dos ${ok.length} testados${gain >= 1.3 ? ` — <em>${gTxt}× mais rápido</em> que a média` : ''}.${curProv ? ` Hoje você usa <b>${DIAG_ESC(curProv.name)}</b>.` : ''}</div>
       <div class="dns-compare">
         <div class="avg"><span>Média dos testados</span><b>${dnsMs(avg)} ms</b></div>
         <div class="arrow">→</div>
         <div class="best"><span>${DIAG_ESC(best.name)} (melhor)</span><b>${dnsMs(best.ms)} ms</b></div>
-        ${gain >= 1.3 ? `<div class="gain">${gain >= 10 ? Math.round(gain) : gain.toFixed(1).replace('.', ',')}× mais rápido</div>` : ''}
+        ${gain >= 1.3 ? `<div class="gain">${gTxt}× mais rápido</div>` : ''}
       </div>`;
   } else {
     head = `<div class="dns-big">Descubra o DNS mais rápido <small>pra sua internet</small></div>
       <div class="dns-sub">O DNS é a "lista telefônica" da internet: um DNS lento atrasa o carregamento de sites, lojas de jogos e matchmaking. Compare ${DNS_COUNT} provedores aqui, na sua rede, e troque em um clique.</div>`;
   }
-  const applyLabel = sel ? `Aplicar ${DIAG_ESC(sel.name)}` : 'Aplicar DNS';
   const connected = ov && ov.connected;
-  const hero = `<div class="dns-card dns-hero">
+  const locked = DNS.busy || DNS.testing;
+  const applyLabel = sel ? `Aplicar ${DIAG_ESC(sel.name)}` : 'Aplicar DNS';
+  root.innerHTML = `<div class="dns-card dns-hero">
     <div>
       <span class="dns-chip${ov && !connected ? ' off' : ''}"><i></i>${!ov ? 'Verificando...' : connected ? 'Conectado' : 'Sem conexão'}</span>
       ${head}
       <div class="dns-actions">
-        ${best ? `<button class="dns-btn primary" data-dns="apply" ${DNS.busy || !sel ? 'disabled' : ''}>${DNS_ICON.shield}${DNS.busy ? 'Aguardando permissão...' : applyLabel}</button>` : `<button class="dns-btn primary" data-dns="bench" ${DNS.testing ? 'disabled' : ''}>${DNS_ICON.pulse}${DNS.testing ? 'Analisando...' : 'Analisar DNS'}</button>`}
-        <button class="dns-btn" data-dns="restore" ${DNS.busy || !connected ? 'disabled' : ''}>${DNS_ICON.reset}Restaurar automático</button>
+        ${best && !DNS.testing ? `<button class="dns-btn primary" data-dns="apply" ${locked || !sel ? 'disabled' : ''}>${DNS_ICON.shield}${DNS.busy ? 'Aplicando...' : applyLabel}</button>` : `<button class="dns-btn primary" data-dns="bench" ${locked ? 'disabled' : ''}>${DNS_ICON.pulse}${DNS.testing ? 'Analisando...' : 'Analisar DNS'}</button>`}
+        <button class="dns-btn" data-dns="restore" ${locked || !connected ? 'disabled' : ''}>${DNS_ICON.reset}Restaurar automático</button>
       </div>
       <div class="dns-note">${DNS_ICON.check}<span>Muda só o DNS — reversível pro automático (DHCP) a qualquer hora.</span></div>
       ${DNS.error ? `<div class="dns-note" style="color:var(--off)"><span>${DIAG_ESC(DNS.error)}</span></div>` : ''}
@@ -6905,27 +6956,46 @@ function dnsRender(){
       <div class="dns-info-card wide"><span>DNS atual</span><b class="warn">${DIAG_ESC(cur.length ? cur.join(' / ') : '—')}</b><small>${ov ? (ov.auto_dns ? 'DHCP ativado' : 'Definido manualmente') : ''}</small></div>
     </div>
   </div>`;
+}
 
-  // --- ranking ---
-  const list = DNS.results ? [...ok, ...DNS.results.filter(r => r.ms == null)] : [];
-  const rows = list.length ? list.map((r, i) => {
-    const isBest = best && r.id === best.id;
-    const isSel = sel && r.id === sel.id && best;
+function dnsRowsHtml(){
+  const { ok, best } = dnsStats();
+  const sel = (DNS.results || []).find(r => r.id === DNS.selected) || best;
+  const cur = DNS.overview && DNS.overview.dns ? DNS.overview.dns : [];
+  const row = (r, rank, state, extra) => {
+    const isBest = state === 'done' && best && r.id === best.id && !DNS.testing;
+    const isSel = state === 'done' && sel && r.id === sel.id && !DNS.testing && !isBest;
     const isCur = cur.includes(r.primary);
-    const w = r.ms != null && best ? Math.max(8, Math.round(best.ms / r.ms * 100)) : 0;
-    return `<div class="dns-row${isBest ? ' best' : ''}${isSel && !isBest ? ' sel' : ''}">
-      <div class="rk">${i + 1}</div>
-      <div class="nm"><b>${DIAG_ESC(r.name)}</b><em>${r.primary} / ${r.secondary}</em>${isBest ? `<span class="dns-tag">⚡ Mais rápido</span>` : ''}${isCur ? `<span class="dns-tag cur">Em uso</span>` : ''}
-        <div class="dns-bar"><i style="width:${w}%"></i></div></div>
-      <div class="ms${r.ms == null ? ' fail' : ''}">${r.ms != null ? `${dnsMs(r.ms)}<small>ms</small>` : 'sem resposta'}</div>
-      <button class="dns-btn" data-dns="pick" data-id="${r.id}" ${r.ms == null ? 'disabled' : ''}>Escolher</button>
+    const done = state === 'done';
+    return `<div class="dns-row ${state === 'pend' ? 'pend' : state === 'run' ? 'run' : ''}${isBest ? ' best' : ''}${isSel ? ' sel' : ''}${extra || ''}" data-id="${r.id}">
+      <div class="rk">${DNS.testing || !done ? '·' : rank}</div>
+      <div class="nm"><b>${DIAG_ESC(r.name)}</b><em>${r.primary} / ${r.secondary}</em>${isBest ? '<span class="dns-tag">⚡ Mais rápido</span>' : ''}${isCur ? '<span class="dns-tag cur">Em uso</span>' : ''}
+        <div class="dns-bar"><i style="width:${done && r.ms != null ? dnsBarW(r.ms) : 0}%"></i></div></div>
+      <div class="ms${done && r.ms == null ? ' fail' : ''}">${state === 'run' ? 'medindo...' : state === 'pend' ? '—' : r.ms != null ? `${dnsMs(r.ms)}<small>ms</small>` : 'sem resposta'}</div>
+      <button class="dns-btn" data-dns="pick" data-id="${r.id}" ${!done || r.ms == null || DNS.testing ? 'disabled' : ''} style="${DNS.testing ? 'visibility:hidden' : ''}">Escolher</button>
     </div>`;
-  }).join('') : `<div class="dns-empty">${DNS.testing ? 'Medindo...' : 'Clique em "Analisar DNS" pra comparar os provedores na sua rede.'}</div>`;
+  };
+  if (DNS.testing){
+    return DNS_LIST.map(p => {
+      const r = DNS.partial[p.id];
+      if (r) return row(r, 0, 'done', DNS.fresh === p.id ? ' fresh' : '');
+      return row(p, 0, DNS.current === p.id ? 'run' : 'pend');
+    }).join('');
+  }
+  if (DNS.results){
+    const list = [...ok, ...DNS.results.filter(r => r.ms == null)];
+    return list.map((r, i) => row(r, i + 1, 'done', '')).join('');
+  }
+  return '<div class="dns-empty">Clique em "Analisar DNS" pra comparar os provedores na sua rede.</div>';
+}
 
-  const lower = `<div class="dns-lower">
+function dnsRenderLower(){
+  const root = document.getElementById('dnsLower');
+  if (!root) return;
+  root.innerHTML = `<div class="dns-lower">
     <div class="dns-card">
-      <div class="dns-card-head"><h3>Ranking de DNS</h3><button class="dns-btn" data-dns="bench" ${DNS.testing ? 'disabled' : ''}>${DNS_ICON.pulse}${DNS.testing ? 'Analisando...' : (DNS.results ? 'Analisar de novo' : 'Analisar DNS')}</button></div>
-      ${rows}
+      <div class="dns-card-head"><h3>Ranking de DNS</h3><button class="dns-btn" data-dns="bench" ${DNS.testing || DNS.busy ? 'disabled' : ''}>${DNS_ICON.pulse}${DNS.testing ? 'Analisando...' : (DNS.results ? 'Analisar de novo' : 'Analisar DNS')}</button></div>
+      <div id="dnsRows">${dnsRowsHtml()}</div>
     </div>
     <div class="dns-card">
       <div class="dns-card-head"><h3>Opções de aplicação</h3></div>
@@ -6935,65 +7005,243 @@ function dnsRender(){
         <label class="switch"><input type="checkbox" data-dns="renew" ${DNS.renew ? 'checked' : ''}><span class="track"></span><span class="thumb"></span></label></div>
     </div>
   </div>`;
-
-  root.innerHTML = `<div class="dns-wrap">${hero}${lower}</div>`;
 }
-const DNS_COUNT = 8;
+function dnsRender(){ dnsRenderHero(); dnsRenderLower(); }
+
+// reordena o ranking com animação (cada linha desliza até a posição nova)
+function dnsFlip(renderFn){
+  const root = document.getElementById('dnsLower');
+  const first = {};
+  if (root) root.querySelectorAll('.dns-row[data-id]').forEach(r => { first[r.dataset.id] = r.getBoundingClientRect().top; });
+  renderFn();
+  if (!root) return;
+  root.querySelectorAll('.dns-row[data-id]').forEach(r => {
+    const d = (first[r.dataset.id] ?? 0) - r.getBoundingClientRect().top;
+    if (!d) return;
+    r.style.transition = 'none'; r.style.transform = `translateY(${d}px)`;
+    requestAnimationFrame(() => requestAnimationFrame(() => { r.style.transition = 'transform .85s cubic-bezier(.2,.8,.2,1)'; r.style.transform = ''; }));
+  });
+}
+
+// ---------- pipeline animado do DNS ----------
+const DP = { nodes:[], links:[], total:0, done:0, cur:-1, q:[], wake:null };
+const DNS_STEPS = {
+  analyze: [
+    { id:'conn', label:'Conexão',             icon:'net' },
+    { id:'test', label:'Testando provedores', icon:'radar' },
+    { id:'rank', label:'Montando ranking',    icon:'rank' },
+    { id:'best', label:'Melhor DNS',          icon:'trophy' },
+  ],
+};
+function dnsSteps(mode, flush, renew){
+  if (mode === 'analyze') return DNS_STEPS.analyze;
+  const st = [{ id:'uac', label:'Permissão', icon:'lock' },
+              { id:'apply', label: mode === 'restore' ? 'Voltando ao automático' : 'Trocando DNS', icon:'shield' }];
+  if (flush) st.push({ id:'flushed', label:'Limpando cache', icon:'trash' });
+  if (renew && mode === 'apply') st.push({ id:'renewed', label:'Renovando IP', icon:'renew' });
+  st.push({ id:'verify', label:'Verificando', icon:'verify' });
+  return st;
+}
+const DNS_PIPE_TITLE = {
+  analyze: ['Análise de DNS', 'Lê sua conexão, mede cada provedor e monta o ranking'],
+  apply:   ['Aplicando DNS', 'Cada etapa abaixo acontece de verdade no seu Windows'],
+  restore: ['Restaurando DNS', 'Voltando sua conexão pro DNS automático (DHCP)'],
+};
+
+function dnsPipeMount(mode, flush, renew){
+  const root = document.getElementById('dnsPipeRoot');
+  if (!root) return;
+  const steps = dnsSteps(mode, flush, renew);
+  const node = (icon, label, edge) => `<div class="at-node${edge ? ' edge' : ''}"><div class="at-node-box">${dnsPsvg(icon)}<span class="at-badge">${dnsPsvg('check')}</span></div><b>${label}</b><i class="dns-node-cnt"></i></div>`;
+  const link = '<div class="at-link"><span class="at-dot"></span></div>';
+  let h = node('click', 'CLIQUE', true);
+  steps.forEach(st => { h += link + node(st.icon, st.label, false); });
+  h += link + node('screen', 'TELA', true);
+  const t = DNS_PIPE_TITLE[mode];
+  root.innerHTML = `<div class="at-pipe">
+    <div class="at-pipe-head">
+      <div class="at-pipe-title">
+        <div class="at-pipe-badge">${dnsPsvg('bolt')}</div>
+        <div><b>${t[0]}</b><span>${t[1]}</span></div>
+      </div>
+    </div>
+    <div class="at-prog"><div class="at-prog-bar"><div class="at-prog-fill" id="dpFill"></div></div><em id="dpNum">0%</em></div>
+    <div class="at-track">${h}</div>
+    <div class="dns-msg" id="dpMsg"><i></i><span>Pronto pra começar — clique em ${mode === 'analyze' ? '"Analisar DNS"' : 'um botão acima'}.</span></div>
+  </div>`;
+  DP.nodes = [...root.querySelectorAll('.at-node')];
+  DP.links = [...root.querySelectorAll('.at-link')];
+  DP.total = steps.length + 2; DP.done = 0; DP.cur = -1; DP.steps = steps;
+}
+function dpProgress(){ const pct = Math.round(DP.done / DP.total * 100); const f = document.getElementById('dpFill'), n = document.getElementById('dpNum'); if (f) f.style.width = pct + '%'; if (n) n.textContent = pct + '%'; }
+function dpMsg(html, live){ const m = document.getElementById('dpMsg'); if (m){ m.className = 'dns-msg' + (live ? ' live' : ''); m.innerHTML = `<i></i><span>${html}</span>`; } }
+async function dpStart(){ DP.nodes[0].classList.add('active'); await dnsSleep(450); DP.nodes[0].classList.replace('active', 'done'); DP.done++; dpProgress(); }
+// a bolinha percorre a linha até o nó i e ele fica ativo
+async function dpEnter(i){
+  const l = DP.links[i - 1];
+  if (l){ l.classList.add('run'); await dnsSleep(750); l.classList.replace('run', 'filled'); }
+  DP.nodes[i].classList.add('active'); DP.cur = i;
+}
+function dpCount(i, txt){ const c = DP.nodes[i] && DP.nodes[i].querySelector('i'); if (c) c.textContent = txt || ''; }
+function dpFinish(i, txt){ DP.nodes[i].classList.replace('active', 'done'); if (txt != null) dpCount(i, txt); DP.done++; dpProgress(); }
+function dpFail(i, txt){
+  const n = DP.nodes[i]; if (!n) return;
+  n.classList.remove('active'); n.classList.add('err');
+  const b = n.querySelector('.at-badge'); if (b) b.innerHTML = dnsPsvg('cross');
+  if (txt) dpCount(i, txt);
+}
+async function dpEnd(){ await dpEnter(DP.nodes.length - 1); await dnsSleep(450); dpFinish(DP.nodes.length - 1); }
+function dpPush(ev){ DP.q.push(ev); if (DP.wake){ const w = DP.wake; DP.wake = null; w(); } }
+async function dpNext(){ while (!DP.q.length) await new Promise(r => { DP.wake = r; }); return DP.q.shift(); }
 
 async function dnsLoadOverview(){
-  if (!window.__TAURI__) { DNS.overview = null; dnsRender(); return; }
-  try{ DNS.overview = await window.__TAURI__.core.invoke('dns_overview'); DNS.error = ''; }
+  if (!window.__TAURI__) { DNS.overview = null; dnsRenderHero(); return; }
+  try{ DNS.overview = await window.__TAURI__.core.invoke('dns_overview'); }
   catch(err){ DNS.overview = { connected:false, dns:[] }; DNS.error = String(err); }
-  dnsRender();
+  dnsRenderHero();
+  dnsRenderLower();
 }
 
 async function dnsBench(){
-  if (DNS.testing) return;
+  if (DNS.testing || DNS.busy) return;
   if (!window.__TAURI__){ showToast('O teste de DNS só funciona no app instalado'); return; }
-  DNS.testing = true; DNS.error = ''; dnsRender();
-  try{
-    DNS.results = await window.__TAURI__.core.invoke('dns_benchmark');
-    const ok = DNS.results.filter(r => r.ms != null).sort((a, b) => a.ms - b.ms);
-    DNS.selected = ok[0] ? ok[0].id : null;
-    if (!ok.length) DNS.error = 'Nenhum provedor respondeu — confira se a internet está ligada ou se o firewall bloqueia DNS.';
-  }catch(err){ DNS.error = String(err); }
-  DNS.testing = false; dnsRender();
+  const inv = window.__TAURI__.core.invoke;
+  DNS.testing = true; DNS.error = ''; DNS.partial = {}; DNS.current = null; DNS.fresh = null; DNS.results = null; DNS.selected = null;
+  dnsPipeMount('analyze'); dnsRender();
+  dpMsg('Começando a análise...', true);
+  await dpStart();
+
+  // 1) conexão
+  await dpEnter(1); dpMsg('Lendo sua <b>conexão ativa</b>...', true);
+  try{ DNS.overview = await inv('dns_overview'); }catch(err){ DNS.overview = { connected:false, dns:[] }; }
+  dnsRenderHero(); await dnsSleep(500);
+  if (!DNS.overview.connected){
+    dpFail(1, 'sem rede'); dpMsg('Nenhuma conexão ativa encontrada — ligue a internet e tente de novo.');
+    DNS.testing = false; DNS.error = 'Sem conexão ativa.'; dnsRender(); return;
+  }
+  dpFinish(1, DNS.overview.alias || 'ok');
+
+  // 2) testa um provedor por vez
+  await dpEnter(2);
+  const results = [];
+  for (let i = 0; i < DNS_LIST.length; i++){
+    const p = DNS_LIST[i];
+    DNS.current = p.id; DNS.fresh = null; dnsRenderLower();
+    dpMsg(`Testando <b>${p.name}</b> (${p.primary})...`, true);
+    dpCount(2, `${i}/${DNS_LIST.length}`);
+    const t0 = Date.now();
+    let r;
+    try{ r = await inv('dns_probe_provider', { id: p.id }); }
+    catch(err){ r = { ...p, ms: null }; }
+    const wait = 420 - (Date.now() - t0);
+    if (wait > 0) await dnsSleep(wait);
+    r = { ...p, ms: r.ms };
+    results.push(r); DNS.partial[p.id] = r; DNS.current = null; DNS.fresh = p.id;
+    dpCount(2, `${i + 1}/${DNS_LIST.length}`);
+    DNS.results = results.slice(); // permite stats ao vivo
+    dnsRenderLower();
+  }
+  dpFinish(2, `${DNS_LIST.length}/${DNS_LIST.length}`);
+
+  // 3) ranking (linhas deslizam pra posição nova)
+  await dpEnter(3); dpMsg('Ordenando por <b>velocidade</b>...', true);
+  await dnsSleep(400);
+  DNS.testing = false; DNS.fresh = null;
+  const ok = results.filter(r => r.ms != null).sort((a, b) => a.ms - b.ms);
+  DNS.results = results;
+  dnsFlip(dnsRenderLower);
+  await dnsSleep(1000);
+  dpFinish(3, `${ok.length} válidos`);
+
+  // 4) melhor
+  await dpEnter(4);
+  if (ok.length){
+    DNS.selected = ok[0].id;
+    dpMsg(`<b>${DIAG_ESC(ok[0].name)}</b> venceu com <b>${dnsMs(ok[0].ms)} ms</b>.`);
+    dpFinish(4, ok[0].name);
+  } else {
+    DNS.error = 'Nenhum provedor respondeu — confira se a internet está ligada ou se o firewall bloqueia DNS.';
+    dpFail(4, 'nenhum'); dpMsg('Nenhum provedor respondeu.');
+  }
+  dnsRender();
+  await dpEnd();
 }
 
-async function dnsApply(){
+// troca (ou restaura) o DNS: as etapas vêm do próprio Windows, em tempo real
+async function dnsRunChange(mode){
+  if (DNS.busy || DNS.testing) return;
+  if (!window.__TAURI__){ showToast('Só funciona no app instalado'); return; }
+  const inv = window.__TAURI__.core.invoke;
   const sel = (DNS.results || []).find(r => r.id === DNS.selected);
-  if (!sel || DNS.busy) return;
-  DNS.busy = true; DNS.error = ''; dnsRender();
-  try{
-    const m = await window.__TAURI__.core.invoke('dns_apply', { primary: sel.primary, secondary: sel.secondary, flush: DNS.flush, renew: DNS.renew });
-    showToast(m);
-  }catch(err){ DNS.error = String(err); showToast(String(err)); }
-  DNS.busy = false;
-  await dnsLoadOverview();
-}
+  if (mode === 'apply' && !sel) return;
+  const flush = DNS.flush, renew = DNS.renew;
+  DNS.busy = true; DNS.error = ''; dnsRenderHero(); dnsRenderLower();
+  dnsPipeMount(mode, flush, renew);
+  DP.q = [];
+  const steps = DP.steps;
+  const verifyIdx = steps.length;           // nó do "Verificando" (nós: 0=clique, 1..n=etapas)
+  let result = null;
+  const call = (mode === 'apply'
+      ? inv('dns_apply', { primary: sel.primary, secondary: sel.secondary, flush, renew })
+      : inv('dns_restore', { flush }))
+    .then(m => ({ ok:true, m }), e => ({ ok:false, e:String(e) }))
+    .then(r => { result = r; dpPush({ name:'__done' }); });
 
-async function dnsRestore(){
-  if (DNS.busy) return;
-  DNS.busy = true; DNS.error = ''; dnsRender();
-  try{
-    const m = await window.__TAURI__.core.invoke('dns_restore', { flush: DNS.flush });
-    showToast(m);
-  }catch(err){ DNS.error = String(err); showToast(String(err)); }
-  DNS.busy = false;
-  await dnsLoadOverview();
+  await dpStart();
+  await dpEnter(1);
+  dpMsg('Aguardando você <b>aceitar a permissão de administrador</b> (janela do Windows)...', true);
+  const order = steps.filter(s => s.id !== 'verify').map((s, k) => k === 0 ? 'started' : (s.id === 'apply' ? 'applied' : s.id));
+  const msgs = {
+    applied: mode === 'restore' ? 'Voltando o DNS pro <b>automático (DHCP)</b>...' : `Trocando o DNS pra <b>${sel ? DIAG_ESC(sel.name) : ''}</b>...`,
+    flushed: 'Limpando o <b>cache de DNS</b> do Windows...',
+    renewed: 'Renovando o <b>IP</b> (a internet pode piscar)...',
+  };
+  while (true){
+    const ev = await dpNext();
+    if (ev.name === '__done') break;
+    const k = order.indexOf(ev.name);
+    if (k < 0) continue;
+    // o marcador k conclui a etapa k+1 e ativa a seguinte (se não for a verificação)
+    if (DP.cur === k + 1){
+      dpFinish(k + 1, k === 0 ? 'ok' : '✓');
+    }
+    const next = k + 2;
+    if (next < verifyIdx){
+      await dpEnter(next);
+      const nextId = order[next - 1];
+      dpMsg(msgs[nextId] || 'Trabalhando...', true);
+    }
+  }
+  if (!result || !result.ok){
+    dpFail(DP.cur, 'falhou'); dpMsg(DIAG_ESC(result ? result.e : 'Falhou'));
+    DNS.error = result ? result.e : 'Falhou'; showToast(DNS.error);
+    DNS.busy = false; await dnsLoadOverview(); return;
+  }
+  // marca qualquer etapa que ainda esteja ativa (ex.: eventos atrasados)
+  steps.forEach((s, k) => { const n = DP.nodes[k + 1]; if (s.id !== 'verify' && n.classList.contains('active')) dpFinish(k + 1, '✓'); });
+  await dpEnter(verifyIdx); dpMsg('Conferindo o <b>DNS atual</b> da sua conexão...', true);
+  await dnsLoadOverview(); await dnsSleep(500);
+  const cur = DNS.overview && DNS.overview.dns ? DNS.overview.dns : [];
+  dpFinish(verifyIdx, cur[0] || 'ok');
+  dpMsg(DIAG_ESC(result.m));
+  showToast(result.m);
+  DNS.busy = false; dnsRenderHero(); dnsRenderLower();
+  await dpEnd();
 }
+const dnsApply = () => dnsRunChange('apply');
+const dnsRestore = () => dnsRunChange('restore');
 
 function bindDnsPanel(panel){
   panel.addEventListener('click', e => {
     const el = e.target.closest('[data-dns]');
-    if (!el) return;
+    if (!el || el.disabled) return;
     const act = el.dataset.dns;
     if (act === 'bench') dnsBench();
     else if (act === 'apply') dnsApply();
     else if (act === 'restore') dnsRestore();
-    else if (act === 'pick'){ DNS.selected = el.dataset.id; dnsRender(); }
-    else if (act === 'eye-ip'){ DNS.hideIp = !DNS.hideIp; dnsRender(); }
-    else if (act === 'eye-gw'){ DNS.hideGw = !DNS.hideGw; dnsRender(); }
+    else if (act === 'pick'){ DNS.selected = el.dataset.id; dnsRenderHero(); dnsRenderLower(); }
+    else if (act === 'eye-ip'){ DNS.hideIp = !DNS.hideIp; dnsRenderHero(); }
+    else if (act === 'eye-gw'){ DNS.hideGw = !DNS.hideGw; dnsRenderHero(); }
   });
   panel.addEventListener('change', e => {
     const el = e.target.closest('[data-dns]');
@@ -7001,6 +7249,10 @@ function bindDnsPanel(panel){
     if (el.dataset.dns === 'flush') DNS.flush = el.checked;
     else if (el.dataset.dns === 'renew') DNS.renew = el.checked;
   });
+  if (window.__TAURI__ && window.__TAURI__.event){
+    window.__TAURI__.event.listen('dns-progress', ev => dpPush({ name: String(ev.payload) }));
+  }
+  dnsPipeMount('analyze');
   dnsRender();
   dnsLoadOverview();
 }
