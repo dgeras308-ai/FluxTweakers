@@ -402,48 +402,58 @@
   :root[data-color-theme="verde_neon"] .switch input:checked ~ .track{
     box-shadow:0 0 14px -1px var(--accent);
   }
-  /* ===== Tema Aurora: paleta própria (fundo azul-noite, ciano → lavanda) ===== */
-  :root[data-color-theme="aurora"]{
-    --bg:#070b16;
-    --panel:rgba(120,165,255,.05);
-    --card:rgba(120,165,255,.06);
-    --card-hover:rgba(120,165,255,.1);
-    --border:rgba(140,175,255,.16);
-    --border-soft:rgba(140,175,255,.09);
-    --text:#eaf1ff;
-    --muted:#94a6c8;
-    --muted2:#5f6f90;
-    --item-bg:rgba(120,165,255,.055);
-    --item-bg-hover:rgba(120,165,255,.1);
-    --item-border:rgba(140,175,255,.16);
-    --item-text:#eaf1ff;
-    --item-muted:#94a6c8;
-    --ok:#34d399;
-    --off:#fb7185;
-    --surface-strong:rgba(9,14,28,.96);
-    --shadow-md:0 10px 28px -10px rgba(2,6,23,.75);
+  /* ===== Tema Grafite: sóbrio e profissional (cinza-grafite, uma única cor de destaque, tudo liso) ===== */
+  :root[data-color-theme="grafite"]{
+    --bg:#0c0e12;
+    --panel:rgba(255,255,255,.03);
+    --card:rgba(255,255,255,.04);
+    --card-hover:rgba(255,255,255,.07);
+    --border:rgba(255,255,255,.1);
+    --border-soft:rgba(255,255,255,.06);
+    --text:#e8eaee;
+    --muted:#8d95a3;
+    --muted2:#5c6472;
+    --item-bg:rgba(255,255,255,.035);
+    --item-bg-hover:rgba(255,255,255,.065);
+    --item-border:rgba(255,255,255,.09);
+    --item-text:#e8eaee;
+    --item-muted:#8d95a3;
+    --ok:#3ecf8e;
+    --off:#ef6470;
+    --surface-strong:rgba(14,16,20,.97);
+    --shadow-sm:0 1px 2px rgba(0,0,0,.35);
+    --shadow-md:0 8px 22px -12px rgba(0,0,0,.6);
   }
-  :root[data-color-theme="aurora"] #bgFallback{
-    background:
-      radial-gradient(ellipse 1100px 700px at 15% -5%, rgba(56,189,248,.15), transparent 60%),
-      radial-gradient(ellipse 900px 800px at 92% 12%, rgba(167,139,250,.14), transparent 58%),
-      radial-gradient(ellipse 1000px 700px at 50% 108%, rgba(45,212,191,.09), transparent 60%),
-      linear-gradient(180deg,#0a1020 0%,#060912 100%);
+  :root[data-color-theme="grafite"] #bgFallback{
+    background:radial-gradient(ellipse 1200px 520px at 50% -10%, rgba(255,255,255,.035), transparent 70%),linear-gradient(180deg,#0e1014 0%,#0a0c0f 100%);
   }
-  :root[data-color-theme="aurora"] .home-hero-btn.primary,
-  :root[data-color-theme="aurora"] .bar button:not(.bar-btn-secondary),
-  :root[data-color-theme="aurora"] .login-btn,
-  :root[data-color-theme="aurora"] .preset-btn-performance{
-    box-shadow:0 10px 24px -12px var(--accent);
-  }
-  :root[data-color-theme="aurora"] .preset-btn-ultra{
-    background:linear-gradient(135deg,var(--accent2),var(--accent));color:#07101f;
-  }
-  :root[data-color-theme="aurora"] .profile-card.perf .profile-card-icon{background:linear-gradient(135deg,var(--accent),var(--accent2));}
-  :root[data-color-theme="aurora"] .profile-card.perf .profile-card-icon svg{color:#07101f;}
-  :root[data-color-theme="aurora"] .home-hero h2 .accent-text{
-    background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent;
-  }
+  :root[data-color-theme="grafite"] .login-aurora{opacity:.16;}
+  :root[data-color-theme="grafite"] #bg3d,
+  :root[data-color-theme="grafite"] #bgRaio{opacity:0;}
+  /* sem brilho / sem neon */
+  :root[data-color-theme="grafite"] .home-hero-btn.primary,
+  :root[data-color-theme="grafite"] .bar button,
+  :root[data-color-theme="grafite"] .login-btn,
+  :root[data-color-theme="grafite"] .preset-btn-performance,
+  :root[data-color-theme="grafite"] .at-run,
+  :root[data-color-theme="grafite"] .dns-btn.primary,
+  :root[data-color-theme="grafite"] aside#tabs button.active{box-shadow:none;}
+  /* menu: item ativo discreto em vez de bloco colorido */
+  :root[data-color-theme="grafite"] aside#tabs button.active{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--text);}
+  :root[data-color-theme="grafite"] aside#tabs button.active .label{color:var(--text);}
+  :root[data-color-theme="grafite"] aside#tabs button.active .count{color:var(--muted);background:rgba(255,255,255,.07);}
+  :root[data-color-theme="grafite"] aside#tabs button.active::before{background:var(--accent);opacity:1;}
+  :root[data-color-theme="grafite"] aside#tabs button.active svg{color:var(--accent);}
+  /* painéis animados: sem halo luminoso */
+  :root[data-color-theme="grafite"] .at-pipe{background:var(--item-bg);border-color:var(--item-border);box-shadow:none;}
+  :root[data-color-theme="grafite"] .at-node.active .at-node-box{box-shadow:0 0 0 1px var(--accent);animation:none;}
+  :root[data-color-theme="grafite"] .at-link.filled{box-shadow:none;}
+  :root[data-color-theme="grafite"] .at-dot{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent);}
+  :root[data-color-theme="grafite"] .at-dot::before{display:none;}
+  :root[data-color-theme="grafite"] .at-prog-fill{box-shadow:none;}
+  :root[data-color-theme="grafite"] .dns-hero{background:var(--item-bg);}
+  :root[data-color-theme="grafite"] .dns-msg i{box-shadow:none;}
+  :root[data-color-theme="grafite"] .dns-chip i{box-shadow:none;}
   .theme-swatch{
     width:19px;height:19px;border-radius:50%;border:2px solid var(--bg);cursor:pointer;
     padding:0;transition:transform .15s,box-shadow .15s;flex-shrink:0;box-shadow:0 0 0 1px var(--border);
@@ -4419,7 +4429,7 @@ const CAT_COLORS = {
 };
 
 const THEME_COLORS = {
-  aurora:"#38bdf8",
+  grafite:"#4c8bf5",
   roxo:"#7c5cff", vermelho:"#ff4d3d", indigo:"#6470ee", emerald:"#2dd4a7", cyan:"#43c9e5",
   azul:"#2f7cf6", laranja:"#ff8a3d", rosa:"#ff5c9e", dourado:"#e0b23d",
   branco_laranja:"#ff7a1a", mono:"#e8e2df", azul_neon:"#00c8ff",
@@ -4427,7 +4437,8 @@ const THEME_COLORS = {
 };
 const LIGHT_THEMES = new Set(["branco_laranja"]);
 // 2ª cor do degradê de cada tema (antes ficava sempre cinza, por isso os botões não combinavam)
-const THEME_ACCENT2 = { aurora:"#a78bfa", mono:"#c9c9c9" };
+// grafite: segunda cor = a própria cor de destaque, então os "degradês" ficam lisos
+const THEME_ACCENT2 = { grafite:"#4c8bf5", mono:"#c9c9c9" };
 function deriveAccent2(hex){
   const n = parseInt(hex.slice(1), 16);
   let r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
@@ -4445,7 +4456,7 @@ function deriveAccent2(hex){
   return '#' + f(0) + f(8) + f(4);
 }
 const THEME_LABELS = {
-  aurora:"Aurora",
+  grafite:"Grafite",
   roxo:"Roxo", vermelho:"Vermelho", indigo:"Índigo", emerald:"Esmeralda", cyan:"Ciano",
   azul:"Azul", laranja:"Laranja", rosa:"Rosa", dourado:"Dourado",
   branco_laranja:"Branco & Laranja", mono:"Mono", azul_neon:"Azul Neon",
@@ -4483,7 +4494,8 @@ function initThemePicker(){
   el.querySelectorAll('.theme-swatch').forEach(s=>{
     s.onclick = ()=> applyTheme(s.dataset.color);
   });
-  const saved = safeLocalGet2('dgeras_theme') || 'aurora';
+  let saved = safeLocalGet2('dgeras_theme') || 'grafite';
+  if (saved === 'aurora') saved = 'grafite';
   applyTheme(saved);
 }
 
