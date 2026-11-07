@@ -871,6 +871,12 @@
     padding:6px 10px;font-size:11.5px;letter-spacing:.02em;
     opacity:0;transition:opacity .12s,transform .12s;box-shadow:var(--shadow-md);z-index:40;
   }
+  .sidebar-collapse{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 10px;padding:7px 10px;border-radius:9px;border:1px solid var(--border-soft);background:transparent;color:var(--muted);font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;transition:background .15s,color .15s;}
+  .sidebar-collapse:hover{background:var(--item-bg-hover);color:var(--text);}
+  .sidebar-collapse svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;transition:transform .2s;}
+  .sidebar-compact .sidebar-collapse{justify-content:center;padding:7px 0;}
+  .sidebar-compact .sidebar-collapse span{display:none;}
+  .sidebar-compact .sidebar-collapse svg{transform:rotate(180deg);}
   .sidebar-compact aside#tabs button .count{display:none;} /* tooltip já mostra o nome; contador some no modo compacto */
   .sidebar-compact aside#tabs button:hover .label{
     opacity:1;transform:translateY(-50%) translateX(10px);
@@ -1927,6 +1933,75 @@
   .at-res-card.done{border-color:color-mix(in srgb,var(--accent) 35%,var(--item-border));}
   .at-res-card.err{border-color:var(--off);}
   .at-res-card.err svg{stroke:var(--off);}
+  /* ---- DNS (aba Rede) ---- */
+  .dns-wrap{display:flex;flex-direction:column;gap:14px;margin:4px 0 22px;}
+  .dns-card{border-radius:18px;background:linear-gradient(175deg,var(--item-bg),color-mix(in srgb,var(--item-bg) 92%,#000));border:1px solid var(--item-border);padding:22px;}
+  .dns-hero{display:grid;grid-template-columns:1.15fr 1fr;gap:26px;background:radial-gradient(520px 240px at 0% 0%,var(--accent-dim),transparent 70%),linear-gradient(175deg,var(--item-bg),color-mix(in srgb,var(--item-bg) 92%,#000));border-color:color-mix(in srgb,var(--accent) 22%,var(--item-border));}
+  .dns-chip{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;color:var(--ok);background:color-mix(in srgb,var(--ok) 13%,transparent);border:1px solid color-mix(in srgb,var(--ok) 30%,transparent);}
+  .dns-chip i{width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor;}
+  .dns-chip.off{color:var(--off);background:color-mix(in srgb,var(--off) 13%,transparent);border-color:color-mix(in srgb,var(--off) 30%,transparent);}
+  .dns-big{margin:16px 0 8px;font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--text);line-height:1.1;}
+  .dns-big small{font-size:16px;font-weight:600;color:var(--muted);letter-spacing:0;}
+  .dns-sub{font-size:13px;color:var(--muted);line-height:1.5;max-width:520px;}
+  .dns-sub b{color:var(--text);}
+  .dns-sub em{font-style:normal;font-weight:700;color:var(--ok);}
+  .dns-compare{display:flex;align-items:center;gap:18px;margin:18px 0;padding:14px 18px;border-radius:14px;background:color-mix(in srgb,var(--item-bg) 70%,transparent);border:1px solid var(--item-border);max-width:470px;}
+  .dns-compare div span{display:block;font-size:11px;color:var(--muted);}
+  .dns-compare div b{display:block;font-size:22px;font-weight:800;margin-top:2px;}
+  .dns-compare .avg b{color:#f5c542;}
+  .dns-compare .best b{color:var(--ok);}
+  .dns-compare .arrow{color:var(--muted);font-size:18px;}
+  .dns-compare .gain{margin-left:auto;font-size:13px;font-weight:700;color:var(--ok);}
+  .dns-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;}
+  .dns-btn{display:inline-flex;align-items:center;gap:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;padding:11px 18px;border-radius:11px;color:var(--text);background:var(--item-bg);border:1px solid var(--item-border);transition:transform .15s,filter .15s,border-color .15s;}
+  .dns-btn:hover:not(:disabled){transform:translateY(-1px);border-color:var(--accent);}
+  .dns-btn:disabled{opacity:.55;cursor:default;}
+  .dns-btn.primary{color:#08151a;border-color:transparent;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 6px 18px -8px var(--accent);}
+  .dns-btn.primary:hover:not(:disabled){filter:brightness(1.08);border-color:transparent;}
+  .dns-btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .dns-note{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:12px;color:var(--muted);}
+  .dns-note svg{width:14px;height:14px;fill:none;stroke:var(--ok);stroke-width:2;flex-shrink:0;}
+  .dns-info{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-content:start;}
+  .dns-info-card{padding:12px 14px;border-radius:13px;background:color-mix(in srgb,var(--item-bg) 80%,transparent);border:1px solid var(--item-border);min-width:0;}
+  .dns-info-card.wide{grid-column:1 / -1;}
+  .dns-info-card span{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:11.5px;color:var(--muted);font-weight:600;}
+  .dns-info-card b{display:block;margin-top:5px;font-size:15px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .dns-info-card b.ok{color:var(--ok);}
+  .dns-info-card b.warn{color:#f5c542;}
+  .dns-info-card b.blur{filter:blur(6px);user-select:none;}
+  .dns-info-card small{display:block;margin-top:3px;font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .dns-eye{background:none;border:0;padding:0;cursor:pointer;color:var(--muted);display:flex;}
+  .dns-eye:hover{color:var(--text);}
+  .dns-eye svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .dns-lower{display:grid;grid-template-columns:1.5fr 1fr;gap:14px;align-items:start;}
+  .dns-card h3{margin:0;font-size:15px;font-weight:800;color:var(--text);}
+  .dns-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;}
+  .dns-row{display:grid;grid-template-columns:26px 1fr 74px auto;align-items:center;gap:14px;padding:12px 14px;border-radius:13px;border:1px solid transparent;transition:border-color .2s,background .2s;}
+  .dns-row + .dns-row{margin-top:4px;}
+  .dns-row .rk{font-size:13px;font-weight:700;color:var(--muted);text-align:center;}
+  .dns-row .nm{min-width:0;}
+  .dns-row .nm b{font-size:14px;font-weight:800;color:var(--text);}
+  .dns-row .nm em{font-style:normal;font-size:11.5px;color:var(--muted);margin-left:8px;}
+  .dns-tag{display:inline-flex;align-items:center;gap:4px;margin-left:8px;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:700;color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent);}
+  .dns-tag.cur{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);}
+  .dns-bar{height:4px;margin-top:8px;border-radius:4px;background:color-mix(in srgb,var(--text) 9%,transparent);overflow:hidden;}
+  .dns-bar i{display:block;height:100%;border-radius:4px;background:var(--ok);transition:width .6s cubic-bezier(.2,.8,.2,1);}
+  .dns-row .ms{text-align:right;font-size:17px;font-weight:800;color:var(--ok);}
+  .dns-row .ms small{font-size:10.5px;font-weight:600;color:var(--muted);margin-left:3px;}
+  .dns-row .ms.fail{color:var(--off);font-size:12px;}
+  .dns-row.best{background:color-mix(in srgb,var(--ok) 7%,transparent);border-color:color-mix(in srgb,var(--ok) 30%,transparent);}
+  .dns-row.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent);}
+  .dns-empty{padding:26px 10px;text-align:center;font-size:13px;color:var(--muted);}
+  .dns-scan{height:4px;border-radius:4px;overflow:hidden;background:color-mix(in srgb,var(--accent) 14%,transparent);margin-top:16px;max-width:420px;}
+  .dns-scan i{display:block;height:100%;width:40%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--accent2));animation:dnsscan 1.1s ease-in-out infinite;}
+  @keyframes dnsscan{from{margin-left:-40%}to{margin-left:100%}}
+  .dns-opt{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;}
+  .dns-opt + .dns-opt{border-top:1px solid var(--item-border);}
+  .dns-opt b{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--text);}
+  .dns-opt b u{text-decoration:none;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent);}
+  .dns-opt b u.opt{color:var(--muted);background:color-mix(in srgb,var(--text) 8%,transparent);}
+  .dns-opt span{display:block;margin-top:3px;font-size:12px;color:var(--muted);line-height:1.4;}
+  @media (max-width:1000px){.dns-hero,.dns-lower{grid-template-columns:1fr;}}
   .at-su{margin-top:20px;padding:18px;border-radius:16px;background:var(--item-bg);border:1px solid var(--item-border);}
   .at-su h3{margin:0 0 4px;font-size:14px;font-weight:700;color:var(--text);}
   .at-su p{margin:0 0 12px;font-size:12px;color:var(--muted);}
@@ -2228,7 +2303,7 @@
   </div>
 
   <div class="shell">
-    <aside class="sidebar sidebar-compact">
+    <aside class="sidebar" id="mainSidebar">
       <div class="sidebar-brand">
         <div class="sidebar-brand-badge">
           <img src="assets/logo-mark.png" alt="" class="sidebar-logo-img">
@@ -2236,6 +2311,9 @@
         <div class="sidebar-brand-name">By Dgeras</div>
         <div class="sidebar-brand-tag">Optimizer</div>
       </div>
+      <button class="sidebar-collapse" id="sidebarCollapse" title="Recolher / expandir o menu" aria-label="Recolher menu">
+        <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg><span>Recolher menu</span>
+      </button>
       <aside id="tabs"></aside>
       <div class="sidebar-divider"></div>
       <div class="sidebar-block">
@@ -6388,6 +6466,10 @@ function renderPanel(catId){
     <div class="info-card">${VENDOR_INFO[cat.special][cur]}</div>`;
   }
 
+  if(catId === 'network'){
+    html += `<div id="dnsRoot"></div>`;
+  }
+
   if(catId === 'power'){
     html += `<div class="power-plan-box">
       <div class="power-plan-head">
@@ -6588,6 +6670,7 @@ function gameTileIcon(title, group){
   });
 
   panel.innerHTML = html;
+  if(catId === 'network') bindDnsPanel(panel);
 
   panel.querySelectorAll('.acc-toggle-open').forEach(h=>{
     h.onclick = ()=>{
@@ -6742,6 +6825,186 @@ const AT_META = {
 };
 // logo embutido no app (funciona mesmo com o programa não instalado)
 const AT_LOGO = (id) => `assets/apps/${id}.svg`;
+// ----- menu lateral: nomes visíveis por padrão; o botão recolhe pra só ícones -----
+(function(){
+  const sb = document.getElementById('mainSidebar');
+  const btn = document.getElementById('sidebarCollapse');
+  if (!sb || !btn) return;
+  let compact = false;
+  try{ compact = localStorage.getItem('fx_sidebar_compact') === '1'; }catch(e){}
+  sb.classList.toggle('sidebar-compact', compact);
+  btn.addEventListener('click', () => {
+    compact = !compact;
+    sb.classList.toggle('sidebar-compact', compact);
+    try{ localStorage.setItem('fx_sidebar_compact', compact ? '1' : '0'); }catch(e){}
+  });
+})();
+
+// ================= DNS (aba Rede) =================
+const DNS_ICON = {
+  shield: '<svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>',
+  reset:  '<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>',
+  pulse:  '<svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>',
+  eye:    '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  eyeoff: '<svg viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 6.1A9.8 9.8 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4M6.5 6.8C3.8 8.6 2 12 2 12s3.5 7 10 7c1.6 0 3-.4 4.2-1M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>',
+  check:  '<svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/></svg>',
+};
+const DNS = { overview:null, results:null, selected:null, flush:true, renew:false, testing:false, busy:false, hideIp:true, hideGw:true, error:'' };
+
+function dnsMs(v){ return v >= 100 ? Math.round(v) : (Math.round(v * 10) / 10).toString().replace('.', ','); }
+
+function dnsRender(){
+  const root = document.getElementById('dnsRoot');
+  if (!root) return;
+  const ov = DNS.overview;
+  const ok = (DNS.results || []).filter(r => r.ms != null).sort((a, b) => a.ms - b.ms);
+  const best = ok[0] || null;
+  const avg = ok.length ? ok.reduce((t, r) => t + r.ms, 0) / ok.length : 0;
+  const sel = (DNS.results || []).find(r => r.id === DNS.selected) || best;
+  const gain = best && avg ? avg / best.ms : 0;
+  const cur = ov && ov.dns ? ov.dns : [];
+  const curProv = (DNS.results || []).find(r => cur.includes(r.primary) || cur.includes(r.secondary));
+
+  // --- hero ---
+  let head;
+  if (DNS.testing){
+    head = `<div class="dns-big">Testando provedores...</div>
+      <div class="dns-sub">Mandando consultas DNS de verdade pra cada provedor e medindo o tempo de resposta.</div>
+      <div class="dns-scan"><i></i></div>`;
+  } else if (best){
+    head = `<div class="dns-big">${dnsMs(best.ms)} ms <small>no DNS mais rápido pra você</small></div>
+      <div class="dns-sub"><b>${DIAG_ESC(best.name)}</b> (${best.primary}) foi o mais rápido dos ${ok.length} testados${gain >= 1.3 ? ` — <em>${gain >= 10 ? Math.round(gain) : gain.toFixed(1).replace('.', ',')}× mais rápido</em> que a média` : ''}.${curProv ? ` Hoje você usa <b>${DIAG_ESC(curProv.name)}</b>.` : ''}</div>
+      <div class="dns-compare">
+        <div class="avg"><span>Média dos testados</span><b>${dnsMs(avg)} ms</b></div>
+        <div class="arrow">→</div>
+        <div class="best"><span>${DIAG_ESC(best.name)} (melhor)</span><b>${dnsMs(best.ms)} ms</b></div>
+        ${gain >= 1.3 ? `<div class="gain">${gain >= 10 ? Math.round(gain) : gain.toFixed(1).replace('.', ',')}× mais rápido</div>` : ''}
+      </div>`;
+  } else {
+    head = `<div class="dns-big">Descubra o DNS mais rápido <small>pra sua internet</small></div>
+      <div class="dns-sub">O DNS é a "lista telefônica" da internet: um DNS lento atrasa o carregamento de sites, lojas de jogos e matchmaking. Compare ${DNS_COUNT} provedores aqui, na sua rede, e troque em um clique.</div>`;
+  }
+  const applyLabel = sel ? `Aplicar ${DIAG_ESC(sel.name)}` : 'Aplicar DNS';
+  const connected = ov && ov.connected;
+  const hero = `<div class="dns-card dns-hero">
+    <div>
+      <span class="dns-chip${ov && !connected ? ' off' : ''}"><i></i>${!ov ? 'Verificando...' : connected ? 'Conectado' : 'Sem conexão'}</span>
+      ${head}
+      <div class="dns-actions">
+        ${best ? `<button class="dns-btn primary" data-dns="apply" ${DNS.busy || !sel ? 'disabled' : ''}>${DNS_ICON.shield}${DNS.busy ? 'Aguardando permissão...' : applyLabel}</button>` : `<button class="dns-btn primary" data-dns="bench" ${DNS.testing ? 'disabled' : ''}>${DNS_ICON.pulse}${DNS.testing ? 'Analisando...' : 'Analisar DNS'}</button>`}
+        <button class="dns-btn" data-dns="restore" ${DNS.busy || !connected ? 'disabled' : ''}>${DNS_ICON.reset}Restaurar automático</button>
+      </div>
+      <div class="dns-note">${DNS_ICON.check}<span>Muda só o DNS — reversível pro automático (DHCP) a qualquer hora.</span></div>
+      ${DNS.error ? `<div class="dns-note" style="color:var(--off)"><span>${DIAG_ESC(DNS.error)}</span></div>` : ''}
+    </div>
+    <div class="dns-info">
+      <div class="dns-info-card"><span>Status</span><b class="${connected ? 'ok' : ''}">${!ov ? '—' : connected ? 'Conectado' : 'Desconectado'}</b><small>${connected ? 'Interface ativa' : 'Sem rede ativa'}</small></div>
+      <div class="dns-info-card"><span>Adaptador</span><b title="${DIAG_ESC(ov ? ov.alias : '')}">${DIAG_ESC(ov && ov.alias ? ov.alias : '—')}</b><small>${DIAG_ESC(ov ? ov.adapter : '')}</small></div>
+      <div class="dns-info-card"><span>IPv4<button class="dns-eye" data-dns="eye-ip" title="Mostrar/ocultar">${DNS.hideIp ? DNS_ICON.eyeoff : DNS_ICON.eye}</button></span><b class="${DNS.hideIp ? 'blur' : ''}">${DIAG_ESC(ov && ov.ipv4 ? ov.ipv4 : '—')}</b><small>Endereço local da rede</small></div>
+      <div class="dns-info-card"><span>Gateway<button class="dns-eye" data-dns="eye-gw" title="Mostrar/ocultar">${DNS.hideGw ? DNS_ICON.eyeoff : DNS_ICON.eye}</button></span><b class="${DNS.hideGw ? 'blur' : ''}">${DIAG_ESC(ov && ov.gateway ? ov.gateway : '—')}</b><small>Rota padrão</small></div>
+      <div class="dns-info-card wide"><span>DNS atual</span><b class="warn">${DIAG_ESC(cur.length ? cur.join(' / ') : '—')}</b><small>${ov ? (ov.auto_dns ? 'DHCP ativado' : 'Definido manualmente') : ''}</small></div>
+    </div>
+  </div>`;
+
+  // --- ranking ---
+  const list = DNS.results ? [...ok, ...DNS.results.filter(r => r.ms == null)] : [];
+  const rows = list.length ? list.map((r, i) => {
+    const isBest = best && r.id === best.id;
+    const isSel = sel && r.id === sel.id && best;
+    const isCur = cur.includes(r.primary);
+    const w = r.ms != null && best ? Math.max(8, Math.round(best.ms / r.ms * 100)) : 0;
+    return `<div class="dns-row${isBest ? ' best' : ''}${isSel && !isBest ? ' sel' : ''}">
+      <div class="rk">${i + 1}</div>
+      <div class="nm"><b>${DIAG_ESC(r.name)}</b><em>${r.primary} / ${r.secondary}</em>${isBest ? `<span class="dns-tag">⚡ Mais rápido</span>` : ''}${isCur ? `<span class="dns-tag cur">Em uso</span>` : ''}
+        <div class="dns-bar"><i style="width:${w}%"></i></div></div>
+      <div class="ms${r.ms == null ? ' fail' : ''}">${r.ms != null ? `${dnsMs(r.ms)}<small>ms</small>` : 'sem resposta'}</div>
+      <button class="dns-btn" data-dns="pick" data-id="${r.id}" ${r.ms == null ? 'disabled' : ''}>Escolher</button>
+    </div>`;
+  }).join('') : `<div class="dns-empty">${DNS.testing ? 'Medindo...' : 'Clique em "Analisar DNS" pra comparar os provedores na sua rede.'}</div>`;
+
+  const lower = `<div class="dns-lower">
+    <div class="dns-card">
+      <div class="dns-card-head"><h3>Ranking de DNS</h3><button class="dns-btn" data-dns="bench" ${DNS.testing ? 'disabled' : ''}>${DNS_ICON.pulse}${DNS.testing ? 'Analisando...' : (DNS.results ? 'Analisar de novo' : 'Analisar DNS')}</button></div>
+      ${rows}
+    </div>
+    <div class="dns-card">
+      <div class="dns-card-head"><h3>Opções de aplicação</h3></div>
+      <div class="dns-opt"><div><b>Limpar DNS após aplicar <u>Padrão ON</u></b><span>Limpa o cache DNS local após alterar o provedor.</span></div>
+        <label class="switch"><input type="checkbox" data-dns="flush" ${DNS.flush ? 'checked' : ''}><span class="track"></span><span class="thumb"></span></label></div>
+      <div class="dns-opt"><div><b>Renovar IP após aplicar <u class="opt">Opcional</u></b><span>Renovar IP pode reconectar sua internet por alguns segundos.</span></div>
+        <label class="switch"><input type="checkbox" data-dns="renew" ${DNS.renew ? 'checked' : ''}><span class="track"></span><span class="thumb"></span></label></div>
+    </div>
+  </div>`;
+
+  root.innerHTML = `<div class="dns-wrap">${hero}${lower}</div>`;
+}
+const DNS_COUNT = 8;
+
+async function dnsLoadOverview(){
+  if (!window.__TAURI__) { DNS.overview = null; dnsRender(); return; }
+  try{ DNS.overview = await window.__TAURI__.core.invoke('dns_overview'); DNS.error = ''; }
+  catch(err){ DNS.overview = { connected:false, dns:[] }; DNS.error = String(err); }
+  dnsRender();
+}
+
+async function dnsBench(){
+  if (DNS.testing) return;
+  if (!window.__TAURI__){ showToast('O teste de DNS só funciona no app instalado'); return; }
+  DNS.testing = true; DNS.error = ''; dnsRender();
+  try{
+    DNS.results = await window.__TAURI__.core.invoke('dns_benchmark');
+    const ok = DNS.results.filter(r => r.ms != null).sort((a, b) => a.ms - b.ms);
+    DNS.selected = ok[0] ? ok[0].id : null;
+    if (!ok.length) DNS.error = 'Nenhum provedor respondeu — confira se a internet está ligada ou se o firewall bloqueia DNS.';
+  }catch(err){ DNS.error = String(err); }
+  DNS.testing = false; dnsRender();
+}
+
+async function dnsApply(){
+  const sel = (DNS.results || []).find(r => r.id === DNS.selected);
+  if (!sel || DNS.busy) return;
+  DNS.busy = true; DNS.error = ''; dnsRender();
+  try{
+    const m = await window.__TAURI__.core.invoke('dns_apply', { primary: sel.primary, secondary: sel.secondary, flush: DNS.flush, renew: DNS.renew });
+    showToast(m);
+  }catch(err){ DNS.error = String(err); showToast(String(err)); }
+  DNS.busy = false;
+  await dnsLoadOverview();
+}
+
+async function dnsRestore(){
+  if (DNS.busy) return;
+  DNS.busy = true; DNS.error = ''; dnsRender();
+  try{
+    const m = await window.__TAURI__.core.invoke('dns_restore', { flush: DNS.flush });
+    showToast(m);
+  }catch(err){ DNS.error = String(err); showToast(String(err)); }
+  DNS.busy = false;
+  await dnsLoadOverview();
+}
+
+function bindDnsPanel(panel){
+  panel.addEventListener('click', e => {
+    const el = e.target.closest('[data-dns]');
+    if (!el) return;
+    const act = el.dataset.dns;
+    if (act === 'bench') dnsBench();
+    else if (act === 'apply') dnsApply();
+    else if (act === 'restore') dnsRestore();
+    else if (act === 'pick'){ DNS.selected = el.dataset.id; dnsRender(); }
+    else if (act === 'eye-ip'){ DNS.hideIp = !DNS.hideIp; dnsRender(); }
+    else if (act === 'eye-gw'){ DNS.hideGw = !DNS.hideGw; dnsRender(); }
+  });
+  panel.addEventListener('change', e => {
+    const el = e.target.closest('[data-dns]');
+    if (!el) return;
+    if (el.dataset.dns === 'flush') DNS.flush = el.checked;
+    else if (el.dataset.dns === 'renew') DNS.renew = el.checked;
+  });
+  dnsRender();
+  dnsLoadOverview();
+}
+
 // ----- pipeline animado: roda as etapas de verdade, uma por vez -----
 const AT_SVG = {
   click:  '<path d="M6 3l13 7-5.5 2L11 18z"/>',
