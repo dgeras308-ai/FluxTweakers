@@ -3546,6 +3546,408 @@ fn get_machine_id() -> Result<String, String> {
     }
 }
 
+// ================= Jogos: perfil do PC + config do Fortnite =================
+
+#[derive(Serialize)]
+struct PcProfile {
+    cpu: String,
+    threads: usize,
+    ram_gb: f64,
+    gpu: String,
+    refresh_hz: u32,
+    tier: String,
+    tier_label: String,
+    reason: String,
+}
+
+const GAME_TIERS: [&str; 4] = ["entrada", "medio", "alto", "extremo"];
+const GAME_TIER_LABELS: [&str; 4] = ["Entrada", "Intermediário", "Alto desempenho", "Topo de linha"];
+
+/// Classifica a placa de vídeo pelo nome (0 entrada, 1 intermediário, 2 alto, 3 topo).
+/// É uma estimativa pelo modelo — não mede o PC rodando o jogo.
+fn game_classify_gpu(gpu: &str) -> usize {
+    let g = gpu.to_lowercase();
+    let any = |keys: &[&str]| keys.iter().any(|k| g.contains(k));
+    if any(&["rtx 5090", "rtx 5080", "rtx 5070 ti", "rtx 4090", "rtx 4080", "rtx 4070 ti", "rtx 3090", "rtx 3080", "rx 9070", "rx 7900", "rx 6950", "rx 6900", "rx 6800 xt"]) { return 3; }
+    if any(&["rtx 5070", "rtx 5060 ti", "rtx 4070", "rtx 4060 ti", "rtx 3070", "rtx 3060 ti", "rtx 2080", "rtx 2070 super", "rx 9060", "rx 7800", "rx 7700", "rx 6800", "rx 6750", "rx 6700"]) { return 2; }
+    if any(&["rtx 5060", "rtx 4060", "rtx 3060", "rtx 3050", "rtx 2070", "rtx 2060", "gtx 1080", "gtx 1070", "gtx 1660", "rx 7600", "rx 6650", "rx 6600", "rx 5700", "rx 5600", "arc a7", "arc a580"]) { return 1; }
+    if any(&["gtx 1650", "gtx 1060", "gtx 1050", "gtx 960", "gtx 950", "gt 1030", "rx 590", "rx 580", "rx 570", "rx 560", "rx 550", "rx 6500", "rx 6400", "vega", "uhd", "iris", "hd graphics", "radeon graphics", "radeon(tm) graphics", "arc a3", "arc a5", "intel(r)", "mx "]) { return 0; }
+    1
+}
+
+#[cfg(target_os = "windows")]
+fn game_refresh_hz() -> u32 {
+    let ps = "(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | Where-Object { $_.CurrentRefreshRate } | Measure-Object -Property CurrentRefreshRate -Maximum).Maximum";
+    let out = Command::new("powershell")
+        .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
+    out.ok()
+        .and_then(|o| String::from_utf8_lossy(&o.stdout).trim().parse::<f64>().ok())
+        .map(|v| v.round() as u32)
+        .unwrap_or(60)
+        .clamp(30, 500)
+}
+#[cfg(not(target_os = "windows"))]
+fn game_refresh_hz() -> u32 { 60 }
+
+/// Lê o PC (CPU, RAM, GPU, taxa de atualização da tela) e escolhe a faixa de desempenho.
+#[tauri::command]
+async fn game_pc_profile(state: State<'_, SysState>) -> Result<PcProfile, String> {
+    let (cpu, threads, ram_gb) = {
+        let sys = state.0.lock().unwrap();
+        let cpu = sys.cpus().first().map(|c| c.brand().trim().to_string()).filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "Processador não identificado".to_string());
+        (cpu, sys.cpus().len(), ((sys.total_memory() as f64 / 1_073_741_824.0) * 10.0).round() / 10.0)
+    };
+    tauri::async_runtime::spawn_blocking(move || -> Result<PcProfile, String> {
+        let gpu = read_gpu_name_windows();
+        let refresh_hz = game_refresh_hz();
+        let mut tier = game_classify_gpu(&gpu);
+        let mut notes: Vec<String> = Vec::new();
+        if ram_gb < 7.5 { if tier > 0 { notes.push(format!("limitado pela RAM ({ram_gb} GB)")); } tier = tier.min(0); }
+        else if ram_gb < 11.5 { if tier > 1 { notes.push(format!("limitado pela RAM ({ram_gb} GB)")); } tier = tier.min(1); }
+        if threads < 4 { if tier > 0 { notes.push(format!("limitado pela CPU ({threads} threads)")); } tier = tier.min(0); }
+        else if threads < 8 { if tier > 1 { notes.push(format!("limitado pela CPU ({threads} threads)")); } tier = tier.min(1); }
+        let reason = if notes.is_empty() { "Pela placa de vídeo, RAM e processador".to_string() } else { notes.join(" · ") };
+        Ok(PcProfile {
+            cpu, threads, ram_gb, gpu, refresh_hz,
+            tier: GAME_TIERS[tier].to_string(),
+            tier_label: GAME_TIER_LABELS[tier].to_string(),
+            reason,
+        })
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+#[derive(Serialize)]
+struct GameChange {
+    label: String,
+    before: String,
+    after: String,
+}
+
+#[derive(Serialize)]
+struct GameStepResult {
+    message: String,
+    done: u32,
+    total: u32,
+    changes: Vec<GameChange>,
+    path: Option<String>,
+}
+
+#[derive(Serialize)]
+struct FortniteStatus {
+    installed: bool,
+    config_path: Option<String>,
+    has_backup: bool,
+    running: bool,
+}
+
+const FORT_SECTION_USER: &str = "[/Script/FortniteGame.FortGameUserSettings]";
+const FORT_SECTION_SG: &str = "[ScalabilityGroups]";
+const FORT_BACKUP_EXT: &str = "fluxtweakers-backup";
+
+fn fortnite_ini_path() -> Option<PathBuf> {
+    let base = PathBuf::from(std::env::var("LOCALAPPDATA").ok()?).join("FortniteGame").join("Saved").join("Config");
+    for dir in ["WindowsClient", "Windows", "WindowsNoEditor"] {
+        let p = base.join(dir).join("GameUserSettings.ini");
+        if p.exists() { return Some(p); }
+    }
+    None
+}
+
+fn fortnite_backup_path(ini: &Path) -> PathBuf {
+    let mut name = ini.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+    name.push('.');
+    name.push_str(FORT_BACKUP_EXT);
+    ini.with_file_name(name)
+}
+
+fn fortnite_is_running() -> bool {
+    let running = tuner_running_set();
+    running.contains("fortniteclient-win64-shipping.exe") || running.contains("fortnitelauncher.exe")
+}
+
+/// Pasta de instalação do Fortnite (pela Epic Games), se achar.
+fn fortnite_install_exe() -> Option<PathBuf> {
+    let found = scan_epic_games().into_iter().find(|g| g.name.to_lowercase().contains("fortnite"))?;
+    let dir = Path::new(&found.exe_path).parent()?.to_path_buf();
+    let shipping = dir.join("FortniteClient-Win64-Shipping.exe");
+    if shipping.exists() { Some(shipping) } else { None }
+}
+
+fn ini_eol(content: &str) -> &'static str { if content.contains("\r\n") { "\r\n" } else { "\n" } }
+
+fn ini_get(content: &str, section: &str, key: &str) -> Option<String> {
+    let mut in_sec = false;
+    let prefix = format!("{}=", key.to_ascii_lowercase());
+    for line in content.lines() {
+        let t = line.trim();
+        if t.starts_with('[') && t.ends_with(']') { in_sec = t.eq_ignore_ascii_case(section); continue; }
+        if in_sec && t.to_ascii_lowercase().starts_with(&prefix) {
+            return Some(t[prefix.len()..].trim().to_string());
+        }
+    }
+    None
+}
+
+/// Troca (ou cria) chaves dentro de UMA seção, preservando o resto do arquivo
+/// e o tipo de quebra de linha (CRLF/LF).
+fn ini_set(content: &str, section: &str, values: &[(String, String)]) -> String {
+    let eol = ini_eol(content);
+    let mut lines: Vec<String> = content.lines().map(|l| l.to_string()).collect();
+    let mut start: Option<usize> = None;
+    let mut end = lines.len();
+    for (i, l) in lines.iter().enumerate() {
+        let t = l.trim();
+        if t.starts_with('[') && t.ends_with(']') {
+            if t.eq_ignore_ascii_case(section) { start = Some(i); }
+            else if start.is_some() { end = i; break; }
+        }
+    }
+    let mut pending: Vec<(String, String)> = values.to_vec();
+    match start {
+        Some(st) => {
+            for i in (st + 1)..end {
+                let low = lines[i].trim().to_ascii_lowercase();
+                for (k, v) in values {
+                    if low.starts_with(&format!("{}=", k.to_ascii_lowercase())) {
+                        lines[i] = format!("{k}={v}");
+                        pending.retain(|(pk, _)| pk != k);
+                    }
+                }
+            }
+            for (off, (k, v)) in pending.into_iter().enumerate() {
+                lines.insert(end + off, format!("{k}={v}"));
+            }
+        }
+        None => {
+            if !lines.last().map(|l| l.trim().is_empty()).unwrap_or(true) { lines.push(String::new()); }
+            lines.push(section.to_string());
+            for (k, v) in pending { lines.push(format!("{k}={v}")); }
+        }
+    }
+    let mut out = lines.join(eol);
+    out.push_str(eol);
+    out
+}
+
+struct FortSetting {
+    section: &'static str,
+    key: &'static str,
+    label: &'static str,
+    value: String,
+}
+
+/// O que será gravado no arquivo, conforme a faixa do PC e o foco escolhido.
+fn fortnite_plan(tier: &str, focus: &str, refresh: u32) -> Vec<FortSetting> {
+    let base = GAME_TIERS.iter().position(|t| *t == tier).unwrap_or(1) as i32;
+    let delta = match focus { "fps" => -1, "visual" => 1, _ => 0 };
+    let t = (base + delta).clamp(0, 3) as usize;
+    let res = [75.0, 100.0, 100.0, 100.0][t];
+    let q = |arr: [u8; 4]| arr[t].to_string();
+    // competitivo = FPS livre (nunca abaixo de 240 nem da taxa da tela); senão, conforme a faixa
+    let cap = if focus == "fps" { refresh.max(240) } else { [refresh.max(60), refresh.max(144), refresh.max(240), refresh.max(240)][t] };
+    let mut v = Vec::new();
+    let mut add = |section: &'static str, key: &'static str, label: &'static str, value: String| v.push(FortSetting { section, key, label, value });
+    add(FORT_SECTION_USER, "FrameRateLimit", "Limite de FPS", format!("{:.6}", cap as f64));
+    add(FORT_SECTION_USER, "bUseVSync", "VSync", "False".to_string());
+    add(FORT_SECTION_SG, "sg.ResolutionQuality", "Resolução 3D", format!("{:.6}", res));
+    add(FORT_SECTION_SG, "sg.ViewDistanceQuality", "Distância de visão", q([1, 2, 3, 3]));
+    add(FORT_SECTION_SG, "sg.ShadowQuality", "Sombras", q([0, 0, 1, 2]));
+    add(FORT_SECTION_SG, "sg.AntiAliasingQuality", "Anti-aliasing", q([0, 1, 2, 3]));
+    add(FORT_SECTION_SG, "sg.TextureQuality", "Texturas", q([1, 2, 3, 3]));
+    add(FORT_SECTION_SG, "sg.EffectsQuality", "Efeitos", q([0, 1, 1, 2]));
+    add(FORT_SECTION_SG, "sg.PostProcessQuality", "Pós-processamento", q([0, 0, 1, 2]));
+    add(FORT_SECTION_SG, "sg.FoliageQuality", "Folhagem", q([0, 0, 1, 2]));
+    add(FORT_SECTION_SG, "sg.ShadingQuality", "Sombreamento", q([0, 1, 2, 3]));
+    add(FORT_SECTION_SG, "sg.GlobalIlluminationQuality", "Iluminação global", q([0, 0, 0, 1]));
+    add(FORT_SECTION_SG, "sg.ReflectionQuality", "Reflexos", q([0, 0, 0, 1]));
+    v
+}
+
+fn fortnite_human(key: &str, raw: &str) -> String {
+    let r = raw.trim();
+    match key {
+        "FrameRateLimit" => match r.parse::<f64>() { Ok(n) if n <= 0.5 => "Sem limite".to_string(), Ok(n) => format!("{} FPS", n.round() as i64), Err(_) => r.to_string() },
+        "bUseVSync" => if r.eq_ignore_ascii_case("true") { "Ligado".to_string() } else { "Desligado".to_string() },
+        "sg.ResolutionQuality" => match r.parse::<f64>() { Ok(n) => format!("{}%", n.round() as i64), Err(_) => r.to_string() },
+        _ => match r { "0" => "Baixo".to_string(), "1" => "Médio".to_string(), "2" => "Alto".to_string(), "3" => "Épico".to_string(), other => other.to_string() },
+    }
+}
+
+fn fortnite_same(key: &str, a: &str, b: &str) -> bool {
+    if key == "FrameRateLimit" || key == "sg.ResolutionQuality" {
+        match (a.trim().parse::<f64>(), b.trim().parse::<f64>()) { (Ok(x), Ok(y)) => (x - y).abs() < 0.01, _ => a.trim() == b.trim() }
+    } else if key == "bUseVSync" {
+        a.trim().eq_ignore_ascii_case(b.trim())
+    } else {
+        a.trim() == b.trim()
+    }
+}
+
+#[tauri::command]
+fn fortnite_status() -> FortniteStatus {
+    let path = fortnite_ini_path();
+    FortniteStatus {
+        installed: path.is_some() || fortnite_install_exe().is_some(),
+        has_backup: path.as_ref().map(|p| fortnite_backup_path(p).exists()).unwrap_or(false),
+        config_path: path.map(|p| p.to_string_lossy().to_string()),
+        running: fortnite_is_running(),
+    }
+}
+
+/// Roda UMA etapa da otimização do Fortnite (o front chama uma por vez e anima):
+/// "locate", "backup", "write", "windows" ou "verify".
+#[tauri::command]
+async fn fortnite_step(step: String, tier: String, focus: String, refresh_hz: u32) -> Result<GameStepResult, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<GameStepResult, String> {
+        let ini = fortnite_ini_path();
+        let need = || ini.clone().ok_or_else(|| "Não achei a configuração do Fortnite. Abra o jogo uma vez pra ele criar o arquivo e tente de novo.".to_string());
+        match step.as_str() {
+            "locate" => {
+                let p = need()?;
+                Ok(GameStepResult { message: "Arquivo de configuração encontrado".into(), done: 1, total: 1, changes: vec![], path: Some(p.to_string_lossy().to_string()) })
+            }
+            "backup" => {
+                let p = need()?;
+                let b = fortnite_backup_path(&p);
+                if b.exists() {
+                    Ok(GameStepResult { message: "Cópia de segurança original já existia — foi mantida".into(), done: 1, total: 1, changes: vec![], path: Some(b.to_string_lossy().to_string()) })
+                } else {
+                    fs::copy(&p, &b).map_err(|e| format!("Não consegui criar a cópia de segurança: {e}"))?;
+                    Ok(GameStepResult { message: "Cópia de segurança criada ao lado do arquivo".into(), done: 1, total: 1, changes: vec![], path: Some(b.to_string_lossy().to_string()) })
+                }
+            }
+            "write" => {
+                let p = need()?;
+                if fortnite_is_running() {
+                    return Err("O Fortnite está aberto. Feche o jogo primeiro — ele sobrescreve esse arquivo quando fecha.".to_string());
+                }
+                let mut content = fs::read_to_string(&p).map_err(|e| format!("Não consegui ler o arquivo: {e}"))?;
+                let plan = fortnite_plan(&tier, &focus, refresh_hz);
+                let mut changes = Vec::new();
+                let mut changed = 0u32;
+                for item in plan.iter() {
+                    let before_raw = ini_get(&content, item.section, item.key);
+                    let same = before_raw.as_deref().map(|b| fortnite_same(item.key, b, &item.value)).unwrap_or(false);
+                    if !same { changed += 1; }
+                    changes.push(GameChange {
+                        label: item.label.to_string(),
+                        before: before_raw.as_deref().map(|b| fortnite_human(item.key, b)).unwrap_or_else(|| "—".to_string()),
+                        after: fortnite_human(item.key, &item.value),
+                    });
+                }
+                for section in [FORT_SECTION_USER, FORT_SECTION_SG] {
+                    let vals: Vec<(String, String)> = plan.iter().filter(|i| i.section == section).map(|i| (i.key.to_string(), i.value.clone())).collect();
+                    content = ini_set(&content, section, &vals);
+                }
+                if let Ok(meta) = fs::metadata(&p) {
+                    let mut perm = meta.permissions();
+                    if perm.readonly() { perm.set_readonly(false); let _ = fs::set_permissions(&p, perm); }
+                }
+                fs::write(&p, content).map_err(|e| format!("Não consegui salvar o arquivo: {e}"))?;
+                let total = plan.len() as u32;
+                Ok(GameStepResult { message: format!("{changed} de {total} ajustes mudaram"), done: changed, total, changes, path: Some(p.to_string_lossy().to_string()) })
+            }
+            "windows" => {
+                let exe = match fortnite_install_exe() {
+                    Some(e) => e,
+                    None => return Ok(GameStepResult { message: "Instalação da Epic não encontrada — pulei os ajustes do Windows".into(), done: 0, total: 0, changes: vec![], path: None }),
+                };
+                let exe_s = exe.to_string_lossy().to_string();
+                let mut ok = 0u32;
+                let jobs: [(&str, &str); 2] = [
+                    ("HKCU\\Software\\Microsoft\\DirectX\\UserGpuPreference", "GpuPreference=2;"),
+                    ("HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers", "~ DISABLEDXMAXIMIZEDWINDOWEDMODE"),
+                ];
+                for (key, data) in jobs {
+                    let mut cmd = Command::new("reg");
+                    cmd.args(["add", key, "/v", &exe_s, "/t", "REG_SZ", "/d", data, "/f"]);
+                    #[cfg(target_os = "windows")]
+                    { cmd.creation_flags(CREATE_NO_WINDOW); }
+                    if cmd.output().map(|o| o.status.success()).unwrap_or(false) { ok += 1; }
+                }
+                Ok(GameStepResult { message: format!("{ok} de 2 opções do Windows aplicadas (GPU dedicada e tela cheia sem otimizações)"), done: ok, total: 2, changes: vec![], path: Some(exe_s) })
+            }
+            "verify" => {
+                let p = need()?;
+                let content = fs::read_to_string(&p).map_err(|e| format!("Não consegui reler o arquivo: {e}"))?;
+                let plan = fortnite_plan(&tier, &focus, refresh_hz);
+                let total = plan.len() as u32;
+                let ok = plan.iter().filter(|i| ini_get(&content, i.section, i.key).map(|v| fortnite_same(i.key, &v, &i.value)).unwrap_or(false)).count() as u32;
+                if ok == total {
+                    Ok(GameStepResult { message: format!("Conferi o arquivo: {ok} de {total} valores confirmados"), done: ok, total, changes: vec![], path: Some(p.to_string_lossy().to_string()) })
+                } else {
+                    Err(format!("Só {ok} de {total} valores ficaram gravados — o Fortnite pode ter reescrito o arquivo."))
+                }
+            }
+            _ => Err("Etapa desconhecida".to_string()),
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+/// Abre o GameUserSettings.ini do Fortnite no Bloco de Notas.
+#[tauri::command]
+fn fortnite_open_config() -> Result<String, String> {
+    let p = fortnite_ini_path().ok_or_else(|| "Não achei a configuração do Fortnite. Abra o jogo uma vez e tente de novo.".to_string())?;
+    let mut cmd = Command::new("notepad.exe");
+    cmd.arg(&p);
+    cmd.spawn().map_err(|e| format!("Não consegui abrir o Bloco de Notas: {e}"))?;
+    Ok(p.to_string_lossy().to_string())
+}
+
+/// Volta o arquivo do Fortnite pra cópia de segurança original.
+#[tauri::command]
+fn fortnite_restore_backup() -> Result<String, String> {
+    let p = fortnite_ini_path().ok_or_else(|| "Não achei a configuração do Fortnite.".to_string())?;
+    let b = fortnite_backup_path(&p);
+    if !b.exists() { return Err("Ainda não existe cópia de segurança — otimize uma vez primeiro.".to_string()); }
+    if fortnite_is_running() { return Err("Feche o Fortnite antes de restaurar.".to_string()); }
+    if let Ok(meta) = fs::metadata(&p) {
+        let mut perm = meta.permissions();
+        if perm.readonly() { perm.set_readonly(false); let _ = fs::set_permissions(&p, perm); }
+    }
+    fs::copy(&b, &p).map_err(|e| format!("Não consegui restaurar: {e}"))?;
+    Ok("Configuração original do Fortnite restaurada".to_string())
+}
+
+/// Ícones reais dos jogos (extraídos dos .exe). Devolve índice -> data URL PNG.
+#[tauri::command]
+async fn game_icons(paths: Vec<String>) -> Result<std::collections::HashMap<String, String>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut map = std::collections::HashMap::new();
+        let list: Vec<String> = paths.iter().enumerate()
+            .filter(|(_, p)| p.to_lowercase().ends_with(".exe") && Path::new(p.as_str()).exists())
+            .map(|(i, p)| format!("'{}|{}'", i, p.replace('\'', "''")))
+            .collect();
+        if list.is_empty() { return map; }
+        let ps = format!(
+            "Add-Type -AssemblyName System.Drawing; $items = @({}); foreach($it in $items){{ $p = $it.Split('|',2); try {{ $ic = [System.Drawing.Icon]::ExtractAssociatedIcon($p[1]); $b = $ic.ToBitmap(); $ms = New-Object System.IO.MemoryStream; $b.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png); $p[0] + '|' + [Convert]::ToBase64String($ms.ToArray()) }} catch {{}} }}",
+            list.join(",")
+        );
+        #[cfg(target_os = "windows")]
+        {
+            if let Ok(o) = Command::new("powershell").args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps]).creation_flags(CREATE_NO_WINDOW).output() {
+                for line in String::from_utf8_lossy(&o.stdout).lines() {
+                    if let Some((id, b64)) = line.trim().split_once('|') {
+                        if !b64.is_empty() { map.insert(id.to_string(), format!("data:image/png;base64,{b64}")); }
+                    }
+                }
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        { let _ = ps; }
+        map
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))
+}
+
 fn main() {
     #[cfg(target_os = "windows")]
     {
@@ -3561,7 +3963,7 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
         .manage(PdhState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, fortnite_status, fortnite_step, fortnite_open_config, fortnite_restore_backup, game_icons])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));

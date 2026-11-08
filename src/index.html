@@ -2200,6 +2200,88 @@
   .at-missing em img{width:16px;height:16px;border-radius:4px;vertical-align:-3px;margin-right:6px;}
   .at-missing em{font-style:normal;padding:4px 10px;border-radius:999px;background:var(--item-bg);border:1px solid var(--item-border);}
 
+
+  /* ===================== ABA JOGOS ===================== */
+  .gm-wrap{display:flex;flex-direction:column;gap:16px;margin:4px 0 22px;}
+  .gm-card,.gm-section,.gm-hero{border-radius:18px;background:var(--item-bg);border:1px solid var(--item-border);padding:22px;}
+  .gm-section{padding:22px;}
+  .gm-hero{display:grid;grid-template-columns:1.1fr 1fr;gap:26px;align-items:center;background:radial-gradient(520px 220px at 0% 0%,var(--accent-dim),transparent 70%),var(--item-bg);}
+  .gm-chip{display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:11.5px;font-weight:700;color:var(--accent);background:color-mix(in srgb,var(--accent) 13%,transparent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);}
+  .gm-hero h2{margin:14px 0 8px;font-size:27px;line-height:1.12;font-weight:800;letter-spacing:-.02em;color:var(--text);}
+  .gm-hero h2 em{font-style:normal;color:var(--accent);}
+  .gm-hero p{margin:0;font-size:13px;line-height:1.55;color:var(--muted);max-width:480px;}
+  .gm-hero p b{color:var(--text);}
+  .gm-specs{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .gm-spec{padding:12px 14px;border-radius:13px;background:rgba(0,0,0,.14);border:1px solid var(--item-border);min-width:0;}
+  .gm-spec span{display:block;font-size:11px;color:var(--muted);font-weight:600;}
+  .gm-spec b{display:block;margin-top:4px;font-size:14px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .gm-spec small{display:block;margin-top:2px;font-size:11px;color:var(--muted2);}
+  .gm-fort-top{display:flex;gap:16px;align-items:center;}
+  .gm-fort-ico{width:60px;height:60px;border-radius:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:var(--text);background:rgba(0,0,0,.2);border:1px solid var(--item-border);overflow:hidden;}
+  .gm-fort-ico img{width:40px;height:40px;object-fit:contain;}
+  .gm-fort-txt h3{margin:0;font-size:17px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+  .gm-fort-txt p{margin:6px 0 0;font-size:12.5px;line-height:1.55;color:var(--muted);max-width:620px;}
+  .gm-fort-txt code,.gm-hint code{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;padding:1px 6px;border-radius:5px;background:rgba(0,0,0,.25);color:var(--text);}
+  .gm-pill{font-size:10.5px;font-weight:800;padding:3px 10px;border-radius:999px;color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent);}
+  .gm-pill.warn{color:#f5c542;background:rgba(245,197,66,.14);}
+  .gm-focus{display:flex;align-items:center;gap:14px;margin:20px 0 16px;flex-wrap:wrap;}
+  .gm-label{font-size:12px;font-weight:700;color:var(--muted);}
+  .gm-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;min-width:330px;}
+  .gm-seg button{font-family:inherit;padding:9px 8px;border-radius:10px;border:1px solid var(--item-border);background:transparent;color:var(--muted);font-size:12.5px;font-weight:700;cursor:pointer;transition:all .15s;}
+  .gm-seg button small{display:block;font-size:10.5px;font-weight:600;opacity:.75;margin-top:1px;}
+  .gm-seg button:hover:not(:disabled){border-color:var(--accent);color:var(--text);}
+  .gm-seg button.on{background:color-mix(in srgb,var(--accent) 16%,transparent);border-color:var(--accent);color:var(--text);}
+  .gm-seg button:disabled{opacity:.6;cursor:default;}
+  .gm-fort-actions{display:flex;gap:10px;flex-wrap:wrap;}
+  .gm-btn{display:inline-flex;align-items:center;gap:8px;font-family:inherit;font-size:12.8px;font-weight:700;padding:10px 16px;border-radius:11px;border:1px solid var(--item-border);background:transparent;color:var(--text);cursor:pointer;transition:all .15s;white-space:nowrap;}
+  .gm-btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
+  .gm-btn:hover:not(:disabled){border-color:var(--accent);transform:translateY(-1px);}
+  .gm-btn:disabled{opacity:.5;cursor:default;}
+  .gm-btn.primary{background:var(--accent);border-color:transparent;color:#08101c;}
+  .gm-btn.primary svg{fill:currentColor;stroke:none;}
+  .gm-btn.primary:hover:not(:disabled){filter:brightness(1.08);border-color:transparent;}
+  .gm-hint{margin:14px 0 0;font-size:11.8px;line-height:1.55;color:var(--muted2);}
+  .gm-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:16px;flex-wrap:wrap;}
+  .gm-section-head h3{margin:0;font-size:15px;font-weight:800;color:var(--text);}
+  .gm-section-head p{margin:4px 0 0;font-size:12px;color:var(--muted);line-height:1.5;max-width:560px;overflow:hidden;text-overflow:ellipsis;}
+  .gm-changes .gm-section-head{margin-bottom:12px;}
+  .gm-changes .gm-section-head p{font-family:ui-monospace,Consolas,monospace;font-size:11px;white-space:nowrap;max-width:100%;}
+  .gm-diff{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:8px;}
+  .gm-diff-row{display:grid;grid-template-columns:1fr auto auto auto;gap:9px;align-items:center;padding:10px 12px;border-radius:11px;background:rgba(0,0,0,.14);border:1px solid var(--item-border);font-size:12.3px;opacity:0;animation:gmrow .5s ease forwards;}
+  .gm-diff-row span{color:var(--muted);font-weight:600;}
+  .gm-diff-row em{font-style:normal;color:var(--muted2);text-decoration:line-through;text-decoration-color:rgba(255,255,255,.2);}
+  .gm-diff-row i{font-style:normal;color:var(--muted2);}
+  .gm-diff-row b{color:var(--ok);font-weight:800;}
+  .gm-diff-row b.same{color:var(--text);}
+  @keyframes gmrow{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .gm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px;}
+  .gm-grid .detected-games-empty{grid-column:1 / -1;}
+  .gm-game{display:flex;flex-direction:column;gap:11px;padding:16px;border-radius:15px;background:rgba(0,0,0,.14);border:1px solid var(--item-border);transition:border-color .15s,transform .15s;}
+  .gm-game:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--item-border));transform:translateY(-2px);}
+  .gm-game-top{display:flex;align-items:center;gap:13px;min-width:0;}
+  .gm-game-ico{width:48px;height:48px;border-radius:13px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800;color:var(--muted);background:var(--item-bg);border:1px solid var(--item-border);overflow:hidden;}
+  .gm-game-ico img{width:32px;height:32px;object-fit:contain;}
+  .gm-game-info{min-width:0;}
+  .gm-game-info b{display:block;font-size:14px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .gm-game-info .game-detected-src{display:block;margin-top:3px;font-size:11.3px;color:var(--muted);}
+  .gm-game .game-detected-path{display:block;font-size:10.8px;color:var(--muted2);font-family:ui-monospace,Consolas,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .gm-game .game-graphics-note{font-size:11px;color:var(--muted);line-height:1.4;}
+  .gm-game .game-graphics-note:empty{display:none;}
+  .gm-game-presets{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+  .gm-game .game-preset-btn{padding:8px 4px;border-radius:9px;font-size:11.8px;font-weight:700;}
+  .gm-game .gm-analyze{display:inline-flex;align-items:center;justify-content:center;gap:7px;width:100%;border-style:dashed;}
+  .gm-game .gm-analyze svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;}
+  .gm-game.game-detected-card{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;flex-wrap:nowrap;gap:11px;padding:16px;border-radius:15px;background:rgba(0,0,0,.14);border:1px solid var(--item-border);text-align:left;}
+  .gm-game .game-detected-src{font-size:11.3px;text-transform:none;letter-spacing:0;color:var(--muted);font-weight:600;}
+  .gm-game .game-detected-path{max-width:none;text-align:left;}
+  .gm-game .game-graphics-note{max-width:none;color:var(--muted);}
+  .gm-game .gm-game-presets{width:100%;}
+  .gm-game .game-preset-btn.active{color:#08101c;}
+  .gm-add{display:flex;gap:10px;margin-top:16px;}
+  .gm-in{flex:1;box-sizing:border-box;font-family:inherit;font-size:13px;padding:10px 13px;border-radius:11px;border:1px solid var(--item-border);background:rgba(0,0,0,.18);color:var(--text);outline:none;}
+  .gm-in:focus{border-color:var(--accent);}
+  @media (max-width:1000px){.gm-hero{grid-template-columns:1fr;}.gm-seg{min-width:0;width:100%;}}
+
   /* ===================== LOGIN (layout dividido, sóbrio) ===================== */
   #loginScreen{display:block;padding:0;background:var(--bg);}
   #loginScreen::before,#loginScreen::after{display:none;}
@@ -5834,6 +5916,228 @@ async function activateFluxPowerPlan(btn){
   setTimeout(loadPowerPlans, 900);
 }
 
+// ================= Aba Jogos: perfil do PC + Fortnite + biblioteca =================
+const GM_ICON = {
+  refresh: '<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.2L3 16M3 21v-5h5"/></svg>',
+  bolt:    '<svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>',
+  note:    '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>',
+  undo:    '<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>',
+  search:  '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>',
+};
+const GM_PIPE_ICON = {
+  click:'<path d="M6 3l13 7-5.5 2L11 18z"/>',
+  cpu:'<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>',
+  file:'<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/>',
+  copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
+  sliders:'<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+  win:'<rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/>',
+  verify:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  screen:'<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+  bolt:'<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  cross:'<path d="M6 6l12 12M18 6L6 18"/>',
+};
+const gmEsc = t => String(t ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const gmSleep = ms => new Promise(r => setTimeout(r, ms));
+const gmPsvg = k => `<svg viewBox="0 0 24 24">${GM_PIPE_ICON[k]}</svg>`;
+const GM = { profile:null, loadingProfile:false, fort:null, fortIcon:null, focus:'balanced', running:false, games:[] };
+const GM_TIER_REC = { entrada:'Desempenho', medio:'Equilibrado', alto:'Qualidade', extremo:'Qualidade' };
+const GM_FOCUS = { fps:'Competitivo', balanced:'Equilibrado', visual:'Visual' };
+
+// pipeline animado reutilizável (mesmo visual do DNS e do App Tuner)
+function fxPipe(rootId){
+  const P = { nodes:[], links:[], total:0, done:0, cur:-1, steps:[] };
+  P.mount = (title, sub, steps, idle) => {
+    const root = document.getElementById(rootId); if(!root) return;
+    const node = (icon, label, edge) => `<div class="at-node${edge ? ' edge' : ''}"><div class="at-node-box"><svg viewBox="0 0 24 24">${GM_PIPE_ICON[icon]}</svg><span class="at-badge"><svg viewBox="0 0 24 24">${GM_PIPE_ICON.check}</svg></span></div><b>${label}</b><i class="dns-node-cnt"></i></div>`;
+    const link = '<div class="at-link"><span class="at-dot"></span></div>';
+    let h = node('click','CLIQUE',true);
+    steps.forEach(st => { h += link + node(st.icon, st.label, false); });
+    h += link + node('screen','TELA',true);
+    root.innerHTML = `<div class="at-pipe">
+      <div class="at-pipe-head"><div class="at-pipe-title"><div class="at-pipe-badge"><svg viewBox="0 0 24 24">${GM_PIPE_ICON.bolt}</svg></div><div><b>${title}</b><span>${sub}</span></div></div></div>
+      <div class="at-prog"><div class="at-prog-bar"><div class="at-prog-fill" id="${rootId}-fill"></div></div><em id="${rootId}-num">0%</em></div>
+      <div class="at-track">${h}</div>
+      <div class="dns-msg" id="${rootId}-msg"><i></i><span>${idle || ''}</span></div>
+    </div>`;
+    P.nodes = [...root.querySelectorAll('.at-node')]; P.links = [...root.querySelectorAll('.at-link')];
+    P.total = steps.length + 2; P.done = 0; P.cur = -1; P.steps = steps;
+  };
+  P.progress = () => { const pct = Math.round(P.done / P.total * 100); const f = document.getElementById(rootId + '-fill'), n = document.getElementById(rootId + '-num'); if(f) f.style.width = pct + '%'; if(n) n.textContent = pct + '%'; };
+  P.msg = (html, live) => { const m = document.getElementById(rootId + '-msg'); if(m){ m.className = 'dns-msg' + (live ? ' live' : ''); m.innerHTML = `<i></i><span>${html}</span>`; } };
+  P.start = async () => { P.nodes[0].classList.add('active'); await gmSleep(450); P.nodes[0].classList.replace('active','done'); P.done++; P.progress(); };
+  P.enter = async i => { const l = P.links[i - 1]; if(l){ l.classList.add('run'); await gmSleep(750); l.classList.replace('run','filled'); } P.nodes[i].classList.add('active'); P.cur = i; };
+  P.count = (i, t) => { const c = P.nodes[i] && P.nodes[i].querySelector('i'); if(c) c.textContent = t || ''; };
+  P.finish = (i, t) => { P.nodes[i].classList.replace('active','done'); if(t != null) P.count(i, t); P.done++; P.progress(); };
+  P.fail = (i, t) => { const n = P.nodes[i]; if(!n) return; n.classList.remove('active'); n.classList.add('err'); const b = n.querySelector('.at-badge'); if(b) b.innerHTML = `<svg viewBox="0 0 24 24">${GM_PIPE_ICON.cross}</svg>`; if(t) P.count(i, t); };
+  P.end = async () => { await P.enter(P.nodes.length - 1); await gmSleep(450); P.finish(P.nodes.length - 1); };
+  return P;
+}
+const GP = fxPipe('gmPipeRoot');
+
+function gmShortCpu(c){ return String(c || '').replace(/\(R\)|\(TM\)|CPU|Processor|with Radeon.*$/gi,'').replace(/\s+/g,' ').trim(); }
+
+function gmRenderHero(){
+  const root = document.getElementById('gmHero');
+  if(!root) return;
+  const p = GM.profile;
+  if(!window.__TAURI__){
+    root.innerHTML = `<div class="gm-hero-main"><span class="gm-chip">Prévia</span><h2>Seu PC para jogos</h2><p>A análise do hardware e a otimização dos jogos só funcionam no app instalado.</p></div>`;
+    return;
+  }
+  if(!p){
+    root.innerHTML = `<div class="gm-hero-main"><span class="gm-chip">${GM.loadingProfile ? 'Analisando...' : 'Seu PC'}</span><h2>Lendo o seu hardware...</h2><p>Estamos verificando processador, placa de vídeo, memória e taxa de atualização da tela.</p></div>`;
+    return;
+  }
+  root.innerHTML = `<div class="gm-hero-main">
+      <span class="gm-chip">${gmEsc(p.tier_label)}</span>
+      <h2>Seu PC é <em>${gmEsc(p.tier_label)}</em> pra jogos</h2>
+      <p>${gmEsc(p.reason)}. Preset recomendado: <b>${GM_TIER_REC[p.tier] || 'Equilibrado'}</b>.</p>
+    </div>
+    <div class="gm-specs">
+      <div class="gm-spec"><span>Processador</span><b title="${gmEsc(p.cpu)}">${gmEsc(gmShortCpu(p.cpu))}</b><small>${p.threads} threads</small></div>
+      <div class="gm-spec"><span>Placa de vídeo</span><b title="${gmEsc(p.gpu)}">${gmEsc(p.gpu)}</b><small>faixa ${gmEsc(p.tier_label)}</small></div>
+      <div class="gm-spec"><span>Memória</span><b>${p.ram_gb} GB</b><small>RAM instalada</small></div>
+      <div class="gm-spec"><span>Tela</span><b>${p.refresh_hz} Hz</b><small>taxa de atualização</small></div>
+    </div>`;
+}
+
+function gmRenderFortnite(){
+  const root = document.getElementById('gmFortnite');
+  if(!root) return;
+  if(!window.__TAURI__ || !GM.fort || !GM.fort.installed){ root.innerHTML = ''; return; }
+  const f = GM.fort;
+  const hasCfg = !!f.config_path;
+  const busy = GM.running;
+  const icon = GM.fortIcon ? `<img src="${GM.fortIcon}" alt="">` : 'F';
+  root.innerHTML = `<div class="gm-card gm-fort">
+    <div class="gm-fort-top">
+      <div class="gm-fort-ico">${icon}</div>
+      <div class="gm-fort-txt">
+        <h3>Fortnite <span class="gm-pill ${hasCfg ? 'ok' : 'warn'}">${hasCfg ? 'Configuração encontrada' : 'Abra o jogo uma vez'}</span>${f.running ? '<span class="gm-pill warn">Aberto agora</span>' : ''}</h3>
+        <p>Ajusta o arquivo <code>GameUserSettings.ini</code> do jogo — o mesmo que você abriria no Bloco de Notas — de acordo com o seu PC, com cópia de segurança do original.</p>
+      </div>
+    </div>
+    <div class="gm-focus">
+      <span class="gm-label">Foco</span>
+      <div class="gm-seg" id="gmFocusSeg">
+        ${Object.entries(GM_FOCUS).map(([k, v]) => `<button type="button" data-focus="${k}" class="${GM.focus === k ? 'on' : ''}" ${busy ? 'disabled' : ''}>${v}<small>${k === 'fps' ? 'máx. FPS' : k === 'visual' ? 'mais bonito' : 'meio-termo'}</small></button>`).join('')}
+      </div>
+    </div>
+    <div class="gm-fort-actions">
+      <button type="button" class="gm-btn primary" data-gm="fort-run" ${busy || !hasCfg ? 'disabled' : ''}>${GM_ICON.bolt}${busy ? 'Otimizando...' : 'Otimizar pro meu PC'}</button>
+      <button type="button" class="gm-btn" data-gm="fort-open" ${busy || !hasCfg ? 'disabled' : ''}>${GM_ICON.note}Abrir no Bloco de Notas</button>
+      <button type="button" class="gm-btn" data-gm="fort-restore" ${busy || !f.has_backup ? 'disabled' : ''}>${GM_ICON.undo}Restaurar original</button>
+    </div>
+    <p class="gm-hint">Feche o Fortnite antes de otimizar — ele reescreve esse arquivo quando fecha. Uma cópia do arquivo original fica salva ao lado, com a extensão <code>.fluxtweakers-backup</code>.</p>
+  </div>`;
+}
+
+function gmRenderChanges(changes, path){
+  const root = document.getElementById('gmChanges');
+  if(!root) return;
+  if(!changes || !changes.length){ root.innerHTML = ''; return; }
+  root.innerHTML = `<div class="gm-card gm-changes">
+    <div class="gm-section-head"><div><h3>O que mudou no arquivo</h3><p title="${gmEsc(path || '')}">${gmEsc(path || '')}</p></div></div>
+    <div class="gm-diff">${changes.map((c, i) => `<div class="gm-diff-row" style="animation-delay:${i * 90}ms"><span>${gmEsc(c.label)}</span><em>${gmEsc(c.before)}</em><i>→</i><b class="${c.before === c.after ? 'same' : ''}">${gmEsc(c.after)}</b></div>`).join('')}</div>
+  </div>`;
+}
+
+async function gmLoadProfile(){
+  if(!window.__TAURI__ || GM.loadingProfile) return;
+  GM.loadingProfile = true; gmRenderHero();
+  try{ GM.profile = await window.__TAURI__.core.invoke('game_pc_profile'); }catch(err){ GM.profile = null; }
+  GM.loadingProfile = false; gmRenderHero();
+}
+async function gmLoadFortnite(){
+  if(!window.__TAURI__) return;
+  try{ GM.fort = await window.__TAURI__.core.invoke('fortnite_status'); }catch(err){ GM.fort = null; }
+  gmRenderFortnite();
+}
+
+const GM_STEPS = [
+  { id:'hw',      label:'Seu PC',          icon:'cpu' },
+  { id:'locate',  label:'Config do jogo',  icon:'file' },
+  { id:'backup',  label:'Cópia de segurança', icon:'copy' },
+  { id:'write',   label:'Aplicando',       icon:'sliders' },
+  { id:'windows', label:'Windows',         icon:'win' },
+  { id:'verify',  label:'Verificando',     icon:'verify' },
+];
+
+async function gmRunFortnite(){
+  if(GM.running) return;
+  if(!window.__TAURI__){ showToast('A otimização só funciona no app instalado'); return; }
+  const inv = window.__TAURI__.core.invoke;
+  GM.running = true; gmRenderFortnite(); gmRenderChanges(null);
+  GP.mount('Otimizando o Fortnite', 'Cada etapa mexe de verdade no seu PC e no arquivo do jogo', GM_STEPS, '');
+  GP.msg('Começando...', true);
+  await GP.start();
+
+  // 1) hardware
+  await GP.enter(1); GP.msg('Lendo o seu <b>hardware</b>...', true);
+  try{ GM.profile = await inv('game_pc_profile'); }catch(err){}
+  gmRenderHero(); await gmSleep(650);
+  if(!GM.profile){ GP.fail(1, 'falhou'); GP.msg('Não consegui ler o hardware.'); GM.running = false; gmRenderFortnite(); return; }
+  GP.finish(1, GM.profile.tier_label);
+  const args = { tier: GM.profile.tier, focus: GM.focus, refreshHz: GM.profile.refresh_hz };
+
+  const run = [
+    { i:2, step:'locate',  msg:'Procurando o <b>GameUserSettings.ini</b> do Fortnite...' },
+    { i:3, step:'backup',  msg:'Guardando uma <b>cópia de segurança</b> do arquivo original...' },
+    { i:4, step:'write',   msg:`Gravando as configurações da faixa <b>${gmEsc(GM.profile.tier_label)}</b> (foco ${GM_FOCUS[GM.focus].toLowerCase()})...` },
+    { i:5, step:'windows', msg:'Ajustando o Windows pro jogo: <b>GPU dedicada</b> e tela cheia sem otimizações...' },
+    { i:6, step:'verify',  msg:'Conferindo se o arquivo ficou <b>exatamente como planejado</b>...' },
+  ];
+  let summary = '';
+  for(const st of run){
+    await GP.enter(st.i); GP.msg(st.msg, true);
+    const t0 = Date.now();
+    let r;
+    try{ r = await inv('fortnite_step', { step: st.step, ...args }); }
+    catch(err){
+      GP.fail(st.i, 'falhou'); GP.msg(gmEsc(String(err)));
+      showToast(String(err), 'error');
+      GM.running = false; await gmLoadFortnite(); return;
+    }
+    const wait = 850 - (Date.now() - t0); if(wait > 0) await gmSleep(wait);
+    if(st.step === 'write'){ gmRenderChanges(r.changes, r.path); GP.count(st.i, `${r.done}/${r.total}`); summary = `${r.done} ajustes aplicados`; }
+    else if(st.step === 'windows'){ GP.count(st.i, r.total ? `${r.done}/${r.total}` : '—'); }
+    else if(st.step === 'verify'){ GP.count(st.i, `${r.done}/${r.total}`); }
+    else { GP.count(st.i, '✓'); }
+    GP.finish(st.i);
+    GP.msg(gmEsc(r.message));
+    await gmSleep(300);
+  }
+  await GP.end();
+  GP.msg('<b>Pronto!</b> Abra o Fortnite — as novas configurações já estão valendo.');
+  showToast('Fortnite otimizado: ' + (summary || 'configuração aplicada'));
+  GM.running = false; await gmLoadFortnite();
+}
+
+function gmInit(panel){
+  if(!panel.dataset.gmBound){
+    panel.dataset.gmBound = '1';
+    panel.addEventListener('click', async e => {
+      const f = e.target.closest('[data-focus]');
+      if(f && !GM.running){ GM.focus = f.dataset.focus; gmRenderFortnite(); return; }
+      const b = e.target.closest('[data-gm]');
+      if(!b || b.disabled) return;
+      const act = b.dataset.gm;
+      if(act === 'fort-run') gmRunFortnite();
+      else if(act === 'fort-open'){
+        try{ await window.__TAURI__.core.invoke('fortnite_open_config'); }catch(err){ showToast(String(err), 'error'); }
+      } else if(act === 'fort-restore'){
+        if(b.dataset.confirm !== '1'){ b.dataset.confirm = '1'; const old = b.innerHTML; b.textContent = 'Confirmar restauração?'; setTimeout(() => { b.dataset.confirm = ''; b.innerHTML = old; }, 3500); return; }
+        try{ const m = await window.__TAURI__.core.invoke('fortnite_restore_backup'); showToast(m); gmRenderChanges(null); await gmLoadFortnite(); }
+        catch(err){ showToast(String(err), 'error'); }
+      }
+    });
+  }
+  GP.mount('Otimização do jogo', 'Escolha o foco e clique em "Otimizar pro meu PC" pra ver cada etapa acontecendo', GM_STEPS, 'Pronto pra começar.');
+  gmRenderHero(); gmRenderFortnite();
+  gmLoadProfile(); gmLoadFortnite();
+}
+
 async function loadDetectedGames(){
   const list = document.getElementById('detectedGamesList');
   if (!list) return;
@@ -5841,35 +6145,37 @@ async function loadDetectedGames(){
     list.innerHTML = `<p class="detected-games-empty">Detecção automática só funciona no app instalado.</p>`;
     return;
   }
-  list.innerHTML = `<p class="detected-games-empty">Procurando jogos instalados (Steam/Epic)...</p>`;
+  list.innerHTML = `<p class="detected-games-empty">Procurando jogos instalados...</p>`;
   try{
     const { invoke } = window.__TAURI__.core;
     const games = await invoke('scan_installed_games');
+    GM.games = games || [];
     if (!games || !games.length){
-      list.innerHTML = `<p class="detected-games-empty">Nenhum jogo da Steam ou Epic Games encontrado nesta máquina.</p>`;
+      list.innerHTML = `<p class="detected-games-empty">Nenhum jogo da Steam, Epic, Ubisoft ou Rockstar encontrado nesta máquina.</p>`;
       return;
     }
+    const SRC = { steam:'Steam', epic:'Epic Games', ubisoft:'Ubisoft Connect', rockstar:'Rockstar Games' };
     list.innerHTML = games.map((g, i) => `
-      <div class="game-detected-card">
-        <div class="game-detected-info">
-          <b>${g.name}</b>
-          <span class="game-detected-src">${({steam:'Steam', epic:'Epic Games', ubisoft:'Ubisoft Connect', rockstar:'Rockstar Games'})[g.source] || g.source}</span>
-          <span class="game-detected-path" title="${g.exe_path}">${g.exe_path}</span>
-          <span class="game-graphics-note"></span>
+      <div class="game-detected-card gm-game" data-i="${i}">
+        <div class="gm-game-top">
+          <div class="gm-game-ico" id="gmIco${i}">${gmEsc((g.name || '?').charAt(0).toUpperCase())}</div>
+          <div class="gm-game-info">
+            <b title="${gmEsc(g.name)}">${gmEsc(g.name)}</b>
+            <span class="game-detected-src">${gmEsc(SRC[g.source] || g.source)}${/fortnite/i.test(g.name) ? ' · ajuste do arquivo de config' : ''}</span>
+          </div>
         </div>
-        <div class="game-detected-actions">
-          <button class="game-preset-btn analyze" data-exe-analyze="${i}" title="Roda um diagnóstico real: prioridade, GPU, espaço em disco, apps pesados abertos">🔍 Analisar</button>
+        <span class="game-detected-path" title="${gmEsc(g.exe_path)}">${gmEsc(g.exe_path)}</span>
+        <span class="game-graphics-note"></span>
+        <div class="gm-game-presets">
           <button class="game-preset-btn perf" data-preset="performance" data-exe="${i}" title="${PRESET_LABELS.performance.title}">Desempenho</button>
           <button class="game-preset-btn bal" data-preset="balanced" data-exe="${i}" title="${PRESET_LABELS.balanced.title}">Equilibrado</button>
           <button class="game-preset-btn qual" data-preset="quality" data-exe="${i}" title="${PRESET_LABELS.quality.title}">Qualidade</button>
         </div>
+        <button class="game-preset-btn analyze gm-analyze" data-exe-analyze="${i}" title="Roda um diagnóstico real: prioridade, GPU, espaço em disco, apps pesados abertos">${GM_ICON.search}Analisar este jogo</button>
       </div>
     `).join('');
     list.querySelectorAll('.game-preset-btn[data-exe-analyze]').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const g = games[+btn.dataset.exeAnalyze];
-        runGameAnalysis(g);
-      });
+      btn.addEventListener('click', ()=>{ runGameAnalysis(games[+btn.dataset.exeAnalyze]); });
     });
     list.querySelectorAll('.game-preset-btn[data-preset]').forEach(btn=>{
       btn.addEventListener('click', ()=>{
@@ -5877,8 +6183,16 @@ async function loadDetectedGames(){
         applyGamePreset(g.exe_path, btn.dataset.preset, btn, g.name);
       });
     });
+    // ícones reais dos .exe
+    invoke('game_icons', { paths: games.map(g => g.exe_path) }).then(map => {
+      Object.entries(map || {}).forEach(([i, url]) => {
+        const el = document.getElementById('gmIco' + i);
+        if(el){ el.innerHTML = `<img src="${url}" alt="">`; el.classList.add('has-img'); }
+        if(/fortnite/i.test(games[+i].name)){ GM.fortIcon = url; gmRenderFortnite(); }
+      });
+    }).catch(() => {});
   }catch(err){
-    list.innerHTML = `<p class="detected-games-empty">Não foi possível procurar jogos: ${err}</p>`;
+    list.innerHTML = `<p class="detected-games-empty">Não foi possível procurar jogos: ${gmEsc(err)}</p>`;
   }
 }
 
@@ -7106,21 +7420,24 @@ function renderPanel(catId){
   }
 
   if(cat.special === 'games'){
-    html += `<div class="detected-games-box">
-      <div class="detected-games-head">
-        <div>
-          <h3>Meus jogos</h3>
-          <p>Detecta jogos instalados (Steam, Epic, Ubisoft Connect e Rockstar Games) e otimiza cada um com um clique.</p>
+    html += `<div class="gm-wrap">
+      <section class="gm-hero" id="gmHero"></section>
+      <section id="gmFortnite"></section>
+      <div id="gmPipeRoot"></div>
+      <div id="gmChanges"></div>
+      <section class="gm-section">
+        <div class="gm-section-head">
+          <div><h3>Meus jogos</h3><p>Detecta o que está instalado (Steam, Epic, Ubisoft Connect e Rockstar) e otimiza cada jogo com um clique.</p></div>
+          <button id="rescanGamesBtn" class="gm-btn">${GM_ICON.refresh}Procurar jogos</button>
         </div>
-        <button id="rescanGamesBtn" class="preset-btn">↻ Procurar jogos</button>
-      </div>
-      <div id="detectedGamesList" class="detected-games-list">
-        <p class="detected-games-empty">Clique em "Procurar jogos" pra detectar o que você tem instalado.</p>
-      </div>
-    </div>
-    <div class="ram-input-row">
-      <input type="text" id="customGameInput" placeholder="Nome do .exe do jogo (ex: MeuJogo.exe)" style="flex:1;background:var(--card);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-size:13px;font-family:var(--sans);">
-      <button id="addGameBtn" class="preset-btn preset-btn-highlight">+ Adicionar jogo manualmente</button>
+        <div id="detectedGamesList" class="gm-grid">
+          <p class="detected-games-empty">Clique em "Procurar jogos" pra detectar o que você tem instalado.</p>
+        </div>
+        <div class="gm-add">
+          <input type="text" id="customGameInput" class="gm-in" placeholder="Adicionar jogo pelo nome do .exe (ex: MeuJogo.exe)" autocomplete="off">
+          <button id="addGameBtn" class="gm-btn">+ Adicionar manualmente</button>
+        </div>
+      </section>
     </div>`;
   }
 
@@ -7299,6 +7616,7 @@ function gameTileIcon(title, group){
 
     panel.querySelector('#rescanGamesBtn')?.addEventListener('click', ()=> loadDetectedGames());
     loadDetectedGames();
+    gmInit(panel);
   }
 
   if(catId === 'power'){
