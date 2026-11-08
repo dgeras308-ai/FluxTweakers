@@ -2277,6 +2277,21 @@
   .gm-game .game-graphics-note{max-width:none;color:var(--muted);}
   .gm-game .gm-game-presets{width:100%;}
   .gm-game .game-preset-btn.active{color:#08101c;}
+  .gm-focus-inline{margin:0;}
+  .gm-cfg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;}
+  .gm-cfg{display:flex;flex-direction:column;gap:11px;padding:16px;border-radius:15px;background:rgba(0,0,0,.14);border:1px solid var(--item-border);transition:border-color .15s;}
+  .gm-cfg:hover{border-color:color-mix(in srgb,var(--accent) 40%,var(--item-border));}
+  .gm-cfg.off{opacity:.62;}
+  .gm-cfg-top{display:flex;align-items:center;gap:13px;min-width:0;}
+  .gm-cfg-txt{min-width:0;}
+  .gm-cfg-txt b{display:block;font-size:14px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .gm-cfg-txt span{display:flex;align-items:center;gap:6px;margin-top:3px;font-size:11.5px;color:var(--muted);}
+  .gm-cfg-txt em{font-style:normal;color:#f5c542;font-weight:700;}
+  .gm-dot{width:7px;height:7px;border-radius:50%;background:var(--muted2);display:inline-block;flex-shrink:0;}
+  .gm-dot.ok{background:var(--ok);}
+  .gm-cfg-note{margin:0;font-size:11.5px;line-height:1.5;color:var(--muted2);}
+  .gm-cfg-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;}
+  .gm-btn.sm{padding:7px 12px;font-size:12px;border-radius:9px;}
   .gm-add{display:flex;gap:10px;margin-top:16px;}
   .gm-in{flex:1;box-sizing:border-box;font-family:inherit;font-size:13px;padding:10px 13px;border-radius:11px;border:1px solid var(--item-border);background:rgba(0,0,0,.18);color:var(--text);outline:none;}
   .gm-in:focus{border-color:var(--accent);}
@@ -5940,7 +5955,8 @@ const GM_PIPE_ICON = {
 const gmEsc = t => String(t ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const gmSleep = ms => new Promise(r => setTimeout(r, ms));
 const gmPsvg = k => `<svg viewBox="0 0 24 24">${GM_PIPE_ICON[k]}</svg>`;
-const GM = { profile:null, loadingProfile:false, fort:null, fortIcon:null, focus:'balanced', running:false, games:[] };
+const GM = { profile:null, loadingProfile:false, cfg:null, icons:{}, focus:'balanced', running:false, runningId:null, games:[] };
+const GM_ICON_MATCH = { fortnite:/fortnite/i, cs2:/counter-strike/i, gta5:/grand theft auto v/i, pubg:/pubg/i };
 const GM_TIER_REC = { entrada:'Desempenho', medio:'Equilibrado', alto:'Qualidade', extremo:'Qualidade' };
 const GM_FOCUS = { fps:'Competitivo', balanced:'Equilibrado', visual:'Visual' };
 
@@ -6002,34 +6018,44 @@ function gmRenderHero(){
     </div>`;
 }
 
-function gmRenderFortnite(){
-  const root = document.getElementById('gmFortnite');
+function gmRenderCfg(){
+  const root = document.getElementById('gmCfg');
   if(!root) return;
-  if(!window.__TAURI__ || !GM.fort || !GM.fort.installed){ root.innerHTML = ''; return; }
-  const f = GM.fort;
-  const hasCfg = !!f.config_path;
+  if(!window.__TAURI__ || !GM.cfg){ root.innerHTML = ''; return; }
   const busy = GM.running;
-  const icon = GM.fortIcon ? `<img src="${GM.fortIcon}" alt="">` : 'F';
-  root.innerHTML = `<div class="gm-card gm-fort">
-    <div class="gm-fort-top">
-      <div class="gm-fort-ico">${icon}</div>
-      <div class="gm-fort-txt">
-        <h3>Fortnite <span class="gm-pill ${hasCfg ? 'ok' : 'warn'}">${hasCfg ? 'Configuração encontrada' : 'Abra o jogo uma vez'}</span>${f.running ? '<span class="gm-pill warn">Aberto agora</span>' : ''}</h3>
-        <p>Ajusta o arquivo <code>GameUserSettings.ini</code> do jogo — o mesmo que você abriria no Bloco de Notas — de acordo com o seu PC, com cópia de segurança do original.</p>
+  const list = [...GM.cfg].sort((a, b) => (b.detected - a.detected));
+  const found = list.filter(g => g.detected).length;
+  root.innerHTML = `<div class="gm-card">
+    <div class="gm-section-head">
+      <div><h3>Otimizar pelo arquivo de configuração</h3>
+        <p>Ajusta o arquivo de configuração do jogo (o mesmo que você abriria no Bloco de Notas) conforme o seu PC. ${found ? `<b>${found}</b> de ${list.length} jogos encontrados neste PC.` : 'Nenhum dos jogos suportados foi encontrado neste PC.'}</p></div>
+      <div class="gm-focus gm-focus-inline">
+        <span class="gm-label">Foco</span>
+        <div class="gm-seg" id="gmFocusSeg">
+          ${Object.entries(GM_FOCUS).map(([k, v]) => `<button type="button" data-focus="${k}" class="${GM.focus === k ? 'on' : ''}" ${busy ? 'disabled' : ''}>${v}<small>${k === 'fps' ? 'máx. FPS' : k === 'visual' ? 'mais bonito' : 'meio-termo'}</small></button>`).join('')}
+        </div>
       </div>
     </div>
-    <div class="gm-focus">
-      <span class="gm-label">Foco</span>
-      <div class="gm-seg" id="gmFocusSeg">
-        ${Object.entries(GM_FOCUS).map(([k, v]) => `<button type="button" data-focus="${k}" class="${GM.focus === k ? 'on' : ''}" ${busy ? 'disabled' : ''}>${v}<small>${k === 'fps' ? 'máx. FPS' : k === 'visual' ? 'mais bonito' : 'meio-termo'}</small></button>`).join('')}
-      </div>
+    <div class="gm-cfg-grid">
+      ${list.map(g => {
+        const icon = GM.icons[g.id] ? `<img src="${GM.icons[g.id]}" alt="">` : gmEsc(g.name.charAt(0));
+        const mine = busy && GM.runningId === g.id;
+        return `<div class="gm-cfg ${g.detected ? '' : 'off'}">
+          <div class="gm-cfg-top">
+            <div class="gm-game-ico">${icon}</div>
+            <div class="gm-cfg-txt"><b>${gmEsc(g.name)}</b>
+              <span>${g.detected ? '<i class="gm-dot ok"></i>Configuração encontrada' : '<i class="gm-dot"></i>Não encontrado neste PC'}${g.running ? ' · <em>aberto agora</em>' : ''}</span></div>
+          </div>
+          <p class="gm-cfg-note">${gmEsc(g.note)}</p>
+          <div class="gm-cfg-actions">
+            <button type="button" class="gm-btn primary sm" data-gm="cfg-run" data-game="${g.id}" ${busy || !g.detected ? 'disabled' : ''}>${GM_ICON.bolt}${mine ? 'Otimizando...' : 'Otimizar'}</button>
+            <button type="button" class="gm-btn sm" data-gm="cfg-open" data-game="${g.id}" ${busy || !g.detected ? 'disabled' : ''} title="Abrir o arquivo no Bloco de Notas">${GM_ICON.note}Bloco de Notas</button>
+            <button type="button" class="gm-btn sm" data-gm="cfg-restore" data-game="${g.id}" ${busy || !g.has_backup ? 'disabled' : ''} title="Voltar ao arquivo original">${GM_ICON.undo}Restaurar</button>
+          </div>
+        </div>`;
+      }).join('')}
     </div>
-    <div class="gm-fort-actions">
-      <button type="button" class="gm-btn primary" data-gm="fort-run" ${busy || !hasCfg ? 'disabled' : ''}>${GM_ICON.bolt}${busy ? 'Otimizando...' : 'Otimizar pro meu PC'}</button>
-      <button type="button" class="gm-btn" data-gm="fort-open" ${busy || !hasCfg ? 'disabled' : ''}>${GM_ICON.note}Abrir no Bloco de Notas</button>
-      <button type="button" class="gm-btn" data-gm="fort-restore" ${busy || !f.has_backup ? 'disabled' : ''}>${GM_ICON.undo}Restaurar original</button>
-    </div>
-    <p class="gm-hint">Feche o Fortnite antes de otimizar — ele reescreve esse arquivo quando fecha. Uma cópia do arquivo original fica salva ao lado, com a extensão <code>.fluxtweakers-backup</code>.</p>
+    <p class="gm-hint">Feche o jogo antes de otimizar — a maioria reescreve esse arquivo quando fecha. Uma cópia do original fica salva ao lado, com a extensão <code>.fluxtweakers-backup</code>. Só mudamos opções que já existem no arquivo do seu jogo.</p>
   </div>`;
 }
 
@@ -6049,10 +6075,10 @@ async function gmLoadProfile(){
   try{ GM.profile = await window.__TAURI__.core.invoke('game_pc_profile'); }catch(err){ GM.profile = null; }
   GM.loadingProfile = false; gmRenderHero();
 }
-async function gmLoadFortnite(){
+async function gmLoadCfg(){
   if(!window.__TAURI__) return;
-  try{ GM.fort = await window.__TAURI__.core.invoke('fortnite_status'); }catch(err){ GM.fort = null; }
-  gmRenderFortnite();
+  try{ GM.cfg = await window.__TAURI__.core.invoke('gamecfg_list'); }catch(err){ GM.cfg = null; }
+  gmRenderCfg();
 }
 
 const GM_STEPS = [
@@ -6064,25 +6090,30 @@ const GM_STEPS = [
   { id:'verify',  label:'Verificando',     icon:'verify' },
 ];
 
-async function gmRunFortnite(){
+async function gmRunGame(id){
   if(GM.running) return;
   if(!window.__TAURI__){ showToast('A otimização só funciona no app instalado'); return; }
+  const game = (GM.cfg || []).find(g => g.id === id);
+  if(!game) return;
+  const name = game.name;
   const inv = window.__TAURI__.core.invoke;
-  GM.running = true; gmRenderFortnite(); gmRenderChanges(null);
-  GP.mount('Otimizando o Fortnite', 'Cada etapa mexe de verdade no seu PC e no arquivo do jogo', GM_STEPS, '');
+  GM.running = true; GM.runningId = id; gmRenderCfg(); gmRenderChanges(null);
+  GP.mount('Otimizando ' + gmEsc(name), 'Cada etapa mexe de verdade no seu PC e no arquivo do jogo', GM_STEPS, '');
   GP.msg('Começando...', true);
+  document.getElementById('gmPipeRoot')?.scrollIntoView({ behavior:'smooth', block:'center' });
   await GP.start();
+  const finishRun = async () => { GM.running = false; GM.runningId = null; await gmLoadCfg(); };
 
   // 1) hardware
   await GP.enter(1); GP.msg('Lendo o seu <b>hardware</b>...', true);
   try{ GM.profile = await inv('game_pc_profile'); }catch(err){}
   gmRenderHero(); await gmSleep(650);
-  if(!GM.profile){ GP.fail(1, 'falhou'); GP.msg('Não consegui ler o hardware.'); GM.running = false; gmRenderFortnite(); return; }
+  if(!GM.profile){ GP.fail(1, 'falhou'); GP.msg('Não consegui ler o hardware.'); await finishRun(); return; }
   GP.finish(1, GM.profile.tier_label);
-  const args = { tier: GM.profile.tier, focus: GM.focus, refreshHz: GM.profile.refresh_hz };
+  const args = { game: id, tier: GM.profile.tier, focus: GM.focus, refreshHz: GM.profile.refresh_hz };
 
   const run = [
-    { i:2, step:'locate',  msg:'Procurando o <b>GameUserSettings.ini</b> do Fortnite...' },
+    { i:2, step:'locate',  msg:`Procurando o arquivo de configuração do <b>${gmEsc(name)}</b>...` },
     { i:3, step:'backup',  msg:'Guardando uma <b>cópia de segurança</b> do arquivo original...' },
     { i:4, step:'write',   msg:`Gravando as configurações da faixa <b>${gmEsc(GM.profile.tier_label)}</b> (foco ${GM_FOCUS[GM.focus].toLowerCase()})...` },
     { i:5, step:'windows', msg:'Ajustando o Windows pro jogo: <b>GPU dedicada</b> e tela cheia sem otimizações...' },
@@ -6093,11 +6124,11 @@ async function gmRunFortnite(){
     await GP.enter(st.i); GP.msg(st.msg, true);
     const t0 = Date.now();
     let r;
-    try{ r = await inv('fortnite_step', { step: st.step, ...args }); }
+    try{ r = await inv('gamecfg_step', { step: st.step, ...args }); }
     catch(err){
       GP.fail(st.i, 'falhou'); GP.msg(gmEsc(String(err)));
       showToast(String(err), 'error');
-      GM.running = false; await gmLoadFortnite(); return;
+      await finishRun(); return;
     }
     const wait = 850 - (Date.now() - t0); if(wait > 0) await gmSleep(wait);
     if(st.step === 'write'){ gmRenderChanges(r.changes, r.path); GP.count(st.i, `${r.done}/${r.total}`); summary = `${r.done} ajustes aplicados`; }
@@ -6109,9 +6140,9 @@ async function gmRunFortnite(){
     await gmSleep(300);
   }
   await GP.end();
-  GP.msg('<b>Pronto!</b> Abra o Fortnite — as novas configurações já estão valendo.');
-  showToast('Fortnite otimizado: ' + (summary || 'configuração aplicada'));
-  GM.running = false; await gmLoadFortnite();
+  GP.msg(`<b>Pronto!</b> Abra o ${gmEsc(name)} — as novas configurações já estão valendo.`);
+  showToast(`${name} otimizado: ` + (summary || 'configuração aplicada'));
+  await finishRun();
 }
 
 function gmInit(panel){
@@ -6119,23 +6150,23 @@ function gmInit(panel){
     panel.dataset.gmBound = '1';
     panel.addEventListener('click', async e => {
       const f = e.target.closest('[data-focus]');
-      if(f && !GM.running){ GM.focus = f.dataset.focus; gmRenderFortnite(); return; }
+      if(f && !GM.running){ GM.focus = f.dataset.focus; gmRenderCfg(); return; }
       const b = e.target.closest('[data-gm]');
       if(!b || b.disabled) return;
-      const act = b.dataset.gm;
-      if(act === 'fort-run') gmRunFortnite();
-      else if(act === 'fort-open'){
-        try{ await window.__TAURI__.core.invoke('fortnite_open_config'); }catch(err){ showToast(String(err), 'error'); }
-      } else if(act === 'fort-restore'){
-        if(b.dataset.confirm !== '1'){ b.dataset.confirm = '1'; const old = b.innerHTML; b.textContent = 'Confirmar restauração?'; setTimeout(() => { b.dataset.confirm = ''; b.innerHTML = old; }, 3500); return; }
-        try{ const m = await window.__TAURI__.core.invoke('fortnite_restore_backup'); showToast(m); gmRenderChanges(null); await gmLoadFortnite(); }
+      const act = b.dataset.gm, id = b.dataset.game;
+      if(act === 'cfg-run') gmRunGame(id);
+      else if(act === 'cfg-open'){
+        try{ await window.__TAURI__.core.invoke('gamecfg_open', { game: id }); }catch(err){ showToast(String(err), 'error'); }
+      } else if(act === 'cfg-restore'){
+        if(b.dataset.confirm !== '1'){ b.dataset.confirm = '1'; const old = b.innerHTML; b.textContent = 'Confirmar?'; setTimeout(() => { b.dataset.confirm = ''; b.innerHTML = old; }, 3500); return; }
+        try{ const m = await window.__TAURI__.core.invoke('gamecfg_restore', { game: id }); showToast(m); gmRenderChanges(null); await gmLoadCfg(); }
         catch(err){ showToast(String(err), 'error'); }
       }
     });
   }
-  GP.mount('Otimização do jogo', 'Escolha o foco e clique em "Otimizar pro meu PC" pra ver cada etapa acontecendo', GM_STEPS, 'Pronto pra começar.');
-  gmRenderHero(); gmRenderFortnite();
-  gmLoadProfile(); gmLoadFortnite();
+  GP.mount('Otimização do jogo', 'Escolha o foco e clique em "Otimizar" num jogo pra ver cada etapa acontecendo', GM_STEPS, 'Pronto pra começar.');
+  gmRenderHero(); gmRenderCfg();
+  gmLoadProfile(); gmLoadCfg();
 }
 
 async function loadDetectedGames(){
@@ -6161,7 +6192,7 @@ async function loadDetectedGames(){
           <div class="gm-game-ico" id="gmIco${i}">${gmEsc((g.name || '?').charAt(0).toUpperCase())}</div>
           <div class="gm-game-info">
             <b title="${gmEsc(g.name)}">${gmEsc(g.name)}</b>
-            <span class="game-detected-src">${gmEsc(SRC[g.source] || g.source)}${/fortnite/i.test(g.name) ? ' · ajuste do arquivo de config' : ''}</span>
+            <span class="game-detected-src">${gmEsc(SRC[g.source] || g.source)}${Object.values(GM_ICON_MATCH).some(re => re.test(g.name)) ? ' · config por arquivo' : ''}</span>
           </div>
         </div>
         <span class="game-detected-path" title="${gmEsc(g.exe_path)}">${gmEsc(g.exe_path)}</span>
@@ -6188,8 +6219,9 @@ async function loadDetectedGames(){
       Object.entries(map || {}).forEach(([i, url]) => {
         const el = document.getElementById('gmIco' + i);
         if(el){ el.innerHTML = `<img src="${url}" alt="">`; el.classList.add('has-img'); }
-        if(/fortnite/i.test(games[+i].name)){ GM.fortIcon = url; gmRenderFortnite(); }
+        Object.entries(GM_ICON_MATCH).forEach(([gid, re]) => { if(re.test(games[+i].name)){ GM.icons[gid] = url; } });
       });
+      gmRenderCfg();
     }).catch(() => {});
   }catch(err){
     list.innerHTML = `<p class="detected-games-empty">Não foi possível procurar jogos: ${gmEsc(err)}</p>`;
@@ -7422,7 +7454,7 @@ function renderPanel(catId){
   if(cat.special === 'games'){
     html += `<div class="gm-wrap">
       <section class="gm-hero" id="gmHero"></section>
-      <section id="gmFortnite"></section>
+      <section id="gmCfg"></section>
       <div id="gmPipeRoot"></div>
       <div id="gmChanges"></div>
       <section class="gm-section">
