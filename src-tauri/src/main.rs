@@ -3558,6 +3558,7 @@ struct PcProfile {
     tier: String,
     tier_label: String,
     reason: String,
+    gpu_tier: usize,
 }
 
 const GAME_TIERS: [&str; 4] = ["entrada", "medio", "alto", "extremo"];
@@ -3591,34 +3592,144 @@ fn game_refresh_hz() -> u32 {
 #[cfg(not(target_os = "windows"))]
 fn game_refresh_hz() -> u32 { 60 }
 
+/// Monta o perfil do PC (lê GPU e taxa da tela e escolhe a faixa de desempenho).
+fn build_pc_profile(cpu: String, threads: usize, ram_gb: f64) -> PcProfile {
+    let gpu = read_gpu_name_windows();
+    let refresh_hz = game_refresh_hz();
+    let gpu_tier = game_classify_gpu(&gpu);
+    let mut tier = gpu_tier;
+    let mut notes: Vec<String> = Vec::new();
+    if ram_gb < 7.5 { if tier > 0 { notes.push(format!("limitado pela RAM ({ram_gb} GB)")); } tier = tier.min(0); }
+    else if ram_gb < 11.5 { if tier > 1 { notes.push(format!("limitado pela RAM ({ram_gb} GB)")); } tier = tier.min(1); }
+    if threads < 4 { if tier > 0 { notes.push(format!("limitado pela CPU ({threads} threads)")); } tier = tier.min(0); }
+    else if threads < 8 { if tier > 1 { notes.push(format!("limitado pela CPU ({threads} threads)")); } tier = tier.min(1); }
+    let reason = if notes.is_empty() { "Pela placa de vídeo, RAM e processador".to_string() } else { notes.join(" · ") };
+    PcProfile {
+        cpu, threads, ram_gb, gpu, refresh_hz, gpu_tier,
+        tier: GAME_TIERS[tier].to_string(),
+        tier_label: GAME_TIER_LABELS[tier].to_string(),
+        reason,
+    }
+}
+
+fn sys_basics(state: &State<'_, SysState>) -> (String, usize, f64) {
+    let sys = state.0.lock().unwrap();
+    let cpu = sys.cpus().first().map(|c| c.brand().trim().to_string()).filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "Processador não identificado".to_string());
+    (cpu, sys.cpus().len(), ((sys.total_memory() as f64 / 1_073_741_824.0) * 10.0).round() / 10.0)
+}
+
 /// Lê o PC (CPU, RAM, GPU, taxa de atualização da tela) e escolhe a faixa de desempenho.
 #[tauri::command]
 async fn game_pc_profile(state: State<'_, SysState>) -> Result<PcProfile, String> {
-    let (cpu, threads, ram_gb) = {
-        let sys = state.0.lock().unwrap();
-        let cpu = sys.cpus().first().map(|c| c.brand().trim().to_string()).filter(|s| !s.is_empty())
-            .unwrap_or_else(|| "Processador não identificado".to_string());
-        (cpu, sys.cpus().len(), ((sys.total_memory() as f64 / 1_073_741_824.0) * 10.0).round() / 10.0)
+    let (cpu, threads, ram_gb) = sys_basics(&state);
+    tauri::async_runtime::spawn_blocking(move || build_pc_profile(cpu, threads, ram_gb))
+        .await
+        .map_err(|e| format!("Falha interna: {e}"))
+}
+
+// ---------- análise do jogo contra o PC ----------
+
+struct GameDemand {
+    pat: &'static str,
+    name: &'static str,
+    gpu_min: usize,
+    gpu_rec: usize,
+    ram_min: f64,
+    ram_rec: f64,
+    thr_min: usize,
+    thr_rec: usize,
+    bound: &'static str, // "gpu" | "cpu" | "balanced" — quem costuma limitar o jogo
+}
+
+/// Requisitos aproximados (resumo dos mínimos/recomendados públicos de cada jogo).
+const GAME_DEMANDS: &[GameDemand] = &[
+    GameDemand { pat: "fortnite", name: "Fortnite", gpu_min: 0, gpu_rec: 1, ram_min: 8.0, ram_rec: 16.0, thr_min: 4, thr_rec: 8, bound: "gpu" },
+    GameDemand { pat: "counter-strike", name: "Counter-Strike 2", gpu_min: 0, gpu_rec: 1, ram_min: 8.0, ram_rec: 16.0, thr_min: 4, thr_rec: 8, bound: "cpu" },
+    GameDemand { pat: "grand theft auto v", name: "GTA V", gpu_min: 0, gpu_rec: 1, ram_min: 8.0, ram_rec: 16.0, thr_min: 4, thr_rec: 6, bound: "balanced" },
+    GameDemand { pat: "pubg", name: "PUBG", gpu_min: 0, gpu_rec: 2, ram_min: 8.0, ram_rec: 16.0, thr_min: 4, thr_rec: 8, bound: "cpu" },
+    GameDemand { pat: "minecraft", name: "Minecraft", gpu_min: 0, gpu_rec: 0, ram_min: 4.0, ram_rec: 8.0, thr_min: 2, thr_rec: 4, bound: "cpu" },
+    GameDemand { pat: "league of legends", name: "League of Legends", gpu_min: 0, gpu_rec: 0, ram_min: 4.0, ram_rec: 8.0, thr_min: 2, thr_rec: 4, bound: "cpu" },
+    GameDemand { pat: "valorant", name: "Valorant", gpu_min: 0, gpu_rec: 0, ram_min: 4.0, ram_rec: 8.0, thr_min: 4, thr_rec: 6, bound: "cpu" },
+    GameDemand { pat: "apex legends", name: "Apex Legends", gpu_min: 0, gpu_rec: 1, ram_min: 8.0, ram_rec: 16.0, thr_min: 4, thr_rec: 8, bound: "balanced" },
+    GameDemand { pat: "call of duty", name: "Call of Duty", gpu_min: 1, gpu_rec: 2, ram_min: 12.0, ram_rec: 16.0, thr_min: 6, thr_rec: 8, bound: "gpu" },
+    GameDemand { pat: "warzone", name: "Warzone", gpu_min: 1, gpu_rec: 2, ram_min: 12.0, ram_rec: 16.0, thr_min: 6, thr_rec: 8, bound: "gpu" },
+    GameDemand { pat: "cyberpunk", name: "Cyberpunk 2077", gpu_min: 1, gpu_rec: 2, ram_min: 12.0, ram_rec: 16.0, thr_min: 6, thr_rec: 8, bound: "gpu" },
+    GameDemand { pat: "rocket league", name: "Rocket League", gpu_min: 0, gpu_rec: 0, ram_min: 4.0, ram_rec: 8.0, thr_min: 2, thr_rec: 4, bound: "balanced" },
+    GameDemand { pat: "dota 2", name: "Dota 2", gpu_min: 0, gpu_rec: 0, ram_min: 4.0, ram_rec: 8.0, thr_min: 2, thr_rec: 4, bound: "cpu" },
+    GameDemand { pat: "red dead", name: "Red Dead Redemption 2", gpu_min: 1, gpu_rec: 2, ram_min: 8.0, ram_rec: 16.0, thr_min: 6, thr_rec: 8, bound: "gpu" },
+    GameDemand { pat: "elden ring", name: "Elden Ring", gpu_min: 0, gpu_rec: 1, ram_min: 12.0, ram_rec: 16.0, thr_min: 4, thr_rec: 6, bound: "gpu" },
+];
+
+const GAME_DEMAND_DEFAULT: GameDemand = GameDemand { pat: "", name: "", gpu_min: 0, gpu_rec: 1, ram_min: 8.0, ram_rec: 16.0, thr_min: 4, thr_rec: 8, bound: "balanced" };
+
+#[derive(Serialize)]
+struct GameComponent {
+    name: String,
+    have: String,
+    need: String,
+    status: String, // folga | ok | limite | fraco
+    bound: bool,
+}
+
+#[derive(Serialize)]
+struct GameAnalysis {
+    name: String,
+    known: bool,
+    verdict: String,       // otimo | bom | limite | fraco
+    verdict_label: String,
+    summary: String,
+    components: Vec<GameComponent>,
+    recommended_focus: String,
+}
+
+fn demand_status(have: f64, min: f64, rec: f64, comfy: f64) -> &'static str {
+    if have >= comfy { "folga" } else if have >= rec { "ok" } else if have >= min { "limite" } else { "fraco" }
+}
+fn status_rank(s: &str) -> i32 { match s { "fraco" => 0, "limite" => 1, "ok" => 2, _ => 3 } }
+
+fn build_game_analysis(name: &str, pc: &PcProfile) -> GameAnalysis {
+    let low = name.to_lowercase();
+    let found = GAME_DEMANDS.iter().find(|d| low.contains(d.pat));
+    let d = found.unwrap_or(&GAME_DEMAND_DEFAULT);
+    let shown = if found.is_some() { d.name.to_string() } else { name.to_string() };
+
+    let gpu_st = demand_status(pc.gpu_tier as f64, d.gpu_min as f64, d.gpu_rec as f64, d.gpu_rec as f64 + 1.0);
+    let ram_st = demand_status(pc.ram_gb, d.ram_min - 0.6, d.ram_rec - 0.6, d.ram_rec * 1.5);
+    let thr_st = demand_status(pc.threads as f64, d.thr_min as f64, d.thr_rec as f64, d.thr_rec as f64 * 1.5);
+    let components = vec![
+        GameComponent { name: "Placa de vídeo".into(), have: format!("{} · faixa {}", pc.gpu, GAME_TIER_LABELS[pc.gpu_tier]), need: format!("Faixa {} ou melhor", GAME_TIER_LABELS[d.gpu_rec]), status: gpu_st.into(), bound: d.bound == "gpu" },
+        GameComponent { name: "Processador".into(), have: format!("{} threads", pc.threads), need: format!("{} threads recomendados", d.thr_rec), status: thr_st.into(), bound: d.bound == "cpu" },
+        GameComponent { name: "Memória".into(), have: format!("{} GB", pc.ram_gb), need: format!("{} GB recomendados", d.ram_rec as i64), status: ram_st.into(), bound: false },
+    ];
+    let sts = [("placa de vídeo", gpu_st), ("processador", thr_st), ("memória", ram_st)];
+    let worst = sts.iter().min_by_key(|(_, s)| status_rank(s)).unwrap();
+    let bound_st = match d.bound { "gpu" => gpu_st, "cpu" => thr_st, _ => if status_rank(gpu_st) >= status_rank(thr_st) { gpu_st } else { thr_st } };
+    let (verdict, label, focus) = match worst.1 {
+        "fraco" => ("fraco", "Vai sofrir", "fps"),
+        "limite" => ("limite", "Roda no limite", "fps"),
+        _ => if bound_st == "folga" { ("otimo", "Roda no máximo", "visual") } else { ("bom", "Roda bem", "balanced") },
     };
-    tauri::async_runtime::spawn_blocking(move || -> Result<PcProfile, String> {
-        let gpu = read_gpu_name_windows();
-        let refresh_hz = game_refresh_hz();
-        let mut tier = game_classify_gpu(&gpu);
-        let mut notes: Vec<String> = Vec::new();
-        if ram_gb < 7.5 { if tier > 0 { notes.push(format!("limitado pela RAM ({ram_gb} GB)")); } tier = tier.min(0); }
-        else if ram_gb < 11.5 { if tier > 1 { notes.push(format!("limitado pela RAM ({ram_gb} GB)")); } tier = tier.min(1); }
-        if threads < 4 { if tier > 0 { notes.push(format!("limitado pela CPU ({threads} threads)")); } tier = tier.min(0); }
-        else if threads < 8 { if tier > 1 { notes.push(format!("limitado pela CPU ({threads} threads)")); } tier = tier.min(1); }
-        let reason = if notes.is_empty() { "Pela placa de vídeo, RAM e processador".to_string() } else { notes.join(" · ") };
-        Ok(PcProfile {
-            cpu, threads, ram_gb, gpu, refresh_hz,
-            tier: GAME_TIERS[tier].to_string(),
-            tier_label: GAME_TIER_LABELS[tier].to_string(),
-            reason,
-        })
+    let prefix = if found.is_some() { String::new() } else { "Esse jogo não está na nossa lista, então é uma estimativa geral. ".to_string() };
+    let summary = match verdict {
+        "otimo" => format!("{prefix}Seu PC passa folgado pelo {shown}. Dá pra priorizar a qualidade visual sem medo."),
+        "bom" => format!("{prefix}Seu PC atende o recomendado do {shown}. O equilíbrio entre FPS e visual é o melhor ponto."),
+        "limite" => format!("{prefix}Seu PC está no limite do {shown} — o que mais aperta é a {}. Vale priorizar FPS: sombras e efeitos no baixo.", worst.0),
+        _ => format!("{prefix}O {shown} pede mais do que a sua {} entrega. Use o foco Competitivo e espere ajustes baixos.", worst.0),
+    };
+    GameAnalysis { name: shown, known: found.is_some(), verdict: verdict.into(), verdict_label: label.into(), summary, components, recommended_focus: focus.into() }
+}
+
+/// Compara o jogo com o PC: placa, processador e memória contra o que ele pede.
+#[tauri::command]
+async fn game_analyze(state: State<'_, SysState>, name: String) -> Result<GameAnalysis, String> {
+    let (cpu, threads, ram_gb) = sys_basics(&state);
+    tauri::async_runtime::spawn_blocking(move || {
+        let pc = build_pc_profile(cpu, threads, ram_gb);
+        build_game_analysis(&name, &pc)
     })
     .await
-    .map_err(|e| format!("Falha interna: {e}"))?
+    .map_err(|e| format!("Falha interna: {e}"))
 }
 
 #[derive(Serialize)]
@@ -4136,18 +4247,7 @@ async fn gamecfg_step(game: String, step: String, tier: String, focus: String, r
                     None => return step_ok("Sem ajustes extras do Windows pra esse jogo — pulei".into(), 0, 0, vec![], None),
                 };
                 let exe_s = exe.to_string_lossy().to_string();
-                let mut ok = 0u32;
-                let jobs: [(&str, &str); 2] = [
-                    ("HKCU\\Software\\Microsoft\\DirectX\\UserGpuPreference", "GpuPreference=2;"),
-                    ("HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers", "~ DISABLEDXMAXIMIZEDWINDOWEDMODE"),
-                ];
-                for (key, data) in jobs {
-                    let mut cmd = Command::new("reg");
-                    cmd.args(["add", key, "/v", &exe_s, "/t", "REG_SZ", "/d", data, "/f"]);
-                    #[cfg(target_os = "windows")]
-                    { cmd.creation_flags(CREATE_NO_WINDOW); }
-                    if cmd.output().map(|o| o.status.success()).unwrap_or(false) { ok += 1; }
-                }
+                let ok = game_reg_apply(&exe_s);
                 step_ok(format!("{ok} de 2 opções do Windows aplicadas (GPU dedicada e tela cheia sem otimizações)"), ok, 2, vec![], Some(exe_s))
             }
             "verify" => {
@@ -4166,6 +4266,98 @@ async fn gamecfg_step(game: String, step: String, tier: String, focus: String, r
                     step_ok(format!("Conferi o arquivo: {ok} de {total} valores confirmados"), ok, total, vec![], Some(p.to_string_lossy().to_string()))
                 } else {
                     Err(format!("Só {ok} de {total} valores ficaram gravados — o {} pode ter reescrito o arquivo.", def.name))
+                }
+            }
+            _ => Err("Etapa desconhecida".to_string()),
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+const GAME_WIN_JOBS: [(&str, &str); 2] = [
+    ("HKCU\\Software\\Microsoft\\DirectX\\UserGpuPreference", "GpuPreference=2;"),
+    ("HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers", "~ DISABLEDXMAXIMIZEDWINDOWEDMODE"),
+];
+
+/// Liga "GPU de alto desempenho" e desliga as otimizações de tela cheia pro .exe (sem admin).
+fn game_reg_apply(exe: &str) -> u32 {
+    let mut ok = 0u32;
+    for (key, data) in GAME_WIN_JOBS {
+        let mut cmd = Command::new("reg");
+        cmd.args(["add", key, "/v", exe, "/t", "REG_SZ", "/d", data, "/f"]);
+        #[cfg(target_os = "windows")]
+        { cmd.creation_flags(CREATE_NO_WINDOW); }
+        if cmd.output().map(|o| o.status.success()).unwrap_or(false) { ok += 1; }
+    }
+    ok
+}
+
+fn game_reg_verify(exe: &str) -> u32 {
+    let mut ok = 0u32;
+    for (key, expect) in GAME_WIN_JOBS {
+        let mut cmd = Command::new("reg");
+        cmd.args(["query", key, "/v", exe]);
+        #[cfg(target_os = "windows")]
+        { cmd.creation_flags(CREATE_NO_WINDOW); }
+        if let Ok(o) = cmd.output() {
+            if o.status.success() && String::from_utf8_lossy(&o.stdout).contains(expect) { ok += 1; }
+        }
+    }
+    ok
+}
+
+#[derive(Serialize)]
+struct GamePreviewRow {
+    label: String,
+    current: String,
+    recommended: String,
+    same: bool,
+}
+
+/// Mostra, SEM gravar nada, como está a configuração do jogo agora versus o recomendado pro seu PC.
+#[tauri::command]
+async fn gamecfg_preview(game: String, tier: String, focus: String, refresh_hz: u32) -> Result<Vec<GamePreviewRow>, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<Vec<GamePreviewRow>, String> {
+        let def = gamecfg_def(&game)?;
+        let p = gamecfg_path(def.id).ok_or_else(|| format!("Não achei a configuração do {}.", def.name))?;
+        let content = fs::read_to_string(&p).map_err(|e| format!("Não consegui ler o arquivo: {e}"))?;
+        let mut rows = Vec::new();
+        for item in gamecfg_plan(def.id, &tier, &focus, refresh_hz).iter() {
+            let cur = cfg_get(def.format, &content, item);
+            if cur.is_none() && !item.create { continue; }
+            let same = cur.as_deref().map(|c| cfg_same(item, c, &item.value)).unwrap_or(false);
+            rows.push(GamePreviewRow {
+                label: item.label.to_string(),
+                current: cur.as_deref().map(|c| cfg_human(item.fmt, c)).unwrap_or_else(|| "—".to_string()),
+                recommended: cfg_human(item.fmt, &item.value),
+                same,
+            });
+        }
+        Ok(rows)
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+/// Ajustes do Windows pra QUALQUER jogo (por .exe): "apply" ou "verify".
+#[tauri::command]
+async fn game_windows_tweak(exe_path: String, step: String) -> Result<GameStepResult, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<GameStepResult, String> {
+        if !exe_path.to_lowercase().ends_with(".exe") || !Path::new(&exe_path).exists() {
+            return Err("Não achei o executável do jogo.".to_string());
+        }
+        match step.as_str() {
+            "apply" => {
+                let ok = game_reg_apply(&exe_path);
+                Ok(GameStepResult { message: format!("{ok} de 2 opções do Windows aplicadas (GPU dedicada e tela cheia sem otimizações)"), done: ok, total: 2, changes: vec![], path: Some(exe_path) })
+            }
+            "verify" => {
+                let ok = game_reg_verify(&exe_path);
+                if ok == 2 {
+                    Ok(GameStepResult { message: "Conferi no registro: 2 de 2 opções gravadas".into(), done: 2, total: 2, changes: vec![], path: Some(exe_path) })
+                } else {
+                    Err(format!("Só {ok} de 2 opções ficaram gravadas no registro."))
                 }
             }
             _ => Err("Etapa desconhecida".to_string()),
@@ -4246,7 +4438,7 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
         .manage(PdhState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, gamecfg_list, gamecfg_step, gamecfg_open, gamecfg_restore, game_icons])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));

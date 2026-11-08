@@ -2292,6 +2292,64 @@
   .gm-cfg-note{margin:0;font-size:11.5px;line-height:1.5;color:var(--muted2);}
   .gm-cfg-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;}
   .gm-btn.sm{padding:7px 12px;font-size:12px;border-radius:9px;}
+  .gm-picker .gm-section-head{margin-bottom:14px;}
+  .gm-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;}
+  .gm-tiles .detected-games-empty{grid-column:1 / -1;}
+  .gm-tile{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:13px;border:1px solid var(--item-border);background:rgba(0,0,0,.14);color:var(--text);font-family:inherit;text-align:left;cursor:pointer;transition:all .15s;min-width:0;}
+  .gm-tile:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--item-border));}
+  .gm-tile.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 11%,transparent);box-shadow:0 0 0 1px var(--accent);}
+  .gm-tile .gm-game-ico{width:42px;height:42px;font-size:17px;border-radius:11px;}
+  .gm-tile .gm-game-ico img{width:28px;height:28px;}
+  .gm-tile-txt{min-width:0;}
+  .gm-tile-txt b{display:block;font-size:13.2px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .gm-tile-txt span{display:block;margin-top:2px;font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .gm-tile-txt span i{font-style:normal;color:var(--accent);}
+  .gm-an-head{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
+  .gm-an-ico{width:54px;height:54px;border-radius:15px;}
+  .gm-an-ico img{width:36px;height:36px;}
+  .gm-an-title{flex:1;min-width:0;}
+  .gm-an-title h3{margin:0;font-size:19px;font-weight:800;color:var(--text);}
+  .gm-an-title span{display:block;margin-top:2px;font-size:12px;color:var(--muted);}
+  .gm-verdict{padding:7px 15px;border-radius:999px;font-size:12.5px;font-weight:800;white-space:nowrap;}
+  .gm-verdict.v-otimo{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent);border:1px solid color-mix(in srgb,var(--ok) 35%,transparent);}
+  .gm-verdict.v-bom{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);}
+  .gm-verdict.v-limite{color:#f5c542;background:rgba(245,197,66,.12);border:1px solid rgba(245,197,66,.35);}
+  .gm-verdict.v-fraco{color:var(--off);background:color-mix(in srgb,var(--off) 12%,transparent);border:1px solid color-mix(in srgb,var(--off) 35%,transparent);}
+  .gm-an-sum{margin:0 0 18px;font-size:13.5px;line-height:1.6;color:var(--muted);max-width:760px;}
+  .gm-comps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px;}
+  .gm-comp{padding:14px 15px;border-radius:13px;background:rgba(0,0,0,.14);border:1px solid var(--item-border);min-width:0;}
+  .gm-comp-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11.5px;color:var(--muted);font-weight:600;}
+  .gm-comp-top em{font-style:normal;color:var(--muted2);font-weight:600;}
+  .gm-comp-top i{font-style:normal;font-size:10.5px;font-weight:800;padding:2px 9px;border-radius:999px;white-space:nowrap;}
+  .gm-comp b{display:block;margin-top:8px;font-size:13.2px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .gm-comp small{display:block;margin-top:3px;font-size:11px;color:var(--muted2);}
+  .gm-meter{height:5px;margin-top:11px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden;}
+  .gm-meter u{display:block;height:100%;border-radius:5px;background:var(--ok);transition:width .7s cubic-bezier(.2,.8,.2,1);animation:gmgrow .8s cubic-bezier(.2,.8,.2,1);}
+  @keyframes gmgrow{from{width:0}}
+  .gm-comp.st-folga .gm-comp-top i,.gm-comp.st-ok .gm-comp-top i{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent);}
+  .gm-comp.st-limite .gm-comp-top i{color:#f5c542;background:rgba(245,197,66,.14);}
+  .gm-comp.st-limite .gm-meter u{background:#f5c542;}
+  .gm-comp.st-fraco .gm-comp-top i{color:var(--off);background:color-mix(in srgb,var(--off) 14%,transparent);}
+  .gm-comp.st-fraco .gm-meter u{background:var(--off);}
+  .gm-comp.st-ok .gm-meter u{background:var(--accent);}
+  .gm-rec{margin-bottom:16px;}
+  .gm-rec-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px;}
+  .gm-rec-head h4{margin:0;font-size:14.5px;font-weight:800;color:var(--text);}
+  .gm-rec-head p{margin:5px 0 0;font-size:12.3px;line-height:1.55;color:var(--muted);max-width:560px;}
+  .gm-rec-head p b{color:var(--text);}
+  .gm-seg button small.rec{color:var(--accent);opacity:1;font-weight:800;}
+  .gm-rec-table{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:8px;}
+  .gm-rec-row{display:grid;grid-template-columns:1fr auto auto auto 76px;gap:10px;align-items:center;padding:10px 13px;border-radius:11px;background:rgba(0,0,0,.14);border:1px solid var(--item-border);font-size:12.3px;}
+  .gm-rec-row span{color:var(--muted);font-weight:600;}
+  .gm-rec-row em{font-style:normal;color:var(--muted2);}
+  .gm-rec-row i{font-style:normal;color:var(--muted2);}
+  .gm-rec-row b{color:var(--text);font-weight:800;}
+  .gm-rec-row u{text-decoration:none;font-size:10.8px;font-weight:800;text-align:right;color:var(--accent);}
+  .gm-rec-row.ok b{color:var(--ok);}
+  .gm-rec-row.ok u{color:var(--ok);}
+  .gm-rec-row.ok em{text-decoration:none;}
+  .gm-an-actions{display:flex;gap:10px;flex-wrap:wrap;}
+  @media (max-width:1000px){.gm-comps{grid-template-columns:1fr;}.gm-rec-table{grid-template-columns:1fr;}}
   .gm-add{display:flex;gap:10px;margin-top:16px;}
   .gm-in{flex:1;box-sizing:border-box;font-family:inherit;font-size:13px;padding:10px 13px;border-radius:11px;border:1px solid var(--item-border);background:rgba(0,0,0,.18);color:var(--text);outline:none;}
   .gm-in:focus{border-color:var(--accent);}
@@ -5955,11 +6013,12 @@ const GM_PIPE_ICON = {
 const gmEsc = t => String(t ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const gmSleep = ms => new Promise(r => setTimeout(r, ms));
 const gmPsvg = k => `<svg viewBox="0 0 24 24">${GM_PIPE_ICON[k]}</svg>`;
-const GM = { profile:null, loadingProfile:false, cfg:null, icons:{}, focus:'balanced', running:false, runningId:null, games:[] };
-const GM_ICON_MATCH = { fortnite:/fortnite/i, cs2:/counter-strike/i, gta5:/grand theft auto v/i, pubg:/pubg/i };
-const GM_TIER_REC = { entrada:'Desempenho', medio:'Equilibrado', alto:'Qualidade', extremo:'Qualidade' };
+const GM = { profile:null, profilePromise:null, cfg:null, games:[], iconsByExe:{}, sel:null, analysis:null, preview:null, focus:'balanced', focusTouched:{}, running:false, scanDone:false, cfgDone:false };
+const GM_ICON_MATCH = { fortnite:/fortnite/i, cs2:/counter-strike/i, gta5:/grand theft auto v/i, pubg:/pubg/i, minecraft:/minecraft/i, lol:/league of legends/i };
 const GM_FOCUS = { fps:'Competitivo', balanced:'Equilibrado', visual:'Visual' };
-
+const GM_SRC = { steam:'Steam', epic:'Epic Games', ubisoft:'Ubisoft Connect', rockstar:'Rockstar Games', config:'Encontrado pela configuração' };
+const GM_ST_LABEL = { folga:'Sobra', ok:'Atende', limite:'No limite', fraco:'Abaixo' };
+const GM_ST_W = { folga:100, ok:78, limite:46, fraco:20 };
 // pipeline animado reutilizável (mesmo visual do DNS e do App Tuner)
 function fxPipe(rootId){
   const P = { nodes:[], links:[], total:0, done:0, cur:-1, steps:[] };
@@ -6002,13 +6061,13 @@ function gmRenderHero(){
     return;
   }
   if(!p){
-    root.innerHTML = `<div class="gm-hero-main"><span class="gm-chip">${GM.loadingProfile ? 'Analisando...' : 'Seu PC'}</span><h2>Lendo o seu hardware...</h2><p>Estamos verificando processador, placa de vídeo, memória e taxa de atualização da tela.</p></div>`;
+    root.innerHTML = `<div class="gm-hero-main"><span class="gm-chip">${GM.profilePromise ? 'Analisando...' : 'Seu PC'}</span><h2>Lendo o seu hardware...</h2><p>Estamos verificando processador, placa de vídeo, memória e taxa de atualização da tela.</p></div>`;
     return;
   }
   root.innerHTML = `<div class="gm-hero-main">
       <span class="gm-chip">${gmEsc(p.tier_label)}</span>
       <h2>Seu PC é <em>${gmEsc(p.tier_label)}</em> pra jogos</h2>
-      <p>${gmEsc(p.reason)}. Preset recomendado: <b>${GM_TIER_REC[p.tier] || 'Equilibrado'}</b>.</p>
+      <p>${gmEsc(p.reason)}. Abaixo, escolha um jogo pra ver se ele roda bem e quais configs combinam com o seu PC.</p>
     </div>
     <div class="gm-specs">
       <div class="gm-spec"><span>Processador</span><b title="${gmEsc(p.cpu)}">${gmEsc(gmShortCpu(p.cpu))}</b><small>${p.threads} threads</small></div>
@@ -6016,47 +6075,6 @@ function gmRenderHero(){
       <div class="gm-spec"><span>Memória</span><b>${p.ram_gb} GB</b><small>RAM instalada</small></div>
       <div class="gm-spec"><span>Tela</span><b>${p.refresh_hz} Hz</b><small>taxa de atualização</small></div>
     </div>`;
-}
-
-function gmRenderCfg(){
-  const root = document.getElementById('gmCfg');
-  if(!root) return;
-  if(!window.__TAURI__ || !GM.cfg){ root.innerHTML = ''; return; }
-  const busy = GM.running;
-  const list = [...GM.cfg].sort((a, b) => (b.detected - a.detected));
-  const found = list.filter(g => g.detected).length;
-  root.innerHTML = `<div class="gm-card">
-    <div class="gm-section-head">
-      <div><h3>Otimizar pelo arquivo de configuração</h3>
-        <p>Ajusta o arquivo de configuração do jogo (o mesmo que você abriria no Bloco de Notas) conforme o seu PC. ${found ? `<b>${found}</b> de ${list.length} jogos encontrados neste PC.` : 'Nenhum dos jogos suportados foi encontrado neste PC.'}</p></div>
-      <div class="gm-focus gm-focus-inline">
-        <span class="gm-label">Foco</span>
-        <div class="gm-seg" id="gmFocusSeg">
-          ${Object.entries(GM_FOCUS).map(([k, v]) => `<button type="button" data-focus="${k}" class="${GM.focus === k ? 'on' : ''}" ${busy ? 'disabled' : ''}>${v}<small>${k === 'fps' ? 'máx. FPS' : k === 'visual' ? 'mais bonito' : 'meio-termo'}</small></button>`).join('')}
-        </div>
-      </div>
-    </div>
-    <div class="gm-cfg-grid">
-      ${list.map(g => {
-        const icon = GM.icons[g.id] ? `<img src="${GM.icons[g.id]}" alt="">` : gmEsc(g.name.charAt(0));
-        const mine = busy && GM.runningId === g.id;
-        return `<div class="gm-cfg ${g.detected ? '' : 'off'}">
-          <div class="gm-cfg-top">
-            <div class="gm-game-ico">${icon}</div>
-            <div class="gm-cfg-txt"><b>${gmEsc(g.name)}</b>
-              <span>${g.detected ? '<i class="gm-dot ok"></i>Configuração encontrada' : '<i class="gm-dot"></i>Não encontrado neste PC'}${g.running ? ' · <em>aberto agora</em>' : ''}</span></div>
-          </div>
-          <p class="gm-cfg-note">${gmEsc(g.note)}</p>
-          <div class="gm-cfg-actions">
-            <button type="button" class="gm-btn primary sm" data-gm="cfg-run" data-game="${g.id}" ${busy || !g.detected ? 'disabled' : ''}>${GM_ICON.bolt}${mine ? 'Otimizando...' : 'Otimizar'}</button>
-            <button type="button" class="gm-btn sm" data-gm="cfg-open" data-game="${g.id}" ${busy || !g.detected ? 'disabled' : ''} title="Abrir o arquivo no Bloco de Notas">${GM_ICON.note}Bloco de Notas</button>
-            <button type="button" class="gm-btn sm" data-gm="cfg-restore" data-game="${g.id}" ${busy || !g.has_backup ? 'disabled' : ''} title="Voltar ao arquivo original">${GM_ICON.undo}Restaurar</button>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>
-    <p class="gm-hint">Feche o jogo antes de otimizar — a maioria reescreve esse arquivo quando fecha. Uma cópia do original fica salva ao lado, com a extensão <code>.fluxtweakers-backup</code>. Só mudamos opções que já existem no arquivo do seu jogo.</p>
-  </div>`;
 }
 
 function gmRenderChanges(changes, path){
@@ -6069,16 +6087,149 @@ function gmRenderChanges(changes, path){
   </div>`;
 }
 
-async function gmLoadProfile(){
-  if(!window.__TAURI__ || GM.loadingProfile) return;
-  GM.loadingProfile = true; gmRenderHero();
-  try{ GM.profile = await window.__TAURI__.core.invoke('game_pc_profile'); }catch(err){ GM.profile = null; }
-  GM.loadingProfile = false; gmRenderHero();
+
+// ---------- biblioteca (jogos detectados + jogos com arquivo de config) ----------
+function gmLibrary(){
+  const lib = [], used = new Set();
+  (GM.games || []).forEach(g => {
+    const cfgId = Object.keys(GM_ICON_MATCH).find(id => GM_ICON_MATCH[id].test(g.name)) || null;
+    lib.push({ key:'s:' + g.exe_path, name:g.name, source:g.source, exe:g.exe_path, cfgId });
+    if(cfgId) used.add(cfgId);
+  });
+  (GM.cfg || []).forEach(c => { if(c.detected && !used.has(c.id)) lib.push({ key:'c:' + c.id, name:c.name, source:'config', exe:null, cfgId:c.id }); });
+  lib.forEach(e => { e.cfg = e.cfgId ? (GM.cfg || []).find(c => c.id === e.cfgId) : null; e.hasCfg = !!(e.cfg && e.cfg.detected); });
+  return lib;
 }
+const gmEntry = () => gmLibrary().find(e => e.key === GM.sel) || null;
+
+function gmIconOf(e){
+  const url = e.exe && GM.iconsByExe[e.exe];
+  return url ? `<img src="${url}" alt="">` : gmEsc((e.name || '?').charAt(0).toUpperCase());
+}
+
+function gmRenderPicker(){
+  const list = document.getElementById('detectedGamesList');
+  if(!list) return;
+  if(!window.__TAURI__){ list.innerHTML = '<p class="detected-games-empty">A detecção de jogos só funciona no app instalado.</p>'; return; }
+  const lib = gmLibrary();
+  if(!lib.length){
+    list.innerHTML = (GM.scanDone && GM.cfgDone)
+      ? '<p class="detected-games-empty">Nenhum jogo encontrado neste PC. Instale um jogo da Steam/Epic ou clique em "Procurar jogos" de novo.</p>'
+      : '<p class="detected-games-empty">Procurando jogos...</p>';
+    return;
+  }
+  list.innerHTML = lib.map(e => `<button type="button" class="gm-tile${GM.sel === e.key ? ' on' : ''}" data-sel="${gmEsc(e.key)}">
+      <div class="gm-game-ico">${gmIconOf(e)}</div>
+      <div class="gm-tile-txt"><b title="${gmEsc(e.name)}">${gmEsc(e.name)}</b><span>${gmEsc(GM_SRC[e.source] || e.source)}${e.hasCfg ? ' · <i>config por arquivo</i>' : ''}</span></div>
+    </button>`).join('');
+}
+
+// ---------- painel de análise ----------
+function gmRenderAnalysis(){
+  const root = document.getElementById('gmAnalysis');
+  if(!root) return;
+  const e = gmEntry();
+  if(!window.__TAURI__ || !e){ root.innerHTML = ''; return; }
+  const a = GM.analysis;
+  const busy = GM.running;
+  const head = `<div class="gm-an-head">
+      <div class="gm-game-ico gm-an-ico">${gmIconOf(e)}</div>
+      <div class="gm-an-title"><h3>${gmEsc(e.name)}</h3><span>${gmEsc(GM_SRC[e.source] || e.source)}</span></div>
+      ${a ? `<span class="gm-verdict v-${a.verdict}">${gmEsc(a.verdict_label)}</span>` : ''}
+    </div>`;
+  if(!a){
+    root.innerHTML = `<div class="gm-card gm-an">${head}<p class="gm-an-sum">Analisando o jogo e o seu PC...</p></div>`;
+    return;
+  }
+  const comps = a.components.map(c => `<div class="gm-comp st-${c.status}">
+      <div class="gm-comp-top"><span>${gmEsc(c.name)}${c.bound ? ' <em>· limita o jogo</em>' : ''}</span><i>${GM_ST_LABEL[c.status]}</i></div>
+      <b title="${gmEsc(c.have)}">${gmEsc(c.have)}</b>
+      <small>Pede: ${gmEsc(c.need)}</small>
+      <div class="gm-meter"><u style="width:${GM_ST_W[c.status]}%"></u></div>
+    </div>`).join('');
+
+  let rec = '';
+  if(e.hasCfg){
+    const rows = GM.preview;
+    const change = rows ? rows.filter(r => !r.same).length : 0;
+    const focusBtns = Object.entries(GM_FOCUS).map(([k, v]) => `<button type="button" data-focus="${k}" class="${GM.focus === k ? 'on' : ''}" ${busy ? 'disabled' : ''}>${v}${a.recommended_focus === k ? '<small class="rec">recomendado</small>' : `<small>${k === 'fps' ? 'máx. FPS' : k === 'visual' ? 'mais bonito' : 'meio-termo'}</small>`}</button>`).join('');
+    rec = `<div class="gm-rec">
+      <div class="gm-rec-head">
+        <div><h4>Configuração recomendada pro seu PC</h4>
+          <p>${rows ? (change ? `<b>${change}</b> de ${rows.length} opções do arquivo vão mudar.` : 'Seu jogo já está exatamente no recomendado ✓') : 'Lendo o arquivo do jogo...'}</p></div>
+        <div class="gm-seg" id="gmFocusSeg">${focusBtns}</div>
+      </div>
+      ${rows ? `<div class="gm-rec-table">${rows.map(r => `<div class="gm-rec-row${r.same ? ' ok' : ''}"><span>${gmEsc(r.label)}</span><em>${gmEsc(r.current)}</em><i>→</i><b>${gmEsc(r.recommended)}</b><u>${r.same ? '✓ já está' : 'mudar'}</u></div>`).join('')}</div>` : ''}
+    </div>
+    <div class="gm-an-actions">
+      <button type="button" class="gm-btn primary" data-gm="apply" ${busy || !rows ? 'disabled' : ''}>${GM_ICON.bolt}${busy ? 'Otimizando...' : 'Aplicar recomendado'}</button>
+      <button type="button" class="gm-btn" data-gm="open" ${busy ? 'disabled' : ''}>${GM_ICON.note}Abrir no Bloco de Notas</button>
+      <button type="button" class="gm-btn" data-gm="restore" ${busy || !e.cfg.has_backup ? 'disabled' : ''}>${GM_ICON.undo}Restaurar original</button>
+    </div>
+    <p class="gm-hint">Feche o jogo antes de aplicar — a maioria reescreve esse arquivo quando fecha. Uma cópia do original fica salva ao lado (<code>.fluxtweakers-backup</code>) e só mudamos opções que já existem no seu arquivo.</p>`;
+  } else {
+    rec = `<div class="gm-rec">
+      <div class="gm-rec-head"><div><h4>Este jogo não tem arquivo de configuração que o app edite</h4>
+        <p>O que dá pra fazer por ele: ligar a <b>GPU de alto desempenho</b> e desligar as <b>otimizações de tela cheia</b> do Windows pra esse executável. A qualidade gráfica você ajusta dentro do jogo — use o foco <b>${GM_FOCUS[a.recommended_focus] || 'Equilibrado'}</b> como guia.</p></div></div>
+    </div>
+    <div class="gm-an-actions">
+      <button type="button" class="gm-btn primary" data-gm="apply" ${busy || !e.exe ? 'disabled' : ''}>${GM_ICON.bolt}${busy ? 'Otimizando...' : 'Otimizar Windows pra esse jogo'}</button>
+    </div>`;
+  }
+  root.innerHTML = `<div class="gm-card gm-an">${head}<p class="gm-an-sum">${gmEsc(a.summary)}</p><div class="gm-comps">${comps}</div>${rec}</div>`;
+}
+
+async function gmLoadProfile(){
+  if(!window.__TAURI__) return null;
+  if(GM.profilePromise) return GM.profilePromise;
+  GM.profilePromise = window.__TAURI__.core.invoke('game_pc_profile').then(p => { GM.profile = p; return p; }, () => null)
+    .then(p => { GM.profilePromise = null; gmRenderHero(); return p; });
+  gmRenderHero();
+  return GM.profilePromise;
+}
+
 async function gmLoadCfg(){
   if(!window.__TAURI__) return;
-  try{ GM.cfg = await window.__TAURI__.core.invoke('gamecfg_list'); }catch(err){ GM.cfg = null; }
-  gmRenderCfg();
+  try{ GM.cfg = await window.__TAURI__.core.invoke('gamecfg_list'); }catch(err){ GM.cfg = []; }
+  GM.cfgDone = true;
+  gmLibraryChanged();
+}
+
+function gmLibraryChanged(){
+  gmRenderPicker();
+  if(GM.scanDone && GM.cfgDone && !GM.sel){
+    const lib = gmLibrary();
+    const first = lib.find(e => e.hasCfg) || lib[0];
+    if(first) gmSelect(first.key);
+  } else if(GM.sel){ gmRenderAnalysis(); }
+}
+
+async function gmLoadPreview(){
+  const e = gmEntry();
+  if(!e || !e.hasCfg){ GM.preview = null; gmRenderAnalysis(); return; }
+  const p = GM.profile || await gmLoadProfile();
+  if(!p){ GM.preview = null; gmRenderAnalysis(); return; }
+  const key = GM.sel;
+  try{
+    const rows = await window.__TAURI__.core.invoke('gamecfg_preview', { game: e.cfgId, tier: p.tier, focus: GM.focus, refreshHz: p.refresh_hz });
+    if(GM.sel === key) GM.preview = rows;
+  }catch(err){ if(GM.sel === key) GM.preview = null; showToast(String(err), 'error'); }
+  gmRenderAnalysis();
+}
+
+async function gmSelect(key){
+  if(GM.running) return;
+  GM.sel = key; GM.analysis = null; GM.preview = null;
+  gmRenderPicker(); gmRenderAnalysis(); gmRenderChanges(null);
+  const e = gmEntry(); if(!e) return;
+  try{
+    const a = await window.__TAURI__.core.invoke('game_analyze', { name: e.name });
+    if(GM.sel !== key) return;
+    GM.analysis = a;
+    if(!GM.focusTouched[key]) GM.focus = a.recommended_focus;
+  }catch(err){ showToast(String(err), 'error'); return; }
+  gmRenderAnalysis();
+  await gmLoadPreview();
 }
 
 const GM_STEPS = [
@@ -6089,22 +6240,24 @@ const GM_STEPS = [
   { id:'windows', label:'Windows',         icon:'win' },
   { id:'verify',  label:'Verificando',     icon:'verify' },
 ];
+const GM_WIN_STEPS = [
+  { id:'hw',      label:'Seu PC',      icon:'cpu' },
+  { id:'windows', label:'Windows',     icon:'win' },
+  { id:'verify',  label:'Verificando', icon:'verify' },
+];
 
-async function gmRunGame(id){
+async function gmRunGame(entry){
   if(GM.running) return;
   if(!window.__TAURI__){ showToast('A otimização só funciona no app instalado'); return; }
-  const game = (GM.cfg || []).find(g => g.id === id);
-  if(!game) return;
-  const name = game.name;
+  const id = entry.cfgId, name = entry.name;
   const inv = window.__TAURI__.core.invoke;
-  GM.running = true; GM.runningId = id; gmRenderCfg(); gmRenderChanges(null);
+  GM.running = true; gmRenderAnalysis(); gmRenderChanges(null);
   GP.mount('Otimizando ' + gmEsc(name), 'Cada etapa mexe de verdade no seu PC e no arquivo do jogo', GM_STEPS, '');
   GP.msg('Começando...', true);
   document.getElementById('gmPipeRoot')?.scrollIntoView({ behavior:'smooth', block:'center' });
   await GP.start();
-  const finishRun = async () => { GM.running = false; GM.runningId = null; await gmLoadCfg(); };
+  const finishRun = async () => { GM.running = false; await gmLoadCfg(); await gmLoadPreview(); };
 
-  // 1) hardware
   await GP.enter(1); GP.msg('Lendo o seu <b>hardware</b>...', true);
   try{ GM.profile = await inv('game_pc_profile'); }catch(err){}
   gmRenderHero(); await gmSleep(650);
@@ -6145,86 +6298,89 @@ async function gmRunGame(id){
   await finishRun();
 }
 
+// jogos sem arquivo de config: só os ajustes do Windows (GPU dedicada + tela cheia)
+async function gmRunWindows(entry){
+  if(GM.running || !entry.exe) return;
+  if(!window.__TAURI__){ showToast('A otimização só funciona no app instalado'); return; }
+  const inv = window.__TAURI__.core.invoke;
+  GM.running = true; gmRenderAnalysis(); gmRenderChanges(null);
+  GP.mount('Otimizando ' + gmEsc(entry.name), 'Ajustes do Windows pra esse executável', GM_WIN_STEPS, '');
+  GP.msg('Começando...', true);
+  document.getElementById('gmPipeRoot')?.scrollIntoView({ behavior:'smooth', block:'center' });
+  await GP.start();
+  const finishRun = () => { GM.running = false; gmRenderAnalysis(); };
+
+  await GP.enter(1); GP.msg('Lendo o seu <b>hardware</b>...', true);
+  try{ GM.profile = await inv('game_pc_profile'); }catch(err){}
+  gmRenderHero(); await gmSleep(650);
+  if(!GM.profile){ GP.fail(1, 'falhou'); GP.msg('Não consegui ler o hardware.'); finishRun(); return; }
+  GP.finish(1, GM.profile.tier_label);
+
+  const steps = [
+    { i:2, step:'apply',  msg:'Ligando a <b>GPU de alto desempenho</b> e desligando as <b>otimizações de tela cheia</b>...' },
+    { i:3, step:'verify', msg:'Conferindo no <b>registro do Windows</b> se ficou gravado...' },
+  ];
+  for(const st of steps){
+    await GP.enter(st.i); GP.msg(st.msg, true);
+    const t0 = Date.now();
+    let r;
+    try{ r = await inv('game_windows_tweak', { exePath: entry.exe, step: st.step }); }
+    catch(err){ GP.fail(st.i, 'falhou'); GP.msg(gmEsc(String(err))); showToast(String(err), 'error'); finishRun(); return; }
+    const wait = 850 - (Date.now() - t0); if(wait > 0) await gmSleep(wait);
+    GP.count(st.i, `${r.done}/${r.total}`); GP.finish(st.i); GP.msg(gmEsc(r.message)); await gmSleep(300);
+  }
+  await GP.end();
+  GP.msg(`<b>Pronto!</b> O ${gmEsc(entry.name)} agora usa a GPU de alto desempenho.`);
+  showToast(`${entry.name}: ajustes do Windows aplicados`);
+  finishRun();
+}
+
 function gmInit(panel){
   if(!panel.dataset.gmBound){
     panel.dataset.gmBound = '1';
     panel.addEventListener('click', async e => {
+      const tile = e.target.closest('[data-sel]');
+      if(tile){ gmSelect(tile.dataset.sel); return; }
       const f = e.target.closest('[data-focus]');
-      if(f && !GM.running){ GM.focus = f.dataset.focus; gmRenderCfg(); return; }
+      if(f && !GM.running){ GM.focus = f.dataset.focus; GM.focusTouched[GM.sel] = true; gmRenderAnalysis(); gmLoadPreview(); return; }
       const b = e.target.closest('[data-gm]');
       if(!b || b.disabled) return;
-      const act = b.dataset.gm, id = b.dataset.game;
-      if(act === 'cfg-run') gmRunGame(id);
-      else if(act === 'cfg-open'){
-        try{ await window.__TAURI__.core.invoke('gamecfg_open', { game: id }); }catch(err){ showToast(String(err), 'error'); }
-      } else if(act === 'cfg-restore'){
-        if(b.dataset.confirm !== '1'){ b.dataset.confirm = '1'; const old = b.innerHTML; b.textContent = 'Confirmar?'; setTimeout(() => { b.dataset.confirm = ''; b.innerHTML = old; }, 3500); return; }
-        try{ const m = await window.__TAURI__.core.invoke('gamecfg_restore', { game: id }); showToast(m); gmRenderChanges(null); await gmLoadCfg(); }
+      const entry = gmEntry(); if(!entry) return;
+      const act = b.dataset.gm;
+      if(act === 'apply'){ entry.hasCfg ? gmRunGame(entry) : gmRunWindows(entry); }
+      else if(act === 'open'){
+        try{ await window.__TAURI__.core.invoke('gamecfg_open', { game: entry.cfgId }); }catch(err){ showToast(String(err), 'error'); }
+      } else if(act === 'restore'){
+        if(b.dataset.confirm !== '1'){ b.dataset.confirm = '1'; const old = b.innerHTML; b.textContent = 'Confirmar restauração?'; setTimeout(() => { b.dataset.confirm = ''; b.innerHTML = old; }, 3500); return; }
+        try{ const m = await window.__TAURI__.core.invoke('gamecfg_restore', { game: entry.cfgId }); showToast(m); gmRenderChanges(null); await gmLoadCfg(); await gmLoadPreview(); }
         catch(err){ showToast(String(err), 'error'); }
       }
     });
   }
-  GP.mount('Otimização do jogo', 'Escolha o foco e clique em "Otimizar" num jogo pra ver cada etapa acontecendo', GM_STEPS, 'Pronto pra começar.');
-  gmRenderHero(); gmRenderCfg();
+  GP.mount('Otimização do jogo', 'Escolha um jogo e clique em "Aplicar recomendado" pra ver cada etapa acontecendo', GM_STEPS, 'Pronto pra começar.');
+  gmRenderHero(); gmRenderPicker(); gmRenderAnalysis();
   gmLoadProfile(); gmLoadCfg();
 }
 
 async function loadDetectedGames(){
   const list = document.getElementById('detectedGamesList');
   if (!list) return;
-  if (!window.__TAURI__){
-    list.innerHTML = `<p class="detected-games-empty">Detecção automática só funciona no app instalado.</p>`;
-    return;
-  }
-  list.innerHTML = `<p class="detected-games-empty">Procurando jogos instalados...</p>`;
+  if (!window.__TAURI__){ gmRenderPicker(); return; }
+  GM.scanDone = false;
   try{
     const { invoke } = window.__TAURI__.core;
     const games = await invoke('scan_installed_games');
     GM.games = games || [];
-    if (!games || !games.length){
-      list.innerHTML = `<p class="detected-games-empty">Nenhum jogo da Steam, Epic, Ubisoft ou Rockstar encontrado nesta máquina.</p>`;
-      return;
-    }
-    const SRC = { steam:'Steam', epic:'Epic Games', ubisoft:'Ubisoft Connect', rockstar:'Rockstar Games' };
-    list.innerHTML = games.map((g, i) => `
-      <div class="game-detected-card gm-game" data-i="${i}">
-        <div class="gm-game-top">
-          <div class="gm-game-ico" id="gmIco${i}">${gmEsc((g.name || '?').charAt(0).toUpperCase())}</div>
-          <div class="gm-game-info">
-            <b title="${gmEsc(g.name)}">${gmEsc(g.name)}</b>
-            <span class="game-detected-src">${gmEsc(SRC[g.source] || g.source)}${Object.values(GM_ICON_MATCH).some(re => re.test(g.name)) ? ' · config por arquivo' : ''}</span>
-          </div>
-        </div>
-        <span class="game-detected-path" title="${gmEsc(g.exe_path)}">${gmEsc(g.exe_path)}</span>
-        <span class="game-graphics-note"></span>
-        <div class="gm-game-presets">
-          <button class="game-preset-btn perf" data-preset="performance" data-exe="${i}" title="${PRESET_LABELS.performance.title}">Desempenho</button>
-          <button class="game-preset-btn bal" data-preset="balanced" data-exe="${i}" title="${PRESET_LABELS.balanced.title}">Equilibrado</button>
-          <button class="game-preset-btn qual" data-preset="quality" data-exe="${i}" title="${PRESET_LABELS.quality.title}">Qualidade</button>
-        </div>
-        <button class="game-preset-btn analyze gm-analyze" data-exe-analyze="${i}" title="Roda um diagnóstico real: prioridade, GPU, espaço em disco, apps pesados abertos">${GM_ICON.search}Analisar este jogo</button>
-      </div>
-    `).join('');
-    list.querySelectorAll('.game-preset-btn[data-exe-analyze]').forEach(btn=>{
-      btn.addEventListener('click', ()=>{ runGameAnalysis(games[+btn.dataset.exeAnalyze]); });
-    });
-    list.querySelectorAll('.game-preset-btn[data-preset]').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const g = games[+btn.dataset.exe];
-        applyGamePreset(g.exe_path, btn.dataset.preset, btn, g.name);
-      });
-    });
+    GM.scanDone = true;
+    gmLibraryChanged();
     // ícones reais dos .exe
-    invoke('game_icons', { paths: games.map(g => g.exe_path) }).then(map => {
-      Object.entries(map || {}).forEach(([i, url]) => {
-        const el = document.getElementById('gmIco' + i);
-        if(el){ el.innerHTML = `<img src="${url}" alt="">`; el.classList.add('has-img'); }
-        Object.entries(GM_ICON_MATCH).forEach(([gid, re]) => { if(re.test(games[+i].name)){ GM.icons[gid] = url; } });
-      });
-      gmRenderCfg();
+    invoke('game_icons', { paths: GM.games.map(g => g.exe_path) }).then(map => {
+      Object.entries(map || {}).forEach(([i, url]) => { const g = GM.games[+i]; if(g) GM.iconsByExe[g.exe_path] = url; });
+      gmRenderPicker(); gmRenderAnalysis();
     }).catch(() => {});
   }catch(err){
-    list.innerHTML = `<p class="detected-games-empty">Não foi possível procurar jogos: ${gmEsc(err)}</p>`;
+    GM.scanDone = true; GM.games = [];
+    gmLibraryChanged();
   }
 }
 
@@ -7454,22 +7610,22 @@ function renderPanel(catId){
   if(cat.special === 'games'){
     html += `<div class="gm-wrap">
       <section class="gm-hero" id="gmHero"></section>
-      <section id="gmCfg"></section>
-      <div id="gmPipeRoot"></div>
-      <div id="gmChanges"></div>
-      <section class="gm-section">
+      <section class="gm-card gm-picker">
         <div class="gm-section-head">
-          <div><h3>Meus jogos</h3><p>Detecta o que está instalado (Steam, Epic, Ubisoft Connect e Rockstar) e otimiza cada jogo com um clique.</p></div>
+          <div><h3>Escolha um jogo</h3><p>Detecta o que está instalado (Steam, Epic, Ubisoft Connect, Rockstar) e os jogos com arquivo de configuração. Clique num jogo pra analisar.</p></div>
           <button id="rescanGamesBtn" class="gm-btn">${GM_ICON.refresh}Procurar jogos</button>
         </div>
-        <div id="detectedGamesList" class="gm-grid">
-          <p class="detected-games-empty">Clique em "Procurar jogos" pra detectar o que você tem instalado.</p>
+        <div id="detectedGamesList" class="gm-tiles">
+          <p class="detected-games-empty">Procurando jogos...</p>
         </div>
         <div class="gm-add">
-          <input type="text" id="customGameInput" class="gm-in" placeholder="Adicionar jogo pelo nome do .exe (ex: MeuJogo.exe)" autocomplete="off">
-          <button id="addGameBtn" class="gm-btn">+ Adicionar manualmente</button>
+          <input type="text" id="customGameInput" class="gm-in" placeholder="Outro jogo? Nome do .exe pra rodar com prioridade alta (ex: MeuJogo.exe)" autocomplete="off">
+          <button id="addGameBtn" class="gm-btn">+ Adicionar</button>
         </div>
       </section>
+      <section id="gmAnalysis"></section>
+      <div id="gmPipeRoot"></div>
+      <div id="gmChanges"></div>
     </div>`;
   }
 
