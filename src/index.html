@@ -2199,6 +2199,94 @@
   .at-missing{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:18px;font-size:11.5px;color:var(--muted);}
   .at-missing em img{width:16px;height:16px;border-radius:4px;vertical-align:-3px;margin-right:6px;}
   .at-missing em{font-style:normal;padding:4px 10px;border-radius:999px;background:var(--item-bg);border:1px solid var(--item-border);}
+
+  /* ===================== LOGIN (layout dividido, sóbrio) ===================== */
+  #loginScreen{display:block;padding:0;background:var(--bg);}
+  #loginScreen::before,#loginScreen::after{display:none;}
+  .auth-bg{position:absolute;inset:0;background:radial-gradient(900px 620px at 16% 6%,color-mix(in srgb,var(--accent) 11%,transparent),transparent 62%),radial-gradient(700px 500px at 100% 100%,color-mix(in srgb,var(--accent) 6%,transparent),transparent 60%);}
+  .auth-shell{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.12fr) minmax(430px,.88fr);height:100%;padding-top:38px;box-sizing:border-box;}
+  .auth-hero{display:flex;flex-direction:column;justify-content:space-between;padding:44px 64px 40px;border-right:1px solid var(--border-soft);}
+  .auth-hero-top{display:flex;align-items:center;gap:11px;font-size:15px;font-weight:800;letter-spacing:-.01em;color:var(--text);}
+  .auth-logo{width:34px;height:34px;border-radius:9px;object-fit:cover;border:1px solid var(--border);}
+  .auth-hero-body{max-width:520px;}
+  .auth-kicker{display:inline-flex;align-items:center;gap:9px;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
+  .auth-kicker i{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+  .auth-hero h1{margin:18px 0 14px;font-size:clamp(40px,4.8vw,62px);line-height:1.03;letter-spacing:-.035em;font-weight:800;color:var(--text);}
+  .auth-hero-body > p{margin:0 0 34px;font-size:15px;line-height:1.6;color:var(--muted);max-width:440px;}
+  .auth-points{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:20px;}
+  .auth-points li{display:flex;gap:14px;align-items:flex-start;}
+  .auth-pt-ico{width:38px;height:38px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--item-bg);border:1px solid var(--item-border);color:var(--accent);}
+  .auth-pt-ico svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .auth-points b{display:block;font-size:14px;font-weight:700;color:var(--text);}
+  .auth-points span{display:block;margin-top:2px;font-size:12.8px;line-height:1.5;color:var(--muted);}
+  .auth-hero-foot{font-size:12px;color:var(--muted2);font-weight:600;letter-spacing:.04em;}
+  .auth-side{display:flex;align-items:center;justify-content:center;padding:32px;overflow-y:auto;}
+  #loginScreen .auth-card{max-width:408px;width:100%;padding:34px 34px 26px;text-align:left;background:var(--panel);border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 60px -28px rgba(0,0,0,.75);animation:authIn .5s cubic-bezier(.16,1,.3,1);}
+  #loginScreen .auth-card:hover{transform:none;box-shadow:0 24px 60px -28px rgba(0,0,0,.75);}
+  #loginScreen .auth-card::before{display:none;}
+  @keyframes authIn{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+  .auth-card-head h2{margin:0;font-size:23px;font-weight:800;letter-spacing:-.02em;color:var(--text);}
+  .auth-card-head p{margin:6px 0 22px;font-size:13px;line-height:1.5;color:var(--muted);}
+  #loginScreen .auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:0 0 20px;padding:4px;border-radius:11px;background:rgba(255,255,255,.04);border:1px solid var(--border-soft);animation:none;}
+  #loginScreen .auth-tab{padding:9px 0;border-radius:8px;font-size:12.8px;font-weight:700;color:var(--muted);background:transparent;}
+  #loginScreen .auth-tab:hover{color:var(--text);}
+  #loginScreen .auth-tab.active{background:var(--card-hover);color:var(--text);box-shadow:inset 0 0 0 1px var(--border);}
+  #loginScreen .login-label{font-size:12px;font-weight:700;letter-spacing:0;color:var(--muted);margin:0 0 7px;}
+  #loginScreen .login-input-wrap{margin-bottom:15px;}
+  #loginScreen .login-input{height:44px;box-sizing:border-box;padding:0 14px 0 40px;border-radius:10px;font-size:14px;background:rgba(255,255,255,.03);border:1px solid var(--border);}
+  #loginScreen .login-input-pass{padding-right:42px;}
+  #loginScreen .login-input-icon{left:13px;width:16px;height:16px;}
+  #loginScreen .login-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);animation:none;}
+  #loginScreen .login-error{margin:-4px 0 14px;padding:9px 12px;border-radius:9px;font-size:12.3px;font-weight:600;line-height:1.4;color:var(--off);background:color-mix(in srgb,var(--off) 10%,transparent);border:1px solid color-mix(in srgb,var(--off) 30%,transparent);}
+  #loginScreen .login-error[hidden]{display:none;}
+  #loginScreen .login-btn,#restoreScreen .login-btn,#warningModal .login-btn{height:46px;padding:0;border-radius:11px;font-size:13.8px;font-weight:800;color:#08101c;background:var(--accent);border:1px solid transparent;box-shadow:none;transition:filter .15s,transform .15s;}
+  #loginScreen .login-btn:hover,#restoreScreen .login-btn:hover,#warningModal .login-btn:hover{filter:brightness(1.08);transform:translateY(-1px);box-shadow:none;}
+  #loginScreen .plan-choice{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 16px;}
+  #loginScreen .plan-option{padding:12px 13px;border-radius:11px;border:1px solid var(--border);background:rgba(255,255,255,.02);}
+  #loginScreen .plan-option:hover{border-color:var(--muted2);}
+  #loginScreen .plan-option.active{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);box-shadow:none;}
+  #loginScreen .plan-option b{font-size:13px;}
+  #loginScreen .plan-option span{font-size:11.3px;line-height:1.4;}
+  .auth-foot{display:flex;align-items:center;justify-content:center;gap:7px;margin:18px 0 0;font-size:11.5px;color:var(--muted2);}
+  .auth-foot svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
+  @media (max-width:980px){.auth-shell{grid-template-columns:1fr;}.auth-hero{display:none;}}
+
+  /* ============ avisos depois do login: ponto de restauração + aviso ============ */
+  #restoreScreen,#warningModal{background:var(--bg);}
+  #restoreScreen::before,#warningModal::before{background:radial-gradient(760px 520px at 50% 0%,color-mix(in srgb,var(--accent) 9%,transparent),transparent 65%);}
+  #warningModal::before{background:radial-gradient(760px 520px at 50% 0%,rgba(245,197,66,.08),transparent 65%);}
+  .gate-card{max-width:440px !important;padding:38px 36px 30px !important;text-align:center;background:var(--panel);border:1px solid var(--border);border-radius:20px;box-shadow:0 26px 70px -30px rgba(0,0,0,.8);}
+  .gate-card:hover{transform:none !important;box-shadow:0 26px 70px -30px rgba(0,0,0,.8) !important;}
+  .gate-card::before{display:none !important;}
+  .gate-icon{width:58px;height:58px;margin:0 auto 18px;border-radius:16px;display:flex;align-items:center;justify-content:center;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);border:1px solid color-mix(in srgb,var(--accent) 32%,transparent);}
+  .gate-icon svg{width:27px;height:27px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .gate-icon.warn{color:#f5c542;background:rgba(245,197,66,.11);border-color:rgba(245,197,66,.34);}
+  .gate-step{display:inline-block;margin-bottom:8px;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
+  .gate-step.warn{color:#f5c542;}
+  .gate-card h2{margin:0 0 10px;font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--text);}
+  .gate-card > p{margin:0 0 20px;font-size:13.3px;line-height:1.6;color:var(--muted);}
+  .gate-list{list-style:none;margin:0 0 24px;padding:14px 16px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid var(--border-soft);text-align:left;display:flex;flex-direction:column;gap:10px;}
+  .gate-list li{display:flex;align-items:center;gap:10px;font-size:12.8px;color:var(--text);}
+  .gate-list svg{width:16px;height:16px;flex-shrink:0;fill:none;stroke:var(--ok);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;}
+  #restoreScreen .login-btn.login-btn-secondary,#warningModal .login-btn.login-btn-secondary{margin-top:10px;background:transparent;color:var(--muted);border:1px solid var(--border);font-weight:700;}
+  #restoreScreen .login-btn.login-btn-secondary:hover,#warningModal .login-btn.login-btn-secondary:hover{color:var(--text);border-color:var(--muted2);filter:none;}
+  .gate-hint{margin:18px 0 0;font-size:11.5px;color:var(--muted2);}
+
+  /* ===================== NOTIFICAÇÕES ===================== */
+  #toastContainer{bottom:90px;right:22px;gap:10px;}
+  .toast{--tc:var(--ok);position:relative;overflow:hidden;pointer-events:auto;display:flex;align-items:center;gap:12px;min-width:270px;max-width:380px;padding:12px 10px 13px 12px;border-radius:13px;background:var(--surface-strong);border:1px solid var(--border);box-shadow:0 16px 36px -14px rgba(0,0,0,.7);font-size:12.8px;line-height:1.45;color:var(--text);}
+  .toast.t-error{--tc:var(--off);}
+  .toast.t-warning{--tc:#f5c542;}
+  .toast.t-info{--tc:var(--accent);}
+  .toast-ico{width:30px;height:30px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--tc);background:color-mix(in srgb,var(--tc) 14%,transparent);border:1px solid color-mix(in srgb,var(--tc) 30%,transparent);}
+  .toast-ico svg{width:15px;height:15px;}
+  .toast-msg{flex:1;min-width:0;font-weight:600;word-break:break-word;}
+  .toast-x{flex-shrink:0;width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--muted2);cursor:pointer;transition:background .15s,color .15s;}
+  .toast-x:hover{background:rgba(255,255,255,.08);color:var(--text);}
+  .toast-x svg{width:13px;height:13px;}
+  .toast-bar{position:absolute;left:0;bottom:0;height:2px;width:100%;background:var(--tc);transform-origin:left;animation:toastBar var(--dur,3200ms) linear forwards;opacity:.85;}
+  .toast.paused .toast-bar{animation-play-state:paused;}
+  @keyframes toastBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 </style>
 </head>
 <body>
@@ -2233,15 +2321,31 @@
 <div id="topProgress"><div id="topProgressFill"></div></div>
 
 <div id="loginScreen">
-  <div class="login-aurora"><span></span><span></span><span></span></div>
-  <div class="login-grid"></div>
-  <div class="login-card">
-    <div class="brand-badge login-logo">
-      <img src="assets/logo-mark.png" alt="FluxTweakers" class="login-logo-img">
+  <div class="auth-bg"></div>
+  <div class="auth-shell">
+    <aside class="auth-hero">
+      <div class="auth-hero-top">
+        <img src="assets/logo-mark.png" alt="" class="auth-logo">
+        <span>FluxTweakers</span>
+      </div>
+      <div class="auth-hero-body">
+        <span class="auth-kicker"><i></i>Painel de otimização para Windows</span>
+        <h1>Mais FPS,<br>menos lag.</h1>
+        <p>Ajustes reais no sistema, com ponto de restauração e tudo reversível.</p>
+        <ul class="auth-points">
+          <li><div class="auth-pt-ico"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div><div><b>Seguro e reversível</b><span>Crie um ponto de restauração antes de qualquer mudança.</span></div></li>
+          <li><div class="auth-pt-ico"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></div><div><b>App Tuner</b><span>Limpe cache, ajuste prioridade e núcleos de cada programa.</span></div></li>
+          <li><div class="auth-pt-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg></div><div><b>DNS mais rápido</b><span>Compare provedores na sua rede e troque em um clique.</span></div></li>
+        </ul>
+      </div>
+      <div class="auth-hero-foot">by Dgeras</div>
+    </aside>
+    <main class="auth-side">
+  <div class="login-card auth-card">
+    <div class="auth-card-head">
+      <h2 id="authTitle">Bem-vindo de volta</h2>
+      <p id="authSub">Entre com a sua conta para abrir o painel.</p>
     </div>
-    <div class="brand login-brand">FluxTweakers</div>
-    <div class="login-by">by Dgeras</div>
-    <p class="login-sub">Mais FPS, menos lag. Entre para acessar o painel de otimização.</p>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" type="button">Entrar</button>
       <button class="auth-tab" id="tabSignup" type="button">Criar conta</button>
@@ -2293,26 +2397,37 @@
       <p class="login-error" id="signupError" hidden></p>
       <button type="button" id="signupBtn" class="login-btn">Criar conta</button>
     </div>
+    <p class="auth-foot"><svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>Suas contas ficam salvas só neste computador.</p>
+  </div>
+    </main>
   </div>
 </div>
 
 <div id="restoreScreen" hidden>
-  <div class="login-card">
-    <div class="brand-badge login-logo">
-      <img src="assets/logo-mark.png" alt="FluxTweakers" class="login-logo-img">
-    </div>
-    <div class="brand login-brand" style="font-size:18px;">Ponto de Restauração</div>
-    <p class="login-sub">Antes de aplicar qualquer ajuste, recomendamos criar um ponto de restauração do Windows. Assim, se algo der errado, dá pra voltar atrás.</p>
-    <button id="btnCreateRestore" class="login-btn">Baixar e criar ponto de restauração agora</button>
-    <button id="btnSkipRestore" class="login-btn login-btn-secondary">Pular</button>
+  <div class="login-card gate-card">
+    <div class="gate-icon"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+    <span class="gate-step">Antes de começar</span>
+    <h2>Crie um ponto de restauração</h2>
+    <p>Recomendamos criar um ponto de restauração do Windows antes de aplicar qualquer ajuste. Se algo der errado, você volta o sistema ao estado de agora.</p>
+    <ul class="gate-list">
+      <li><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Protege o registro e os arquivos do sistema</li>
+      <li><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Seus arquivos pessoais não são alterados</li>
+      <li><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Dá pra voltar atrás a qualquer momento</li>
+    </ul>
+    <button id="btnCreateRestore" class="login-btn">Baixar e criar ponto de restauração</button>
+    <button id="btnSkipRestore" class="login-btn login-btn-secondary">Pular por enquanto</button>
+    <p class="gate-hint">Será baixado um script que cria o ponto de restauração no Windows.</p>
   </div>
 </div>
 
 <div id="warningModal" hidden>
-  <div class="login-card warning-card">
-    <p class="warning-title">⚠ Aviso</p>
-    <p class="login-sub">Você optou por pular a criação do ponto de restauração. A partir daqui, qualquer risco ou problema causado pelas alterações é de sua responsabilidade — você foi avisado.</p>
-    <button id="btnAckWarning" class="login-btn">Entendi, continuar mesmo assim</button>
+  <div class="login-card gate-card warning-card">
+    <div class="gate-icon warn"><svg viewBox="0 0 24 24"><path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.2h.01"/></svg></div>
+    <span class="gate-step warn">Atenção</span>
+    <h2>Continuar sem ponto de restauração?</h2>
+    <p>Você optou por pular a criação do ponto de restauração. A partir daqui, qualquer risco ou problema causado pelas alterações é de sua responsabilidade — você foi avisado.</p>
+    <button id="btnBackRestore" class="login-btn">Voltar e criar o ponto</button>
+    <button id="btnAckWarning" class="login-btn login-btn-secondary">Entendi, continuar mesmo assim</button>
   </div>
 </div>
 
@@ -2771,7 +2886,7 @@ function showApp(){
   }
   playAppOpenIntro();
   if(window.__bg3dFailed){
-    setTimeout(()=>{ if(typeof showToast === 'function') showToast('⚠️ Fundo 3D não carregou (rede bloqueou cdnjs.cloudflare.com). O resto do painel funciona normal.'); }, 1200);
+    setTimeout(()=>{ if(typeof showToast === 'function') showToast('Fundo animado indisponível sem internet. O painel funciona normalmente.', 'info'); }, 1200);
   }
 }
 
@@ -3089,6 +3204,17 @@ document.getElementById('btnSkipRestore').addEventListener('click', ()=>{
   document.getElementById('warningModal').hidden = false;
 });
 
+document.getElementById('btnBackRestore').addEventListener('click', ()=>{
+  document.getElementById('warningModal').hidden = true;
+  const r = document.getElementById('restoreScreen');
+  r.hidden = false; r.style.display = '';
+});
+(function authTitles(){
+  const t = document.getElementById('authTitle'), sub = document.getElementById('authSub');
+  const set = (login) => { if(!t) return; t.textContent = login ? 'Bem-vindo de volta' : 'Crie sua conta'; sub.textContent = login ? 'Entre com a sua conta para abrir o painel.' : 'Leva poucos segundos. Você pode mudar de plano depois.'; };
+  document.getElementById('tabLogin').addEventListener('click', () => set(true));
+  document.getElementById('tabSignup').addEventListener('click', () => set(false));
+})();
 document.getElementById('btnAckWarning').addEventListener('click', ()=>{
   document.getElementById('restorePoint').checked = false;
   showApp();
@@ -4556,17 +4682,43 @@ function buildSearchIndex(){
 let SEARCH_INDEX = buildSearchIndex();
 
 // ---------- notificações toast ----------
-function showToast(message){
+const TOAST_ICONS = {
+  success:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  error:'<path d="M6 6l12 12M18 6L6 18"/>',
+  warning:'<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+};
+function showToast(message, type){
   const container = document.getElementById('toastContainer');
   if(!container) return;
+  let msg = String(message ?? '');
+  let kind = type;
+  const em = msg.match(/^(✅|⚠️|⚠|🗑️|❌|ℹ️)\s*/u);
+  if(em){
+    if(!kind) kind = ({'✅':'success','⚠️':'warning','⚠':'warning','🗑️':'info','❌':'error','ℹ️':'info'})[em[1]];
+    msg = msg.slice(em[0].length);
+  }
+  if(!kind){
+    if(/falh|erro|não consegui|nao consegui|negad|inválid|invalid|recus|sem resposta|não foi possível/i.test(msg)) kind = 'error';
+    else if(/^(informe|digite|falta|selecione|importe|cole|preencha|escolha)/i.test(msg)) kind = 'warning';
+    else kind = 'success';
+  }
+  const dur = kind === 'error' || kind === 'warning' ? 5200 : 3200;
+  while(container.children.length >= 4) container.firstElementChild.remove();
   const el = document.createElement('div');
-  el.className = 'toast';
-  el.innerHTML = `<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>${message}</span>`;
+  el.className = 'toast t-' + kind;
+  el.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+  el.style.setProperty('--dur', dur + 'ms');
+  el.innerHTML = `<div class="toast-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">${TOAST_ICONS[kind]}</svg></div><span class="toast-msg"></span><button type="button" class="toast-x" aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg></button><i class="toast-bar"></i>`;
+  el.querySelector('.toast-msg').textContent = msg;
   container.appendChild(el);
-  setTimeout(()=>{
-    el.classList.add('out');
-    setTimeout(()=> el.remove(), 200);
-  }, 2600);
+  let timer;
+  const close = () => { clearTimeout(timer); el.classList.add('out'); setTimeout(() => el.remove(), 200); };
+  el.querySelector('.toast-x').addEventListener('click', close);
+  const start = () => { timer = setTimeout(close, dur); el.classList.remove('paused'); };
+  el.addEventListener('mouseenter', () => { clearTimeout(timer); el.classList.add('paused'); });
+  el.addEventListener('mouseleave', start);
+  start();
 }
 
 // ---------- busca global / command palette (Ctrl+K) ----------
