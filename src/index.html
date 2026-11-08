@@ -3342,9 +3342,14 @@ async function getMachineId(){
   }
   return __machineId;
 }
+// aceita o ID colado de qualquer jeito: minúsculo, sem traços, com espaços ou com texto junto
+function parsePcId(raw){
+  const m = String(raw||'').match(/([0-9a-fA-F]{4})[\s-]?([0-9a-fA-F]{4})[\s-]?([0-9a-fA-F]{4})/);
+  return m ? (m[1] + m[2] + m[3]).toUpperCase() : null;
+}
 function machineTag(id){
-  const hex = (id||'').replace(/[^0-9a-fA-F]/g,'').toUpperCase();
-  if(hex.length !== 12) return null;
+  const hex = parsePcId(id);
+  if(!hex) return null;
   const b = new Uint8Array(6);
   for(let i=0;i<6;i++) b[i] = parseInt(hex.substr(i*2,2),16);
   return b;
@@ -3426,8 +3431,9 @@ function renderMasterStatus(){
   const bak = document.getElementById('ksBackupBtn');
   if(imp) imp.hidden = has;
   if(bak) bak.hidden = !has;
-  const gen = document.getElementById('genKeyBtn');
-  if(gen) gen.disabled = !has;
+  const note = document.getElementById('genKeyNote');
+  if(note && !has){ note.hidden = false; note.className = 'ks-note warn'; note.textContent = 'Antes de gerar keys, importe a chave mestra neste PC (quadro "Chave mestra"). Só precisa fazer isso uma vez.'; }
+  else if(note && has && note.classList.contains('warn')){ note.hidden = true; }
 }
 
 function renderGenKeys(){
@@ -3486,36 +3492,44 @@ function bindGenKeyForm(){
 
   btn.addEventListener('click', async () => {
     setNote('', '');
-    const days = parseInt(hidden.value, 10) || 30;
-    const qty = parseInt(document.getElementById('genKeyQty').value, 10) || 1;
-    const pcRaw = document.getElementById('genKeyPc').value.trim();
-    let tag = null;
-    if(pcRaw){
-      tag = machineTag(pcRaw);
-      if(!tag){ setNote('err', 'ID do PC inválido. Use o formato XXXX-XXXX-XXXX (o cliente copia ele no app, no campo "ID deste PC").'); return; }
-    }
-    if(!(window.crypto && crypto.subtle)){ setNote('err', 'Este sistema não suporta a geração segura de keys.'); return; }
-    btn.disabled = true;
     try{
+      if(!getMasterJwk()){
+        setNote('warn', 'Falta importar a chave mestra neste PC. Cole ela no quadro "Chave mestra" ao lado e clique em "Importar chave mestra" — só precisa fazer isso uma vez.');
+        const m = document.getElementById('ksMaster'); if(m){ m.scrollIntoView({ behavior:'smooth', block:'center' }); }
+        return;
+      }
+      if(!(window.crypto && crypto.subtle)){ setNote('err', 'Este sistema não liberou a criptografia do navegador (crypto.subtle). Atualize o WebView2 do Windows e abra o app de novo.'); return; }
+      const days = parseInt(hidden.value, 10) || 30;
+      const qty = parseInt(document.getElementById('genKeyQty').value, 10) || 1;
+      const pcRaw = document.getElementById('genKeyPc').value.trim();
+      let tag = null, pcShown = null;
+      if(pcRaw){
+        tag = machineTag(pcRaw);
+        if(!tag){ setNote('err', 'Não achei um ID de PC válido no que você colou. O ID tem 12 letras/números no formato XXXX-XXXX-XXXX — o cliente copia ele no app, na caixa "Tenho uma key". Se não for usar, deixe o campo vazio.'); return; }
+        pcShown = parsePcId(pcRaw).replace(/(.{4})(.{4})(.{4})/, '$1-$2-$3');
+        document.getElementById('genKeyPc').value = pcShown;
+      }
+      btn.disabled = true; btn.textContent = 'Gerando...';
       const keys = getKeys();
       const made = [];
       for(let i=0;i<qty;i++){
         const code = await fxSignKey(days, tag);
         const v = await fxVerifyKey(code);
-        keys.push({ code, days, createdAt: Date.now(), signed:true, serial: v.serial, machine: tag ? fxHex(tag).replace(/(.{4})(.{4})(.{4})/, '$1-$2-$3') : null, used:false, usedBy:null });
+        if(!v.ok) throw new Error('a key gerada não passou na própria verificação (' + v.reason + ')');
+        keys.push({ code, days, createdAt: Date.now(), signed:true, serial: v.serial, machine: pcShown, used:false, usedBy:null });
         made.push(code);
       }
       saveKeys(keys);
       renderGenKeys();
       const box = document.getElementById('genKeyMade');
       box.hidden = false;
-      box.innerHTML = `<div class="ks-made-top"><span>${made.length} key${made.length>1?'s':''} gerada${made.length>1?'s':''} · ${days} dias${tag ? ' · vinculada a 1 PC' : ''}</span><button type="button" class="ks-btn sm" id="genKeyCopyAll">Copiar ${made.length>1?'todas':'key'}</button></div>` + made.map(c => `<code>${ksEsc(c)}</code>`).join('');
+      box.innerHTML = `<div class="ks-made-top"><span>${made.length} key${made.length>1?'s':''} gerada${made.length>1?'s':''} · ${days} dias${tag ? ' · só pro PC ' + pcShown : ' · serve em qualquer PC'}</span><button type="button" class="ks-btn sm" id="genKeyCopyAll">Copiar ${made.length>1?'todas':'key'}</button></div>` + made.map(c => `<code>${ksEsc(c)}</code>`).join('');
       document.getElementById('genKeyCopyAll').addEventListener('click', async e => { const ok = await copyText(made.join('\n')); flashBtn(e.currentTarget, ok ? 'Copiado!' : 'Falhou'); });
+      box.scrollIntoView({ behavior:'smooth', block:'nearest' });
     }catch(err){
-      setNote('err', err.message || 'Não consegui gerar a key.');
+      setNote('err', 'Não consegui gerar a key: ' + ((err && (err.name ? err.name + ' — ' : '') + (err.message || err)) || 'erro desconhecido'));
     }
-    btn.disabled = false;
-    renderMasterStatus();
+    btn.disabled = false; btn.textContent = 'Gerar key';
   });
 
   // chave mestra
