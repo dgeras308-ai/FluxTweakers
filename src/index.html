@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-color-theme="grafite">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,11 +15,11 @@
     --text:#ffffff;
     --muted:#a3a3a3;
     --muted2:#666666;
-    --accent:#ffffff;
-    --accent2:#c9c9c9;
-    --accent-dim:#ffffff1e;
-    --tab-accent:#ffffff;
-    --tab-accent-dim:#ffffff17;
+    --accent:#4c8bf5;
+    --accent2:#4c8bf5;
+    --accent-dim:#4c8bf522;
+    --tab-accent:#4c8bf5;
+    --tab-accent-dim:#4c8bf520;
     --off:#f2555f;
     --ok:#34d399;
     --item-bg:rgba(255,255,255,.04);
@@ -38,28 +38,6 @@
     --shadow-lg:0 24px 60px -20px rgba(0,0,0,.65);
     --surface-strong:rgba(19,19,22,.96);
   }
-  :root.light-mode{
-    --bg:#f2f3f6;
-    --panel:#ffffff;
-    --card:#ffffff;
-    --card-hover:#f4f5f8;
-    --border:#e3e5ea;
-    --border-soft:#ebedf1;
-    --text:#15171c;
-    --muted:#6b7280;
-    --muted2:#9aa1ac;
-    --item-bg:#f7f8fa;
-    --item-bg-hover:#eef0f4;
-    --item-border:#e3e5ea;
-    --item-text:#15171c;
-    --item-muted:#6b7280;
-    --item-shadow:0 1px 2px rgba(20,20,30,.05);
-    --shadow-sm:0 1px 3px rgba(20,20,30,.09);
-    --shadow-md:0 10px 26px -10px rgba(20,20,30,.14);
-    --shadow-lg:0 22px 55px -20px rgba(20,20,30,.2);
-    --surface-strong:rgba(255,255,255,.97);
-  }
-  :root.light-mode #bg3d, :root.light-mode #bgFallback, :root.light-mode #bgRaio{opacity:0;}
   *{box-sizing:border-box;}
   ::selection{background:var(--accent);color:#000;}
   ::-webkit-scrollbar{width:10px;height:10px;}
@@ -375,33 +353,6 @@
   .preset-btn-ultra:hover{filter:brightness(1.1);transform:translateY(-1px);}
   .setting-row.search-hidden, .acc-section.search-hidden{display:none !important;}
 
-  .theme-picker{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-  :root[data-color-theme="azul_neon"] .home-hero-btn.primary,
-  :root[data-color-theme="vermelho_neon"] .home-hero-btn.primary,
-  :root[data-color-theme="verde_neon"] .home-hero-btn.primary,
-  :root[data-color-theme="azul_neon"] .bar button:not(.bar-btn-secondary),
-  :root[data-color-theme="vermelho_neon"] .bar button:not(.bar-btn-secondary),
-  :root[data-color-theme="verde_neon"] .bar button:not(.bar-btn-secondary),
-  :root[data-color-theme="azul_neon"] .login-btn,
-  :root[data-color-theme="vermelho_neon"] .login-btn,
-  :root[data-color-theme="verde_neon"] .login-btn{
-    box-shadow:0 0 16px -2px var(--accent), 0 0 3px var(--accent);
-  }
-  :root[data-color-theme="azul_neon"] aside#tabs button.active,
-  :root[data-color-theme="vermelho_neon"] aside#tabs button.active,
-  :root[data-color-theme="verde_neon"] aside#tabs button.active{
-    box-shadow:0 0 14px -4px var(--accent);
-  }
-  :root[data-color-theme="azul_neon"] .home-score-fill,
-  :root[data-color-theme="vermelho_neon"] .home-score-fill,
-  :root[data-color-theme="verde_neon"] .home-score-fill{
-    filter:drop-shadow(0 0 6px var(--accent));
-  }
-  :root[data-color-theme="azul_neon"] .switch input:checked ~ .track,
-  :root[data-color-theme="vermelho_neon"] .switch input:checked ~ .track,
-  :root[data-color-theme="verde_neon"] .switch input:checked ~ .track{
-    box-shadow:0 0 14px -1px var(--accent);
-  }
   /* ===== Tema Grafite: sóbrio e profissional (cinza-grafite, uma única cor de destaque, tudo liso) ===== */
   :root[data-color-theme="grafite"]{
     --bg:#0c0e12;
@@ -454,15 +405,6 @@
   :root[data-color-theme="grafite"] .dns-hero{background:var(--item-bg);}
   :root[data-color-theme="grafite"] .dns-msg i{box-shadow:none;}
   :root[data-color-theme="grafite"] .dns-chip i{box-shadow:none;}
-  .theme-swatch{
-    width:19px;height:19px;border-radius:50%;border:2px solid var(--bg);cursor:pointer;
-    padding:0;transition:transform .15s,box-shadow .15s;flex-shrink:0;box-shadow:0 0 0 1px var(--border);
-  }
-  .theme-swatch:hover{transform:scale(1.18);}
-  .theme-swatch.active{box-shadow:0 0 0 2px var(--bg), 0 0 0 3.5px var(--text);}
-  .theme-swatch-split{box-shadow:0 0 0 1px #d8d8d8;}
-  .theme-swatch-split.active{box-shadow:0 0 0 2px var(--bg), 0 0 0 3.5px var(--text);}
-
   .sidebar-label{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted2);font-weight:700;margin:0 0 10px;}
 
   .safety{
@@ -934,7 +876,6 @@
     opacity:1;transform:translateY(-50%) translateX(10px);
   }
   .sidebar-compact .sidebar-label{display:none;}
-  .sidebar-compact .theme-picker{justify-content:center;}
   .sidebar-compact .account-badge{justify-content:center;padding:8px 4px;}
   .sidebar-compact .account-badge .info{display:none;}
   .sidebar-compact .sidebar-block.safety{justify-content:center;}
@@ -1781,14 +1722,6 @@
     backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);
   }
   #diagModal[hidden]{display:none;}
-  :root.light-mode #diagModal{
-    --dg-text:#161a26; --dg-muted:#5a6377; --dg-line:rgba(0,0,0,.09);
-    --dg-surface:#ffffff; --dg-hover:rgba(0,0,0,.035);
-    --dg-ok:#12a865; --dg-warn:#d98a00; --dg-bad:#e2304d;
-    background:
-      radial-gradient(1000px 560px at 50% -10%, color-mix(in srgb, var(--dg-ac) 20%, transparent), transparent 70%),
-      rgba(236,238,245,.6);
-  }
   .diag-card{
     width:100%;max-width:1040px;max-height:min(740px, calc(100vh - 56px));
     display:flex;flex-direction:column;min-height:0;color:var(--dg-text);
@@ -1800,13 +1733,6 @@
     animation:cardEnter .35s cubic-bezier(.16,1,.3,1);
   }
   .diag-card.grouped{height:min(740px, calc(100vh - 56px));}
-  :root.light-mode .diag-card{
-    background:
-      linear-gradient(165deg, color-mix(in srgb, var(--dg-ac) 9%, #ffffff) 0%, #fbfbfe 55%, color-mix(in srgb, var(--dg-ac) 6%, #f6f7fb) 100%) padding-box,
-      linear-gradient(160deg, color-mix(in srgb, var(--dg-ac) 65%, transparent), rgba(0,0,0,.06) 42%, color-mix(in srgb, var(--dg-ac) 30%, transparent)) border-box;
-    box-shadow:0 2px 4px rgba(20,24,40,.12), 0 40px 80px -28px rgba(20,24,40,.35), 0 0 80px -36px var(--dg-ac), inset 0 1px 0 rgba(255,255,255,.9);
-  }
-
   /* cabeçalho */
   .diag-head{display:flex;align-items:center;gap:14px;padding:18px 22px 18px 24px;border-bottom:1px solid var(--dg-line);flex-shrink:0;}
   .diag-head-icon{
@@ -2744,10 +2670,6 @@
           <p id="redeemKeyMsg" class="redeem-key-msg" hidden></p>
           <div class="redeem-pcid"><span>ID deste PC:</span><code id="redeemPcId">...</code><button type="button" id="redeemPcCopy" title="Copiar o ID deste PC">copiar</button></div>
         </div>
-      </div>
-      <div class="sidebar-block">
-        <p class="sidebar-label">Tema</p>
-        <div class="theme-picker" id="themePicker"></div>
       </div>
       <div class="sidebar-block safety" title="Ponto de restauração: recomendado. O app pede admin sozinho — reinicie depois.">
         <label class="switch">
@@ -5001,46 +4923,13 @@ const CAT_COLORS = {
   mouse:"#43c9e5", power:"#43c9e5", network:"#43c9e5", system:"#43c9e5", monitor:"#43c9e5", games:"#43c9e5", windows:"#43c9e5", apptuner:"#43c9e5"
 };
 
-const THEME_COLORS = {
-  grafite:"#4c8bf5",
-  roxo:"#7c5cff", vermelho:"#ff4d3d", indigo:"#6470ee", emerald:"#2dd4a7", cyan:"#43c9e5",
-  azul:"#2f7cf6", laranja:"#ff8a3d", rosa:"#ff5c9e", dourado:"#e0b23d",
-  branco_laranja:"#ff7a1a", mono:"#e8e2df", azul_neon:"#00c8ff",
-  vermelho_neon:"#ff0033", verde_neon:"#00e676"
-};
-const LIGHT_THEMES = new Set(["branco_laranja"]);
-// 2ª cor do degradê de cada tema (antes ficava sempre cinza, por isso os botões não combinavam)
-// grafite: segunda cor = a própria cor de destaque, então os "degradês" ficam lisos
-const THEME_ACCENT2 = { grafite:"#4c8bf5", mono:"#c9c9c9" };
-function deriveAccent2(hex){
-  const n = parseInt(hex.slice(1), 16);
-  let r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2;
-  let h = 0, sat = 0;
-  if (max !== min){
-    const d = max - min;
-    sat = l > .5 ? d / (2 - max - min) : d / (max + min);
-    h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
-    h *= 60;
-  }
-  h = (h + 34) % 360;
-  const L = Math.min(.72, l + .06), S = Math.min(1, sat);
-  const f = k => { const a = S * Math.min(L, 1 - L), kk = (k + h / 30) % 12; const c = L - a * Math.max(-1, Math.min(kk - 3, 9 - kk, 1)); return Math.round(c * 255).toString(16).padStart(2, '0'); };
-  return '#' + f(0) + f(8) + f(4);
-}
-const THEME_LABELS = {
-  grafite:"Grafite",
-  roxo:"Roxo", vermelho:"Vermelho", indigo:"Índigo", emerald:"Esmeralda", cyan:"Ciano",
-  azul:"Azul", laranja:"Laranja", rosa:"Rosa", dourado:"Dourado",
-  branco_laranja:"Branco & Laranja", mono:"Mono", azul_neon:"Azul Neon",
-  vermelho_neon:"Vermelho Neon", verde_neon:"Verde Neon"
-};
+const THEME_ACCENT = "#4c8bf5"; // único tema do app: Grafite (cinza-grafite + um azul de destaque)
 
 function safeLocalGet2(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
 function safeLocalSet2(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 
-function applyTheme(colorKey){
-  const color = THEME_COLORS[colorKey] || THEME_COLORS.roxo;
+function applyTheme(){
+  const color = THEME_ACCENT;
   Object.keys(CAT_COLORS).forEach(k => CAT_COLORS[k] = color);
   document.querySelectorAll('#tabs button').forEach(b=>{
     b.style.setProperty('--btn-color', color);
@@ -5048,28 +4937,16 @@ function applyTheme(colorKey){
   });
   const activeCat = document.querySelector('#tabs button.active');
   if(activeCat) setTabAccent(activeCat.dataset.cat);
-  document.documentElement.style.setProperty('--accent', color);
-  document.documentElement.style.setProperty('--accent2', THEME_ACCENT2[colorKey] || deriveAccent2(color));
-  document.documentElement.style.setProperty('--accent-dim', color + '22');
-  document.documentElement.classList.toggle('light-mode', LIGHT_THEMES.has(colorKey));
-  document.documentElement.setAttribute('data-color-theme', colorKey);
-  safeLocalSet2('dgeras_theme', colorKey);
-  document.querySelectorAll('.theme-swatch').forEach(s=> s.classList.toggle('active', s.dataset.color===colorKey));
+  const root = document.documentElement;
+  root.style.setProperty('--accent', color);
+  root.style.setProperty('--accent2', color);
+  root.style.setProperty('--accent-dim', color + '22');
+  root.setAttribute('data-color-theme', 'grafite');
 }
 
 function initThemePicker(){
-  const el = document.getElementById('themePicker');
-  el.innerHTML = Object.keys(THEME_COLORS).map(k=>{
-    const isLight = LIGHT_THEMES.has(k);
-    const bg = isLight ? `linear-gradient(135deg, #ffffff 50%, ${THEME_COLORS[k]} 50%)` : THEME_COLORS[k];
-    return `<button class="theme-swatch${isLight ? ' theme-swatch-split' : ''}" data-color="${k}" style="background:${bg}" title="${THEME_LABELS[k] || k}"></button>`;
-  }).join('');
-  el.querySelectorAll('.theme-swatch').forEach(s=>{
-    s.onclick = ()=> applyTheme(s.dataset.color);
-  });
-  let saved = safeLocalGet2('dgeras_theme') || 'grafite';
-  if (saved === 'aurora') saved = 'grafite';
-  applyTheme(saved);
+  applyTheme();
+  try{ localStorage.removeItem('dgeras_theme'); }catch(e){} // temas antigos foram removidos
 }
 
 function setTabAccent(catId){
