@@ -4597,10 +4597,6 @@ reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Search" /v CortanaC
       cmd:`reg add "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System" /v EnableActivityFeed /t REG_DWORD /d 0 /f
 reg add "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System" /v PublishUserActivities /t REG_DWORD /d 0 /f
 reg add "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System" /v UploadUserActivities /t REG_DWORD /d 0 /f` },
-    { id:"sys_debloat_list", group:"⚠ Debloat Avançado (cuidado)", title:"Remover lista específica de apps (mais seguro)", desc:"Remove só uma lista curada de apps de terceiros e bloatware (Candy Crush, Xbox, Bing News/Weather, Duolingo, etc) — mais seguro que remover tudo. Não removi o 'Desktop App Installer' da lista original porque ele é usado pelo winget/Store.",
-      cmd:`powershell -NoProfile -Command "$apps=@('Microsoft.3DBuilder','Microsoft.Microsoft3DViewer','Microsoft.BingWeather','Microsoft.BingSports','Microsoft.BingNews','Microsoft.BingFinance','Microsoft.Office.Sway','Microsoft.Office.OneNote','Microsoft.XboxApp','Microsoft.Xbox.TCUI','Microsoft.XboxGamingOverlay','Microsoft.XboxGameOverlay','Microsoft.XboxIdentityProvider','Microsoft.WindowsPhone','Microsoft.XboxSpeechToTextOverlay','Microsoft.Windows.Phone','Microsoft.CommsPhone','Microsoft.YourPhone','king.com.CandyCrushSaga','king.com.CandyCrushSodaSaga','ShazamEntertainmentLtd.Shazam','Flipboard.Flipboard','9E2F88E3.Twitter','ClearChannelRadioDigital.iHeartRadio','D5EA27B7.Duolingo-LearnLanguagesforFree','AdobeSystemsIncorporated.AdobePhotoshopExpress','PandoraMediaInc.29680B314EFC2','46928bounde.EclipseManager','ActiproSoftwareLLC.562882FEEB491','Microsoft.Appconnector','Microsoft.549981C3F5F10','Microsoft.GetHelp','Microsoft.Messaging','Microsoft.Getstarted','Microsoft.MixedReality.Portal','Microsoft.WindowsFeedbackHub','Microsoft.WindowsAlarms','Microsoft.MSPaint','Microsoft.WindowsMaps','Microsoft.MinecraftUWP','Microsoft.People','Microsoft.Wallet','Microsoft.Print3D','Microsoft.OneConnect','Microsoft.MicrosoftSolitaireCollection','Microsoft.SkypeApp','Microsoft.GroupMe10','Microsoft.WindowsSoundRecorder','Microsoft.RemoteDesktop','Microsoft.NetworkSpeedTest','Microsoft.Todos'); foreach($a in $apps){ Get-AppxPackage $a -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue }"` },
-    { id:"sys_debloat_appx", group:"⚠ Debloat Avançado (cuidado)", title:"Remover TODOS os apps do Windows (AppX)", desc:"ATENÇÃO: remove TODOS os apps não essenciais da Store (Calculadora, Fotos, Xbox, Clima, Correio, etc). Alguns são difíceis de reinstalar depois. Crie um ponto de restauração antes de usar isso.",
-      cmd:`powershell -NoProfile -Command "Get-AppxPackage | Where-Object {$_.NonRemovable -ne $true} | Remove-AppxPackage"` },
     { id:"sys_cleanup", group:"Manutenção", title:"Limpeza completa do PC", desc:"Apaga arquivos temporários (Windows e usuário), histórico de itens recentes, cache de download do Windows Update, esvazia a Lixeira e limpa o cache de DNS.",
       cmd:`del /q /f /s "%windir%\\Temp\\*" >nul 2>&1
 del /q /f /s "%temp%\\*" >nul 2>&1
@@ -4815,8 +4811,6 @@ reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryMana
     { id:"win_lockscreen_ads", group:"Debloat", title:"Remover dicas e anúncios na tela de bloqueio", desc:"Desliga o Windows Spotlight, dicas e sugestões que aparecem na tela de bloqueio.",
       cmd:`reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager" /v RotatingLockScreenOverlayEnabled /t REG_DWORD /d 0 /f
 reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager" /v SubscribedContent-338387Enabled /t REG_DWORD /d 0 /f` },
-    { id:"win_debloat_list", group:"Debloat", title:"Remover apps de terceiros pré-instalados (mais seguro)", desc:"Remove uma lista curada de bloatware (Candy Crush, Xbox, Bing News/Weather, Duolingo etc). Mesma lista já usada na aba Sistema — deixado aqui também por conveniência.",
-      cmd:`powershell -NoProfile -Command "$apps=@('Microsoft.3DBuilder','Microsoft.Microsoft3DViewer','Microsoft.BingWeather','Microsoft.BingSports','Microsoft.BingNews','Microsoft.BingFinance','Microsoft.Office.Sway','Microsoft.XboxApp','Microsoft.Xbox.TCUI','Microsoft.XboxGamingOverlay','Microsoft.XboxGameOverlay','Microsoft.XboxIdentityProvider','Microsoft.YourPhone','king.com.CandyCrushSaga','king.com.CandyCrushSodaSaga','ShazamEntertainmentLtd.Shazam','Flipboard.Flipboard','9E2F88E3.Twitter','D5EA27B7.Duolingo-LearnLanguagesforFree','SpotifyAB.SpotifyMusic','Microsoft.GetHelp','Microsoft.Getstarted','Microsoft.WindowsFeedbackHub','Microsoft.MixedReality.Portal'); foreach($a in $apps){ Get-AppxPackage $a -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue }"` },
 
     { id:"win_advertising_id", group:"Privacidade", title:"Desativar ID de publicidade", desc:"Impede que apps usem um ID único pra te mostrar anúncios personalizados entre eles.",
       cmd:`reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo" /v Enabled /t REG_DWORD /d 0 /f` },
@@ -5911,7 +5905,7 @@ const ASSISTANT_FAQ = [
   { q:"limpar ram limpeza memória cache liberar cheia lotada travada", a:"Tem um botão <b>'Limpar RAM agora'</b> na tela inicial (Início) que libera memória em cache do Windows na hora. Também dá pra deixar isso automático — procure por 'limpeza automática' na aba RAM." },
   { q:"aplicar otimizações botão como usar marcar tweaks ligar funciona ativar", a:"Marca (liga) os ajustes que quer usar em qualquer aba — ou escolhe um preset pronto (Recomendado/Performance/Ultra Performance) — e clica no botão roxo 'Aplicar otimizações' lá embaixo. O Windows vai pedir permissão de administrador (UAC), é normal." },
   { q:"quem é você o que é essa ia assistente robo bot", a:"Sou um assistente local do próprio FluxTweakers — não sou uma inteligência artificial generativa (não sou Claude, ChatGPT etc). Eu só busco nos textos dos ajustes do painel e num conjunto de perguntas frequentes, então posso não entender tudo. Pra dúvidas mais complexas, fala direto com o suporte." },
-  { q:"windows debloat privacidade bloatware remover apps lixo telemetria propaganda anuncio", a:"A aba <b>Windows</b> tem ajustes de Debloat (remove apps/anúncios do sistema), Privacidade (telemetria, rastreamento), Elementos Gráficos (efeitos visuais) e Explorador/Personalização — tudo separado do resto pra ficar organizado." },
+  { q:"windows debloat privacidade bloatware remover apps lixo telemetria propaganda anuncio", a:"A aba <b>Debloat</b> (grupo Windows) lista os apps instalados no seu PC, com o nome e o que cada um faz, e remove os que você marcar. A aba <b>Windows</b> tem ajustes de Debloat do sistema (widgets, Copilot, OneDrive, anúncios), Privacidade (telemetria, rastreamento), Elementos Gráficos (efeitos visuais) e Explorador/Personalização — tudo separado do resto pra ficar organizado." },
   { q:"gpu placa de video nvidia amd intel driver escolher fabricante", a:"Na aba <b>GPU</b>, escolha o fabricante (NVIDIA, AMD ou Intel) no topo pra ver os ajustes específicos da sua placa de vídeo. Cada fabricante tem otimizações diferentes." },
   { q:"cpu processador intel amd prioridade agendamento boost turbo", a:"Na aba <b>CPU</b>, escolha o fabricante (Intel ou AMD) pra ver ajustes específicos de energia, agendamento e prioridade do processador." },
   { q:"tela cheia fullscreen maximizar janela tamanho", a:"O botão do meio na barra de título (entre minimizar e fechar) coloca o app em tela cheia de verdade, cobrindo a tela toda sem sobrar espaço da barra de tarefas. Dá duplo clique na barra de título pra alternar também." },
@@ -9650,6 +9644,8 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.49', date:'11/11/2026', items:[
+    'Removidos das abas Sistema e Windows os 3 ajustes antigos de debloat (lista fixa e "remover todos os apps"). Agora o debloat de apps fica só na aba <b>Debloat</b>, onde você vê o nome e o que cada app faz antes de remover.' ] },
   { v:'1.1.48', date:'11/11/2026', items:[
     'Agora, quando o app atualiza, aparece uma janela com a <b>versão</b> e <b>o que foi feito</b>.',
     'Pra rever as novidades depois, clique na versão no rodapé do menu lateral.' ] },
@@ -9798,7 +9794,7 @@ const ULTRA_PRESET = [...PERFORMANCE_PRESET,
   'nv_telemetry','nv_shadowplay',
   'st_indexing','st_prefetch',
   'pw_pcie_aspm',
-  'sys_notifications','sys_debloat_list'
+  'sys_notifications'
 ];
 
 function applyPreset(ids, label){
