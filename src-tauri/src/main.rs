@@ -5458,6 +5458,83 @@ async fn debloat_remove(name: String) -> Result<String, String> {
 }
 
 
+// ===== Aba Perfil: leitura REAL do hardware e do estado do Windows =====
+// Um único script PowerShell coleta tudo e devolve JSON; a análise (checagens e
+// recomendação) é feita no front em cima desses dados reais.
+const PROFILE_SCAN_PS: &str = r#"
+$ErrorActionPreference = 'SilentlyContinue'
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+$cpu = Get-CimInstance Win32_Processor | Select-Object -First 1 Name,Manufacturer,NumberOfCores,NumberOfLogicalProcessors,MaxClockSpeed,SocketDesignation
+$vram = @{}
+Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11cd-bfc1-08002be10318}\0*' | ForEach-Object {
+  if ($_.'HardwareInformation.qwMemorySize') { $vram[[string]$_.DriverDesc] = [math]::Round(([double]$_.'HardwareInformation.qwMemorySize') / 1GB, 1) }
+}
+$gpus = @(Get-CimInstance Win32_VideoController | Select-Object Name,AdapterCompatibility,DriverVersion,Status,CurrentHorizontalResolution,CurrentVerticalResolution,CurrentRefreshRate,
+  @{n='DriverDate';e={ if ($_.DriverDate) { $_.DriverDate.ToString('yyyy-MM-dd') } else { $null } }},
+  @{n='VramGB';e={ $vram[[string]$_.Name] }})
+$mods = @(Get-CimInstance Win32_PhysicalMemory | Select-Object @{n='GB';e={ [math]::Round($_.Capacity / 1GB, 0) }},Speed,ConfiguredClockSpeed,SMBIOSMemoryType,Manufacturer,PartNumber,DeviceLocator)
+$slots = (Get-CimInstance Win32_PhysicalMemoryArray | Measure-Object -Property MemoryDevices -Sum).Sum
+$sysDisk = $null
+$part = Get-Partition -DriveLetter C
+if ($part) { $sysDisk = [string]$part.DiskNumber }
+$disks = @(Get-PhysicalDisk | Select-Object FriendlyName,MediaType,BusType,HealthStatus,
+  @{n='SizeGB';e={ [math]::Round($_.Size / 1GB, 0) }},
+  @{n='IsSystem';e={ ($sysDisk -ne $null) -and ([string]$_.DeviceId -eq $sysDisk) }})
+$cdrive = Get-CimInstance Win32_LogicalDisk | Where-Object { $_.DeviceID -eq 'C:' } | Select-Object @{n='SizeGB';e={ [math]::Round($_.Size / 1GB, 0) }},@{n='FreeGB';e={ [math]::Round($_.FreeSpace / 1GB, 1) }}
+$chassis = @((Get-CimInstance Win32_SystemEnclosure).ChassisTypes)
+$battery = [bool](Get-CimInstance Win32_Battery)
+$os = Get-CimInstance Win32_OperatingSystem | Select-Object Caption,BuildNumber,OSArchitecture
+$board = Get-CimInstance Win32_BaseBoard | Select-Object Manufacturer,Product
+$bios = Get-CimInstance Win32_BIOS | Select-Object SMBIOSBIOSVersion,@{n='Date';e={ if ($_.ReleaseDate) { $_.ReleaseDate.ToString('yyyy-MM-dd') } else { $null } }}
+$planText = (powercfg /getactivescheme) -join ' '
+$guid = $null
+if ($planText -match '([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})') { $guid = $Matches[1].ToLower() }
+$hags = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers').HwSchMode
+$gm = (Get-ItemProperty 'HKCU:\Software\Microsoft\GameBar').AutoGameModeEnabled
+[pscustomobject]@{
+  cpu = $cpu; gpus = $gpus
+  ram = [pscustomobject]@{ modules = $mods; slots = $slots }
+  disks = $disks; cDrive = $cdrive; chassis = $chassis; battery = $battery
+  os = $os; board = $board; bios = $bios; powerGuid = $guid; hags = $hags; gameMode = $gm
+} | ConvertTo-Json -Depth 5 -Compress
+"#;
+
+/// Lê o hardware e o estado do Windows de verdade (CIM/registro/powercfg) e devolve JSON.
+#[tauri::command]
+async fn profile_scan() -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(|| -> Result<serde_json::Value, String> {
+        #[cfg(target_os = "windows")]
+        {
+            let path = std::env::temp_dir().join("fluxtweakers-scan.ps1");
+            fs::write(&path, PROFILE_SCAN_PS)
+                .map_err(|e| format!("Não consegui preparar a leitura do hardware: {e}"))?;
+            let output = Command::new("powershell")
+                .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File"])
+                .arg(&path)
+                .creation_flags(CREATE_NO_WINDOW)
+                .output()
+                .map_err(|e| format!("Não consegui ler o hardware: {e}"));
+            let _ = fs::remove_file(&path);
+            let output = output?;
+            let text = String::from_utf8_lossy(&output.stdout).to_string();
+            let line = text
+                .lines()
+                .rev()
+                .find(|l| l.trim_start().starts_with('{'))
+                .ok_or_else(|| "O Windows não devolveu os dados do hardware".to_string())?;
+            serde_json::from_str::<serde_json::Value>(line.trim())
+                .map_err(|e| format!("Resposta inválida da leitura de hardware: {e}"))
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+
 fn main() {
     #[cfg(target_os = "windows")]
     {
@@ -5473,7 +5550,7 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
         .manage(PdhState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes, debloat_list, debloat_remove])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes, debloat_list, debloat_remove, profile_scan])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));

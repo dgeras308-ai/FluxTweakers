@@ -295,6 +295,37 @@
   .wn-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:0;border-radius:10px;padding:10px 22px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
   .wn-btn:hover{filter:brightness(1.08);}
   #sidebarVersion{cursor:pointer;} #sidebarVersion:hover{color:var(--accent);}
+  /* ===== Aba Perfil (análise real do PC) ===== */
+  .pp-root{display:flex;flex-direction:column;gap:14px;}
+  .pp-sec-title{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted2);margin:6px 2px -4px;display:flex;align-items:center;gap:8px;}
+  .pp-sec-title small{font-size:11px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--muted);}
+  .pp-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  @media (max-width:980px){ .pp-cards{grid-template-columns:repeat(2,1fr);} } @media (max-width:640px){ .pp-cards{grid-template-columns:1fr;} }
+  .pp-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:13px 15px;min-width:0;}
+  .pp-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .pp-card-label{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted2);}
+  .pp-chip{font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:999px;color:var(--accent);background:var(--accent-dim);white-space:nowrap;}
+  .pp-card-val{font-size:14px;font-weight:700;color:var(--text);margin:7px 0 0;line-height:1.35;word-break:break-word;}
+  .pp-card-sub{font-size:11px;color:var(--muted);margin:4px 0 0;line-height:1.5;word-break:break-word;}
+  .pp-checks{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+  .pp-check{display:grid;grid-template-columns:auto 1fr;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border-soft);}
+  .pp-check:last-child{border-bottom:0;}
+  .pp-ico{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;margin-top:1px;}
+  .pp-check.ok .pp-ico{color:var(--ok);background:color-mix(in srgb,var(--ok) 15%,transparent);}
+  .pp-check.warn .pp-ico{color:#f59e0b;background:color-mix(in srgb,#f59e0b 15%,transparent);}
+  .pp-check.info .pp-ico{color:var(--accent);background:var(--accent-dim);}
+  .pp-check-t{font-size:12.5px;font-weight:700;color:var(--text);margin:0;} .pp-check-d{font-size:11.5px;color:var(--muted);margin:3px 0 0;line-height:1.55;}
+  .pp-check-d b{color:var(--text);}
+  .pp-rec{background:var(--panel);border:1px solid color-mix(in srgb,var(--accent) 40%,var(--border));border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden;}
+  .pp-rec::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(360px 180px at 100% 0%,var(--accent-dim),transparent 70%);}
+  .pp-rec>*{position:relative;z-index:1;}
+  .pp-use{display:flex;gap:6px;flex-wrap:wrap;} .pp-use button{background:var(--card);border:1px solid var(--border);color:var(--muted);border-radius:9px;padding:7px 13px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;}
+  .pp-use button.on{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+  .pp-rec-name{font-size:22px;font-weight:800;margin:0;color:var(--text);letter-spacing:-.01em;} .pp-rec-name small{font-size:12px;font-weight:600;color:var(--muted);margin-left:8px;letter-spacing:0;}
+  .pp-reasons{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px;}
+  .pp-reasons li{font-size:12px;color:var(--muted);line-height:1.55;padding-left:16px;position:relative;} .pp-reasons li::before{content:"";position:absolute;left:3px;top:7px;width:5px;height:5px;border-radius:50%;background:var(--accent);} .pp-reasons li b{color:var(--text);}
+  .pp-apply{align-self:flex-start;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:0;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;} .pp-apply:hover{filter:brightness(1.08);}
+  .pp-loading{font-size:12.5px;color:var(--muted);padding:34px 10px;text-align:center;line-height:1.7;}
   /* ===== Aba Debloat ===== */
   .db-root{display:flex;flex-direction:column;gap:12px;}
   .db-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 14px;position:sticky;top:0;z-index:5;}
@@ -5595,174 +5626,288 @@ profileTabBtn.dataset.cat = 'profile';
 profileTabBtn.onclick = ()=>switchTab('profile');
 tabsEl.appendChild(profileTabBtn);
 
+// ===== Aba Perfil: lê o PC de verdade, checa problemas e monta o perfil =====
 const profileTabPanel = document.createElement('div');
 profileTabPanel.className = 'panel';
 profileTabPanel.id = 'panel-profile';
 profileTabPanel.innerHTML = `
-  <div class="bench-card">
-    <p class="bench-title">Perfil de Otimização</p>
-    <p class="bench-note" style="margin:-4px 0 0;">Responde essas perguntas rápidas e o app monta uma seleção de ajustes sob medida pra sua máquina — te explicando o motivo de cada escolha.</p>
-
-    <div class="profile-form-grid">
-      <div class="profile-form-field">
-        <label>Placa de vídeo</label>
-        <select id="pfGpu">
-          <option value="nvidia">NVIDIA</option>
-          <option value="amd">AMD</option>
-          <option value="intel">Intel (integrada/Arc)</option>
-        </select>
-      </div>
-      <div class="profile-form-field">
-        <label>Modelo da GPU</label>
-        <select id="pfGpuModel"></select>
-      </div>
-      <div class="profile-form-field">
-        <label>Processador</label>
-        <select id="pfCpu">
-          <option value="intel">Intel</option>
-          <option value="amd">AMD</option>
-        </select>
-      </div>
-      <div class="profile-form-field">
-        <label>Modelo do processador</label>
-        <select id="pfCpuModel"></select>
-      </div>
-      <div class="profile-form-field">
-        <label>Memória RAM</label>
-        <select id="pfRam">
-          <option value="8">8 GB ou menos</option>
-          <option value="16" selected>16 GB</option>
-          <option value="32">32 GB ou mais</option>
-        </select>
-      </div>
-      <div class="profile-form-field">
-        <label>Tipo de disco (onde tá o Windows)</label>
-        <select id="pfStorage">
-          <option value="ssd">SSD / NVMe</option>
-          <option value="hdd">HD comum</option>
-        </select>
-      </div>
-      <div class="profile-form-field">
-        <label>Notebook ou desktop?</label>
-        <select id="pfDevice">
-          <option value="desktop">Desktop</option>
-          <option value="laptop">Notebook</option>
-        </select>
-      </div>
-      <div class="profile-form-field">
-        <label>Principal uso</label>
-        <select id="pfUse">
-          <option value="gaming">Jogos</option>
-          <option value="balanced">Uso geral + jogos</option>
-          <option value="work">Trabalho / produtividade</option>
-        </select>
-      </div>
+  <div class="panel-head">
+    <div class="panel-head-left">
+      <div class="panel-icon-badge">${lineIcon('<circle cx="12" cy="8" r="3.4"/><path d="M5 20c1.2-4 4-6 7-6s5.8 2 7 6"/>')}</div>
+      <div><h2>Perfil do seu PC</h2><p class="panel-desc">O app lê o hardware e o estado do Windows de verdade, aponta o que está errado e monta o perfil de otimização pra sua máquina.</p></div>
     </div>
-
-    <button type="button" class="bench-run-btn" id="pfGenerateBtn" style="margin-top:4px;">Gerar recomendação</button>
-
-    <div id="pfResult" class="profile-result" hidden></div>
+    <div class="panel-head-actions"><button class="tab-selectall" id="ppReload">analisar de novo</button></div>
   </div>
+  <div class="pp-root" id="ppRoot"><div class="pp-loading">Abra esta aba pra analisar o seu PC.</div></div>
 `;
 panelsEl.appendChild(profileTabPanel);
 
-function populateModelSelect(selectEl, list, selectDefaultTier){
-  if (!selectEl) return;
-  selectEl.innerHTML = list.map(m=>`<option value="${m.v}">${m.label}</option>`).join('');
-  if (selectDefaultTier){
-    const idx = list.findIndex(m=>m.tier===selectDefaultTier);
-    if (idx >= 0) selectEl.selectedIndex = idx;
+const PP = { data:null, loading:false, err:null, use:'gaming' };
+const PP_DDR = { 20:'DDR', 21:'DDR2', 24:'DDR3', 26:'DDR4', 27:'LPDDR', 28:'LPDDR2', 29:'LPDDR3', 30:'LPDDR4', 34:'DDR5', 35:'LPDDR5' };
+const PP_PLANS = { '381b4222-f694-41f0-9685-ff5bb260df2e':['Equilibrado','bal'], '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c':['Alto desempenho','high'], 'a1841308-3541-4fab-bc81-f71556f20b4a':['Economia de energia','save'], 'e9a42b02-d5df-448d-aa00-03f14749eb61':['Desempenho máximo','ultra'] };
+const PP_TIER_N = { entry:0, mid:1, high:2 };
+const ppArr = x => x == null ? [] : (Array.isArray(x) ? x : [x]);
+const ppEsc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// ---- classificação por nome (estimativa pela classe do modelo) ----
+function ppGpuInfo(name){
+  const n = String(name || '').toLowerCase();
+  const vendor = /nvidia|geforce|quadro|\brtx\b|\bgtx\b/.test(n) ? 'nvidia' : /amd|radeon|\brx\b|vega/.test(n) ? 'amd' : /intel|\barc\b|iris|uhd/.test(n) ? 'intel' : 'other';
+  let integrated = false, tier = 'mid';
+  if (vendor === 'intel'){
+    integrated = !/\barc\b/.test(n);
+    tier = integrated ? 'entry' : (/\ba[57]\d0\b|\bb5[78]0\b/.test(n) ? 'mid' : 'entry');
+  } else if (vendor === 'amd'){
+    const m = n.match(/\brx\s*(\d{3,4})/);
+    if (!m){ integrated = true; tier = 'entry'; }
+    else {
+      const num = parseInt(m[1], 10);
+      if (num >= 9000) tier = num >= 9070 ? 'high' : 'mid';
+      else if (num >= 7000) tier = num >= 7700 ? 'high' : 'mid';
+      else if (num >= 6000) tier = num >= 6800 ? 'high' : (num < 6600 ? 'entry' : 'mid');
+      else if (num >= 5000 && num < 6000 && m[1].length === 4) tier = 'mid';
+      else tier = 'entry';
+    }
+  } else if (vendor === 'nvidia'){
+    const m = n.match(/\b(rtx|gtx|gt)\s*(\d{3,4})/);
+    if (m){
+      const num = parseInt(m[2], 10), kind = m[1];
+      if (kind === 'rtx'){
+        const series = Math.floor(num / 100), model = num % 100;
+        if (num >= 5000) tier = model >= 70 ? 'high' : 'mid';
+        else if (num >= 4000) tier = model >= 70 ? 'high' : 'mid';
+        else if (num >= 3000) tier = model >= 80 ? 'high' : (model >= 60 ? 'mid' : 'entry');
+        else tier = model >= 80 ? 'high' : 'mid';
+      } else if (kind === 'gtx'){
+        tier = num >= 1600 ? (num >= 1660 ? 'mid' : 'entry') : (num >= 1060 && num < 1100 ? 'mid' : 'entry');
+      } else tier = 'entry';
+    }
   }
+  return { vendor, integrated, tier };
 }
-function refreshGpuModelOptions(){
-  const brand = document.getElementById('pfGpu')?.value;
-  populateModelSelect(document.getElementById('pfGpuModel'), GPU_MODELS[brand] || GPU_MODELS.nvidia, 'mid');
+function ppCpuInfo(name){
+  const n = String(name || '').toLowerCase();
+  const vendor = /intel/.test(n) ? 'intel' : /amd|ryzen|athlon/.test(n) ? 'amd' : 'other';
+  const idx = { entry:0, mid:1, high:2 }, back = ['entry','mid','high'];
+  let tier = 'mid', known = false;
+  let m = n.match(/core\s*(?:\(tm\)\s*)?ultra\s*([3579])/);
+  if (m){ tier = m[1] === '3' ? 'entry' : m[1] === '5' ? 'mid' : 'high'; known = true; }
+  else if ((m = n.match(/i([3579])[-\s](\d{4,5})/))){
+    const num = m[2], gen = num.length === 5 ? parseInt(num.slice(0,2), 10) : parseInt(num[0], 10);
+    let t = m[1] === '3' ? 0 : m[1] === '5' ? 1 : 2;
+    if (gen <= 7) t = Math.max(0, t - 1);
+    tier = back[t]; known = true;
+  } else if ((m = n.match(/ryzen\s*([3579])\s*(\d{4})/))){
+    const gen = parseInt(m[2][0], 10);
+    let t = m[1] === '3' ? 0 : m[1] === '5' ? 1 : 2;
+    if (gen <= 2) t = Math.max(0, t - 1);
+    tier = back[t]; known = true;
+  } else if (/pentium|celeron|atom|athlon|\bn\d{3,4}\b|fx-|\ba[468]-/.test(n)){ tier = 'entry'; known = true; }
+  return { vendor, tier, known };
 }
-function refreshCpuModelOptions(){
-  const brand = document.getElementById('pfCpu')?.value;
-  populateModelSelect(document.getElementById('pfCpuModel'), CPU_MODELS[brand] || CPU_MODELS.intel, 'mid');
+const ppCleanCpu = s => String(s || '').replace(/\(R\)|\(TM\)|\bCPU\b|Processor|\d+-Core|with Radeon.*$/gi, '').replace(/\s+/g, ' ').trim();
+const ppMonths = d => { const t = Date.parse(d); return isNaN(t) ? null : (Date.now() - t) / (30.44 * 864e5); };
+const ppFmtDate = d => { const t = new Date(d); return isNaN(t) ? '' : t.toLocaleDateString('pt-BR', { month:'2-digit', year:'numeric' }); };
+
+function ppAnalyze(d){
+  const out = { cards:[], checks:[], facts:{} };
+  const add = (s, t, dd) => out.checks.push({ s, t, d:dd });
+
+  // CPU
+  const cpu = d.cpu || {};
+  const ci = ppCpuInfo(cpu.Name);
+  const ghz = cpu.MaxClockSpeed ? (cpu.MaxClockSpeed / 1000).toFixed(2).replace('.', ',') : null;
+  out.cards.push({ label:'Processador', val:ppCleanCpu(cpu.Name) || 'Não identificado', sub:[cpu.NumberOfCores ? `${cpu.NumberOfCores} núcleos / ${cpu.NumberOfLogicalProcessors} threads` : null, ghz ? `até ${ghz} GHz` : null, cpu.SocketDesignation || null].filter(Boolean).join(' · '), chip: ci.known ? TIER_LABEL[ci.tier].split(' ')[0] : null });
+
+  // Chassi
+  const laptop = ppArr(d.chassis).some(c => [8,9,10,14,30,31,32].includes(Number(c))) || d.battery === true;
+  out.facts.laptop = laptop;
+
+  // GPU
+  const gpus = ppArr(d.gpus).filter(g => g && g.Name && !/basic|remote|virtual|meta|parsec|indirect|displaylink|mirage/i.test(g.Name));
+  const infos = gpus.map(g => ({ g, i:ppGpuInfo(g.Name) }));
+  const disc = infos.filter(x => !x.i.integrated).sort((a, b) => PP_TIER_N[b.i.tier] - PP_TIER_N[a.i.tier])[0];
+  const prim = disc || infos[0];
+  out.facts.gpu = prim ? prim.i : null;
+  out.facts.hasDiscrete = !!disc;
+  if (prim){
+    const g = prim.g, hz = Number(g.CurrentRefreshRate) || 0, w = g.CurrentHorizontalResolution, h = g.CurrentVerticalResolution;
+    out.cards.push({ label:'Placa de vídeo', val:g.Name, sub:[g.VramGB ? `${g.VramGB} GB de VRAM` : null, g.DriverVersion ? `driver ${g.DriverVersion}${g.DriverDate ? ' (' + ppFmtDate(g.DriverDate) + ')' : ''}` : null].filter(Boolean).join(' · '), chip: prim.i.integrated ? 'integrada' : TIER_LABEL[prim.i.tier].split(' ')[0] });
+    if (w && h) out.cards.push({ label:'Tela', val:`${w} x ${h}${hz ? ` @ ${hz} Hz` : ''}`, sub:'resolução e taxa de atualização em uso agora' });
+    if (infos.length > 1 && disc && infos.some(x => x.i.integrated)) add('info', 'Duas placas de vídeo detectadas', `Você tem <b>${ppEsc(infos.find(x => x.i.integrated).g.Name)}</b> (integrada) e <b>${ppEsc(disc.g.Name)}</b> (dedicada). Confirme que seus jogos usam a dedicada em <b>Configurações > Sistema > Tela > Elementos gráficos</b>.`);
+    else if (prim.i.integrated) add('info', 'Sem placa de vídeo dedicada', `Seu PC usa só vídeo integrado (<b>${ppEsc(g.Name)}</b>). Os ajustes tiram peso do sistema, mas o teto de FPS é o do hardware. Memória em dual channel ajuda bastante na iGPU.`);
+    const mo = g.DriverDate ? ppMonths(g.DriverDate) : null;
+    if (mo !== null && !prim.i.integrated){
+      if (mo > 12) add('warn', 'Driver de vídeo desatualizado', `O driver da <b>${ppEsc(g.Name)}</b> é de <b>${ppFmtDate(g.DriverDate)}</b> (${Math.floor(mo)} meses). Baixe o mais recente no site da ${prim.i.vendor === 'nvidia' ? 'NVIDIA' : prim.i.vendor === 'amd' ? 'AMD' : 'Intel'}: traz correções de jogos novos e de desempenho.`);
+      else add('ok', 'Driver de vídeo em dia', `Driver de <b>${ppFmtDate(g.DriverDate)}</b>, com menos de um ano.`);
+    }
+    if (prim.g.VramGB && !prim.i.integrated && prim.g.VramGB < 4) add('info', 'Pouca VRAM', `A placa tem <b>${prim.g.VramGB} GB</b> de VRAM. Em jogos recentes, texturas altas podem estourar a memória de vídeo: prefira texturas médias.`);
+    if (hz && hz <= 60) add('info', 'Tela rodando a 60 Hz', `O Windows está usando <b>${hz} Hz</b>. Se o seu monitor suporta mais (75, 144, 165 Hz...), ative em <b>Configurações > Sistema > Tela > Tela avançada</b>. É de graça e muda muito a fluidez.`);
+  } else {
+    out.cards.push({ label:'Placa de vídeo', val:'Não identificada', sub:'o Windows não devolveu uma GPU ativa' });
+  }
+
+  // CPU x GPU
+  if (prim && !prim.i.integrated && ci.known){
+    const diff = PP_TIER_N[prim.i.tier] - PP_TIER_N[ci.tier];
+    const par = `<b>${ppEsc(ppCleanCpu(cpu.Name))}</b> (classe ${TIER_LABEL[ci.tier].split(' ')[0]}) com <b>${ppEsc(prim.g.Name)}</b> (classe ${TIER_LABEL[prim.i.tier].split(' ')[0]})`;
+    if (diff >= 2) add('warn', 'Possível gargalo no processador', `${par}. A GPU é bem mais forte que a CPU: em jogos leves e competitivos a placa de vídeo vai ficar esperando. Estimativa pela classe do modelo.`);
+    else if (diff <= -2) add('info', 'Processador muito acima da placa de vídeo', `${par}. Em jogos pesados o limite é a GPU. Estimativa pela classe do modelo.`);
+    else add('ok', 'CPU e GPU equilibradas', `${par}: combinação sem desbalanço grande. Estimativa pela classe do modelo.`);
+  }
+
+  // RAM
+  const mods = ppArr(d.ram && d.ram.modules);
+  const slots = Number(d.ram && d.ram.slots) || 0;
+  const totalGB = mods.reduce((a, m) => a + (Number(m.GB) || 0), 0);
+  out.facts.ramGB = totalGB;
+  if (mods.length){
+    const ddr = PP_DDR[Number(mods[0].SMBIOSMemoryType)] || '';
+    const rated = Math.max(...mods.map(m => Number(m.Speed) || 0));
+    const confs = mods.map(m => Number(m.ConfiguredClockSpeed) || 0).filter(x => x > 0);
+    const conf = confs.length ? Math.min(...confs) : 0;
+    out.cards.push({ label:'Memória RAM', val:`${totalGB} GB ${ddr}`.trim(), sub:`${mods.length} pente${mods.length > 1 ? 's' : ''}${slots ? ' em ' + slots + ' slots' : ''} · ${conf ? conf + ' MT/s em uso' : (rated ? rated + ' MT/s' : '')}${rated && conf && Math.abs(rated - conf) > 50 ? ' (nominal ' + rated + ')' : ''}` });
+    if (rated && conf){
+      const ratio = conf / rated;
+      const halfReport = ratio > 0.45 && ratio < 0.55;
+      if (!halfReport && ratio < 0.93){
+        add(laptop ? 'info' : 'warn', 'Memória abaixo da velocidade nominal', `Seus pentes são de <b>${rated} MT/s</b>, mas estão rodando a <b>${conf} MT/s</b>. ${laptop ? 'Em notebook isso costuma ser limite da BIOS.' : 'Entre na BIOS e ative o perfil <b>XMP</b> (Intel) ou <b>EXPO/DOCP</b> (AMD): é desempenho que você já pagou e não está usando.'}`);
+      } else add('ok', 'Memória na velocidade nominal', `Pentes rodando a <b>${conf} MT/s</b>, o que eles suportam.`);
+    }
+    if (mods.length === 1 && slots >= 2) add('warn', 'Um pente só: memória em single channel', `Você tem <b>1 pente de ${mods[0].GB} GB</b> e ${slots} slots. Dois pentes iguais (dual channel) dobram a largura de banda da memória e melhoram jogos, principalmente com vídeo integrado.`);
+    else if (mods.length >= 2 && mods.length % 2 === 0 && new Set(mods.map(m => m.GB)).size === 1) add('ok', 'Pentes de RAM iguais', `<b>${mods.length} pentes de ${mods[0].GB} GB</b>: configuração provável de dual channel.`);
+    else if (mods.length > 1 && new Set(mods.map(m => m.GB)).size > 1) add('info', 'Pentes de RAM de tamanhos diferentes', `Misturar capacidades pode fazer parte da memória rodar em single channel e obriga todos a seguir o pente mais lento.`);
+    if (totalGB <= 8) add('warn', 'Pouca memória RAM', `<b>${totalGB} GB</b> é o maior gargalo do dia a dia hoje: Windows, navegador e jogo disputam espaço. Se possível, vá pra 16 GB.`);
+    else if (totalGB >= 32) add('ok', 'RAM de sobra', `<b>${totalGB} GB</b>: memória não é limitação aqui.`);
+  } else {
+    out.cards.push({ label:'Memória RAM', val:'Não identificada', sub:'o Windows não devolveu os pentes de memória' });
+  }
+
+  // Disco
+  const disks = ppArr(d.disks);
+  const sys = disks.find(x => x.IsSystem === true) || disks[0];
+  const c = d.cDrive || {};
+  if (sys){
+    const media = String(sys.MediaType || ''), bus = String(sys.BusType || '');
+    const isSSD = /ssd/i.test(media) || /nvme/i.test(bus);
+    const isHDD = /hdd/i.test(media) && !/nvme/i.test(bus);
+    out.facts.storage = isHDD ? 'hdd' : 'ssd';
+    const kind = /nvme/i.test(bus) ? 'SSD NVMe' : isSSD ? 'SSD' : isHDD ? 'HD' : 'Disco';
+    out.cards.push({ label:'Disco do Windows', val:`${ppEsc(sys.FriendlyName || 'Disco')}`, sub:[kind + (bus && !/nvme/i.test(bus) ? ' ' + bus : ''), sys.SizeGB ? sys.SizeGB + ' GB' : null, c.FreeGB !== undefined ? `C: com ${String(c.FreeGB).replace('.', ',')} GB livres` : null].filter(Boolean).join(' · '), chip: isHDD ? 'lento' : null });
+    if (isHDD) add('warn', 'Windows instalado em HD comum', `O sistema roda em <b>${ppEsc(sys.FriendlyName)}</b>, um disco mecânico. Boot, abertura de programas e carregamento de jogos são muito mais lentos que em SSD. Trocar por um SSD é a melhora mais sentida que existe.`);
+    else if (isSSD) add('ok', 'Windows em SSD', `<b>${kind}</b> no disco do sistema.`);
+    if (/usb/i.test(bus)) add('warn', 'Windows rodando de disco USB', `O disco do sistema está ligado por USB, o que limita bastante a velocidade.`);
+    if (sys.HealthStatus && !/healthy/i.test(sys.HealthStatus)) add('warn', 'O disco do sistema não está saudável', `O Windows reporta o estado <b>${ppEsc(sys.HealthStatus)}</b> para <b>${ppEsc(sys.FriendlyName)}</b>. Faça backup dos seus arquivos e confira o disco com o programa do fabricante.`);
+  }
+  if (c.SizeGB && c.FreeGB !== undefined){
+    const pct = (c.FreeGB / c.SizeGB) * 100;
+    if (c.FreeGB < 15 || pct < 10) add('warn', 'Pouco espaço livre no disco C:', `Só <b>${String(c.FreeGB).replace('.', ',')} GB</b> livres (${Math.round(pct)}%). Disco quase cheio deixa o Windows lento, atrapalha atualizações e reduz a vida útil do SSD. Libere pelo menos 15% do espaço.`);
+    else if (pct < 20) add('info', 'Espaço livre no C: está ficando curto', `<b>${String(c.FreeGB).replace('.', ',')} GB</b> livres (${Math.round(pct)}%). Vale liberar espaço antes que passe a incomodar.`);
+  }
+
+  // Energia / Modo de Jogo / HAGS
+  const plan = d.powerGuid ? PP_PLANS[d.powerGuid] : null;
+  if (plan){
+    if (plan[1] === 'save' && !laptop) add('warn', 'Plano de energia em Economia', `Num desktop, o plano <b>Economia de energia</b> segura o clock da CPU e custa desempenho. Troque por Alto desempenho (a aba Energia do app cuida disso).`);
+    else if (plan[1] === 'bal' && !laptop) add('info', 'Plano de energia Equilibrado', `Em desktop, o <b>Alto desempenho</b> mantém o clock mais estável em jogos. Os ajustes da aba Energia tratam isso.`);
+    else if (plan[1] === 'high' || plan[1] === 'ultra') add('ok', `Plano de energia: ${plan[0]}`, `Já está num plano voltado a desempenho.`);
+  }
+  if (d.gameMode === 0) add('warn', 'Modo de Jogo desligado', `O Modo de Jogo do Windows prioriza o jogo em primeiro plano. Ligue em <b>Configurações > Jogos > Modo de Jogo</b>.`);
+  else if (d.gameMode === 1) add('ok', 'Modo de Jogo ligado', `O Windows prioriza o jogo em primeiro plano.`);
+  if (d.hags === 2) add('info', 'Agendamento de GPU acelerado por hardware: ligado', `Costuma ajudar em placas recentes, mas pode causar travadas em algumas combinações de driver. Se notar problema, teste desligando em <b>Configurações > Sistema > Tela > Elementos gráficos</b>.`);
+  else if (d.hags === 1) add('info', 'Agendamento de GPU acelerado por hardware: desligado', `Em placas recentes (RTX 30 em diante, RX 6000 em diante) vale testar ligar em <b>Configurações > Sistema > Tela > Elementos gráficos</b>.`);
+
+  // Sistema
+  const os = d.os || {};
+  const build = Number(os.BuildNumber) || 0;
+  const board = d.board || {}, bios = d.bios || {};
+  out.cards.push({ label:'Sistema', val:`${(os.Caption || 'Windows').replace(/^Microsoft\s+/i, '')}`, sub:[build ? 'compilação ' + build : null, [board.Manufacturer, board.Product].filter(Boolean).join(' ') || null, bios.Date ? 'BIOS de ' + ppFmtDate(bios.Date) : null, laptop ? 'notebook' : 'desktop'].filter(Boolean).join(' · ') });
+  if (build && build < 22000) add('info', 'Você está no Windows 10', `A Microsoft encerrou o suporte gratuito do Windows 10 em outubro de 2025: sem atualizações de segurança gratuitas. Se o seu PC é compatível, vale migrar pro Windows 11.`);
+  const bm = bios.Date ? ppMonths(bios.Date) : null;
+  if (bm !== null && bm > 36) add('info', 'BIOS antiga', `A BIOS é de <b>${ppFmtDate(bios.Date)}</b>. Confira no site do fabricante da placa se há versão nova: costuma trazer correções de memória e estabilidade.`);
+  if (laptop) add('info', 'Notebook detectado', `Ajustes agressivos de energia esquentam e gastam bateria. O perfil recomendado respeita isso e não passa do Performance.`);
+
+  const ord = { warn:0, info:1, ok:2 };
+  out.checks.sort((a, b) => ord[a.s] - ord[b.s]);
+  out.facts.cpu = ci;
+  return out;
 }
-refreshGpuModelOptions();
-refreshCpuModelOptions();
-document.getElementById('pfGpu')?.addEventListener('change', refreshGpuModelOptions);
-document.getElementById('pfCpu')?.addEventListener('change', refreshCpuModelOptions);
 
-document.getElementById('pfGenerateBtn')?.addEventListener('click', ()=>{
-  const gpu = document.getElementById('pfGpu').value;
-  const cpu = document.getElementById('pfCpu').value;
-  const ram = parseInt(document.getElementById('pfRam').value, 10);
-  const storage = document.getElementById('pfStorage').value;
-  const device = document.getElementById('pfDevice').value;
-  const use = document.getElementById('pfUse').value;
-
-  const gpuModelSel = document.getElementById('pfGpuModel');
-  const cpuModelSel = document.getElementById('pfCpuModel');
-  const gpuModel = (GPU_MODELS[gpu] || []).find(m=>m.v===gpuModelSel.value) || {label:gpu.toUpperCase(), tier:'mid'};
-  const cpuModel = (CPU_MODELS[cpu] || []).find(m=>m.v===cpuModelSel.value) || {label:cpu.toUpperCase(), tier:'mid'};
-
-  // apenas GPU/CPU de "ponta" contam como high pro cálculo — mid+entry ficam mais conservadores
-  const tierScore = {high:2, mid:1, entry:0};
-  const hwScore = tierScore[gpuModel.tier] + tierScore[cpuModel.tier];
-
-  // aplica os selects de fabricante que várias abas já usam (GPU/CPU/Disco)
-  selectedVendor.gpu = gpu;
-  selectedVendor.cpu = cpu;
-  selectedVendor.storage = storage;
-  ['gpu','cpu','storage'].forEach(cat=>{ if(DATA[cat]) renderPanel(cat); });
-
-  // sincroniza a caixa "quanto de RAM você tem" da aba RAM
-  ramGB = ram;
-  const ramInput = document.getElementById('ramGB');
-  if(ramInput) ramInput.value = ram;
-  if(typeof renderPanel === 'function') renderPanel('ram');
-
-  // escolhe a base de preset conforme o uso informado
-  let basePreset, presetLabel;
-  if(use === 'gaming'){ basePreset = ULTRA_PRESET; presetLabel = 'Ultra Performance'; }
-  else if(use === 'work'){ basePreset = RECOMMENDED_PRESET; presetLabel = 'Recomendado'; }
-  else { basePreset = PERFORMANCE_PRESET; presetLabel = 'Performance'; }
-
-  // hardware de entrada + Ultra Performance pedido: sugere Performance em vez de Ultra,
-  // já que o ganho tende a ser menor e o risco de instabilidade/superaquecimento é maior
-  let downgraded = false;
-  if(use === 'gaming' && hwScore <= 1 && basePreset === ULTRA_PRESET){
-    basePreset = PERFORMANCE_PRESET; presetLabel = 'Performance'; downgraded = true;
+function ppRecommend(a, use){
+  const f = a.facts, reasons = [];
+  const gTier = f.gpu && !f.gpu.integrated ? f.gpu.tier : 'entry';
+  const cTier = f.cpu && f.cpu.known ? f.cpu.tier : 'mid';
+  const score = PP_TIER_N[gTier] + PP_TIER_N[cTier];
+  let preset = use === 'work' ? 'rec' : use === 'balanced' ? 'perf' : 'perf';
+  if (use === 'gaming' && score >= 3 && f.hasDiscrete && !f.laptop && (f.ramGB || 0) >= 16) preset = 'ultra';
+  const uso = { gaming:'jogos', balanced:'uso geral e jogos', work:'trabalho' }[use];
+  reasons.push(`Uso principal escolhido: <b>${uso}</b>.`);
+  if (preset === 'ultra') reasons.push(`Hardware forte (<b>${TIER_LABEL[cTier]}</b> + <b>${TIER_LABEL[gTier]}</b>), desktop e <b>${f.ramGB} GB</b> de RAM: dá folga pro preset mais agressivo.`);
+  if (use === 'gaming' && preset !== 'ultra'){
+    if (f.laptop) reasons.push('É um <b>notebook</b>: limitei a Performance, porque o Ultra esquenta e derruba a bateria.');
+    else if (!f.hasDiscrete) reasons.push('Sem placa de vídeo dedicada: o Ultra traria pouco ganho e mais risco, então fiquei no <b>Performance</b>.');
+    else if ((f.ramGB || 0) < 16) reasons.push(`Com <b>${f.ramGB} GB</b> de RAM o Ultra não compensa: fiquei no <b>Performance</b>.`);
+    else reasons.push(`CPU/GPU de nível <b>${TIER_LABEL[cTier]}</b>/<b>${TIER_LABEL[gTier]}</b>: o Ultra traria pouco ganho a mais pelo risco, então fiquei no <b>Performance</b>.`);
   }
+  if (use === 'work') reasons.push('Para trabalho, o preset <b>Recomendado</b> equilibra desempenho e estabilidade.');
+  if (f.gpu && f.gpu.vendor !== 'other') reasons.push(`Ajustes de GPU configurados para <b>${{ nvidia:'NVIDIA', amd:'AMD', intel:'Intel' }[f.gpu.vendor]}</b> (a que o seu PC realmente usa).`);
+  if (f.storage === 'hdd') reasons.push('Windows em <b>HD</b>: os ajustes de disco e cache entram com mais peso, porque carregamento pesa mais que FPS.');
+  if ((f.ramGB || 0) && f.ramGB <= 8) reasons.push(`Só <b>${f.ramGB} GB</b> de RAM: vale ligar a limpeza automática na aba RAM.`);
+  const warns = a.checks.filter(c => c.s === 'warn').length;
+  if (warns) reasons.push(`Encontrei <b>${warns} ponto${warns > 1 ? 's' : ''} de atenção</b> acima que nenhum ajuste de software resolve (BIOS, hardware, drivers): vale resolver.`);
+  return { preset, reasons };
+}
+const PP_PRESETS = { rec:['Recomendado', () => RECOMMENDED_PRESET], perf:['Performance', () => PERFORMANCE_PRESET], ultra:['Ultra Performance', () => ULTRA_PRESET] };
 
-  applyPreset(basePreset, `Perfil aplicado (base: ${presetLabel})`);
-
-  // liga a limpeza automática de RAM se a máquina tem pouca memória
-  const reasons = [];
-  reasons.push(`Configuração informada: <b>${gpuModel.label}</b> + <b>${cpuModel.label}</b> + <b>${ram} GB</b> de RAM.`);
-  reasons.push(`Base de ajustes: <b>${presetLabel}</b>, escolhida pelo uso principal que você marcou.`);
-  if(downgraded){
-    reasons.push(`Sua GPU e CPU são de nível <b>${TIER_LABEL[gpuModel.tier]}</b>/<b>${TIER_LABEL[cpuModel.tier]}</b> — nesse caso o Ultra Performance costuma trazer pouco ganho a mais e um risco maior de esquentar/instabilizar, então recomendei <b>Performance</b> em vez disso. Se quiser forçar o Ultra mesmo assim, é só trocar a aba de preset ali em cima.`);
-  } else if(hwScore >= 3){
-    reasons.push(`Com <b>${gpuModel.label}</b> e <b>${cpuModel.label}</b> (hardware de ponta), você tem folga de sobra pra aproveitar o preset mais agressivo sem medo.`);
+function ppRender(){
+  const root = document.getElementById('ppRoot'); if (!root) return;
+  if (PP.loading){ root.innerHTML = '<div class="pp-loading">Lendo o seu hardware e o estado do Windows...<br>Leva alguns segundos.</div>'; return; }
+  if (PP.err){ root.innerHTML = `<div class="pp-loading">Não consegui ler o seu PC: ${ppEsc(PP.err)}<br><br><button class="pp-apply" id="ppRetry" style="align-self:center">Tentar de novo</button></div>`; document.getElementById('ppRetry').onclick = () => ppLoad(true); return; }
+  if (!PP.data){ root.innerHTML = '<div class="pp-loading">Abra esta aba pra analisar o seu PC.</div>'; return; }
+  const a = PP.analysis = ppAnalyze(PP.data);
+  const rec = ppRecommend(a, PP.use), pr = PP_PRESETS[rec.preset];
+  const n = pr[1]().length;
+  const warns = a.checks.filter(c => c.s === 'warn').length;
+  const ico = { ok:'✓', warn:'!', info:'i' };
+  root.innerHTML = `
+    <p class="pp-sec-title">Seu PC <small>lido agora, direto do Windows</small></p>
+    <div class="pp-cards">${a.cards.map(c => `<div class="pp-card"><div class="pp-card-top"><span class="pp-card-label">${c.label}</span>${c.chip ? `<span class="pp-chip">${ppEsc(c.chip)}</span>` : ''}</div><p class="pp-card-val">${ppEsc(c.val)}</p><p class="pp-card-sub">${ppEsc(c.sub || '')}</p></div>`).join('')}</div>
+    <p class="pp-sec-title">Verificações <small>${warns ? warns + ' ponto' + (warns > 1 ? 's' : '') + ' de atenção' : 'nenhum problema grave'}</small></p>
+    <div class="pp-checks">${a.checks.map(c => `<div class="pp-check ${c.s}"><span class="pp-ico">${ico[c.s]}</span><div><p class="pp-check-t">${ppEsc(c.t)}</p><p class="pp-check-d">${c.d}</p></div></div>`).join('') || '<div class="pp-check info"><span class="pp-ico">i</span><div><p class="pp-check-t">Nada a reportar</p></div></div>'}</div>
+    <p class="pp-sec-title">Perfil recomendado</p>
+    <div class="pp-rec">
+      <div class="pp-use">${[['gaming','Jogos'],['balanced','Uso geral + jogos'],['work','Trabalho']].map(([k, l]) => `<button data-use="${k}" class="${PP.use === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <p class="pp-rec-name">${pr[0]}<small>${n} ajustes</small></p>
+      <ul class="pp-reasons">${rec.reasons.map(r => `<li>${r}</li>`).join('')}</ul>
+      <button class="pp-apply" id="ppApply">Aplicar este perfil</button>
+    </div>`;
+  root.querySelectorAll('.pp-use button').forEach(b => b.onclick = () => { PP.use = b.dataset.use; ppRender(); });
+  document.getElementById('ppApply').onclick = () => ppApply(rec.preset);
+}
+function ppApply(key){
+  const a = PP.analysis; if (!a) return;
+  const f = a.facts;
+  if (f.gpu && ['nvidia','amd','intel'].includes(f.gpu.vendor)) selectedVendor.gpu = f.gpu.vendor;
+  if (f.cpu && ['intel','amd'].includes(f.cpu.vendor)) selectedVendor.cpu = f.cpu.vendor;
+  if (f.storage) selectedVendor.storage = f.storage;
+  ['gpu','cpu','storage'].forEach(cat => { if (DATA[cat]) renderPanel(cat); });
+  if (f.ramGB){
+    ramGB = Math.round(f.ramGB);
+    const inp = document.getElementById('ramGB'); if (inp) inp.value = ramGB;
+    if (typeof renderPanel === 'function') renderPanel('ram');
   }
-  reasons.push(`GPU configurada como <b>${gpuModel.label}</b> — os tweaks específicos de fabricante na aba GPU já foram ajustados pra isso.`);
-  if(ram <= 8){
-    reasons.push(`Com <b>8 GB de RAM ou menos</b>, isso costuma ser o maior gargalo do dia a dia — vale ativar a limpeza automática de RAM na aba RAM.`);
-  } else if(ram >= 32){
-    reasons.push(`Com <b>32 GB+</b>, RAM não deve ser seu gargalo — os ajustes de RAM aqui têm efeito pequeno, o foco real é CPU/GPU.`);
-  }
-  if(storage === 'hdd'){
-    reasons.push(`Como o Windows está num <b>HD comum</b> (não SSD), tempos de carregamento tendem a pesar mais que FPS — ajustes de indexação e cache de disco importam mais pra você.`);
-  }
-  if(device === 'laptop'){
-    reasons.push(`Em <b>notebook</b>, ajustes agressivos de energia (Ultra Performance) podem esquentar e derrubar a bateria rápido — se notar isso, prefira o preset Performance.`);
-  }
-  reasons.push(`${basePreset.length} ajustes foram marcados. Você pode revisar e desmarcar qualquer um antes de aplicar.`);
-
-  const resultEl = document.getElementById('pfResult');
-  resultEl.hidden = false;
-  resultEl.innerHTML = `
-    <p class="profile-result-title">Por que essas escolhas:</p>
-    <ul>${reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
-  `;
-
-  showToast('Perfil analisado — ' + basePreset.length + ' ajustes selecionados');
-});
+  const pr = PP_PRESETS[key];
+  applyPreset(pr[1](), `Perfil ${pr[0]} aplicado: ${pr[1]().length} ajustes marcados. Revise e clique em Aplicar otimizações.`);
+}
+async function ppLoad(force){
+  if (!window.__TAURI__){ PP.err = 'a leitura do hardware só funciona no app instalado.'; ppRender(); return; }
+  if (PP.loading || (PP.data && !force)) return;
+  PP.loading = true; PP.err = null; ppRender();
+  try{ PP.data = await window.__TAURI__.core.invoke('profile_scan'); }
+  catch(e){ PP.err = String(e); PP.data = null; }
+  PP.loading = false; ppRender();
+}
+document.getElementById('ppReload').addEventListener('click', () => ppLoad(true));
 
 // ===== Aba Configurações: iniciar com o Windows + minimizar pra bandeja ao fechar =====
 const settingsTabBtn = document.createElement('button');
@@ -9385,6 +9530,7 @@ async function appTunerClick(e){
     _switch.apply(this, arguments);
     if (id === 'apptuner') refreshAppTuner();
     if (id === 'debloat') dbLoad();
+    if (id === 'profile') ppLoad();
   };
 })();
 
@@ -9622,6 +9768,11 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.51', date:'11/11/2026', items:[
+    'Aba <b>Perfil</b> refeita: em vez de perguntas, o app <b>lê o seu PC de verdade</b> (CPU, placa de vídeo, RAM, disco, tela, plano de energia, BIOS) e mostra o que está errado.',
+    'Verificações reais: RAM abaixo da velocidade nominal (XMP/EXPO desligado), single channel, driver de vídeo velho, Windows em HD, disco cheio, Modo de Jogo desligado, tela em 60 Hz e possível gargalo entre CPU e GPU.',
+    'O perfil recomendado agora é montado em cima dessas medições e explica o motivo de cada escolha.',
+    'Corrigido um conflito entre as abas Perfil e Desempenho que podia fazer o resultado aparecer no lugar errado.' ] },
   { v:'1.1.50', date:'11/11/2026', items:[
     'Removido o grupo <b>Debloat</b> da aba Windows (Widgets, Copilot, OneDrive e anúncios do menu Iniciar e da tela de bloqueio). O debloat de apps fica só na aba <b>Debloat</b>.' ] },
   { v:'1.1.49', date:'11/11/2026', items:[
