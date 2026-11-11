@@ -277,6 +277,37 @@
   .bench-note{font-size:10px;color:var(--muted2);position:relative;z-index:1;line-height:1.4;}
   .bench-metric-title{font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.04em;margin:2px 0 0;position:relative;z-index:1;}
 
+  /* ===== Aba Debloat ===== */
+  .db-root{display:flex;flex-direction:column;gap:12px;}
+  .db-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 14px;position:sticky;top:0;z-index:5;}
+  .db-bar-info{font-size:12px;color:var(--muted);} .db-bar-info b{color:var(--text);}
+  .db-bar-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .db-search{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:7px 11px;font-size:12px;font-family:inherit;min-width:180px;}
+  .db-search:focus{outline:none;border-color:var(--accent);}
+  .db-btn{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:7px 12px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;}
+  .db-btn:hover{border-color:var(--accent);color:var(--accent);} .db-btn:disabled{opacity:.5;cursor:default;}
+  .db-btn.danger{background:linear-gradient(135deg,#ef4444,#dc2626);border-color:transparent;color:#fff;} .db-btn.danger:hover{color:#fff;filter:brightness(1.1);}
+  .db-note{font-size:11.5px;color:var(--muted);line-height:1.55;background:color-mix(in srgb,#f59e0b 8%,transparent);border:1px solid color-mix(in srgb,#f59e0b 24%,transparent);border-radius:10px;padding:9px 12px;}
+  .db-progress{height:4px;border-radius:999px;background:var(--card);overflow:hidden;} .db-progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s;}
+  .db-group{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+  .db-group>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;}
+  .db-group>summary::-webkit-details-marker{display:none;}
+  .db-group>summary::before{content:"▸";color:var(--muted2);transition:transform .15s;font-size:11px;} .db-group[open]>summary::before{transform:rotate(90deg);}
+  .db-gtitle{font-size:13.5px;font-weight:700;color:var(--text);flex:1;} .db-gtitle small{display:block;font-size:11px;font-weight:400;color:var(--muted2);margin-top:2px;}
+  .db-gcount{font-size:11px;color:var(--muted);font-family:var(--mono);}
+  .db-gsel{font-size:10.5px;}
+  .db-list{display:flex;flex-direction:column;border-top:1px solid var(--border-soft);}
+  .db-row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:flex-start;padding:11px 16px;border-bottom:1px solid var(--border-soft);cursor:pointer;transition:background .12s;}
+  .db-row:last-child{border-bottom:0;} .db-row:hover{background:var(--item-bg);} .db-row.sel{background:color-mix(in srgb,var(--accent) 8%,transparent);}
+  .db-row input{margin-top:3px;accent-color:var(--accent);width:15px;height:15px;cursor:pointer;}
+  .db-name{font-size:13px;font-weight:700;color:var(--text);} .db-id{font-size:10px;color:var(--muted2);font-family:var(--mono);margin-left:6px;font-weight:400;word-break:break-all;}
+  .db-desc{font-size:11.5px;color:var(--muted);line-height:1.5;margin:3px 0 0;}
+  .db-tag{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:999px;white-space:nowrap;}
+  .db-tag.s{color:var(--ok);background:color-mix(in srgb,var(--ok) 13%,transparent);}
+  .db-tag.c{color:#f59e0b;background:color-mix(in srgb,#f59e0b 13%,transparent);}
+  .db-tag.u{color:var(--muted);background:var(--card);}
+  .db-tag.run{color:var(--accent);background:var(--accent-dim);} .db-tag.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 13%,transparent);} .db-tag.err{color:var(--off);background:color-mix(in srgb,var(--off) 13%,transparent);}
+  .db-empty{font-size:12.5px;color:var(--muted);padding:26px 10px;text-align:center;line-height:1.6;}
   /* ===== Aba Desempenho (medições reais) ===== */
   .pf-wrap{display:flex;flex-direction:column;gap:14px;padding:2px 0 8px;}
   .pf-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
@@ -4158,6 +4189,7 @@ const ICONS = {
   startup: lineIcon(startupLine()),
   windows: lineIcon(windowsLine()),
 };
+ICONS.debloat = lineIcon('<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v6M14 10v6"/>');
 ICONS.apptuner = lineIcon('<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>');
 const CHEVRON = `<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`;
 
@@ -4830,6 +4862,8 @@ const VENDOR_INFO = {
 const tabsEl = document.getElementById('tabs');
 const panelsEl = document.getElementById('panels');
 DATA.apptuner = { label:"App Tuner", desc:"Otimizações por aplicativo: limpar cache, subir a prioridade e abrir as configurações certas.", special:"apptuner", items:[] };
+DATA.debloat = { label:"Debloat", desc:"Apps que vêm com o Windows, organizados por grupo, com o nome e o que cada um faz. Só aparecem os que estão instalados no seu PC.", special:"debloat", items:[] };
+const NON_TWEAK_CATS = ['apptuner','debloat'];
 const catIds = Object.keys(DATA);
 
 // ---------- índice de busca global (todas as categorias) ----------
@@ -5010,7 +5044,7 @@ function showToast(message, type){
 
 const CAT_COLORS = {
   cpu:"#43c9e5", gpu:"#43c9e5", ram:"#43c9e5", storage:"#43c9e5",
-  mouse:"#43c9e5", power:"#43c9e5", network:"#43c9e5", system:"#43c9e5", monitor:"#43c9e5", games:"#43c9e5", windows:"#43c9e5", apptuner:"#43c9e5"
+  mouse:"#43c9e5", power:"#43c9e5", network:"#43c9e5", system:"#43c9e5", monitor:"#43c9e5", games:"#43c9e5", windows:"#43c9e5", apptuner:"#43c9e5", debloat:"#43c9e5"
 };
 
 const THEME_ACCENT = "#4c8bf5"; // único tema do app: Grafite (cinza-grafite + um azul de destaque)
@@ -7603,7 +7637,7 @@ document.getElementById('homeActTurbo')?.addEventListener('click', async ()=>{
 const TAB_GROUPS = [
   { label: "Hardware", cats: ["cpu","gpu","ram","storage"] },
   { label: "Sistema", cats: ["power","network","system","startup"] },
-  { label: "Windows", cats: ["windows"] },
+  { label: "Windows", cats: ["windows","debloat"] },
   { label: "Periféricos", cats: ["mouse","monitor"] },
   { label: "Jogos", cats: ["games","apptuner"] },
 ];
@@ -7628,7 +7662,7 @@ TAB_GROUPS.forEach(group => {
   validCats.forEach(catId => {
     const i = catIds.indexOf(catId);
     const btn = document.createElement('button');
-    btn.innerHTML = `${ICONS[catId]}<span class="label">${DATA[catId].label}</span><span class="count">${catId === 'apptuner' ? '' : catItemCount(catId)}</span>`;
+    btn.innerHTML = `${ICONS[catId]}<span class="label">${DATA[catId].label}</span><span class="count">${NON_TWEAK_CATS.includes(catId) ? '' : catItemCount(catId)}</span>`;
     btn.dataset.cat = catId;
     btn.style.setProperty('--btn-color', CAT_COLORS[catId]);
     btn.style.setProperty('--btn-bg', CAT_COLORS[catId] + '22');
@@ -7832,7 +7866,7 @@ function computeTotalItems(){
 }
 function renderStats(){
   document.getElementById('statsRow').innerHTML =
-    `<b>${computeTotalItems()}</b> ajustes em <b>${catIds.filter(c => c !== 'apptuner').length}</b> categorias`;
+    `<b>${computeTotalItems()}</b> ajustes em <b>${catIds.filter(c => !NON_TWEAK_CATS.includes(c)).length}</b> categorias`;
 }
 renderStats();
 renderRestoreWidget();
@@ -8172,7 +8206,7 @@ function animateOverallNumber(el, from, to, duration){
 
 function renderScoreBoard(){
   let totalChecked = 0, totalAll = 0;
-  const cards = catIds.filter(c => c !== 'apptuner').map((catId,i)=>{
+  const cards = catIds.filter(c => !NON_TWEAK_CATS.includes(c)).map((catId,i)=>{
     const total = catItemCount(catId);
     const checked = document.querySelectorAll(`#panel-${catId} input[type=checkbox]:checked`).length;
     totalChecked += checked; totalAll += total;
@@ -8210,13 +8244,15 @@ function renderScoreBoard(){
 function refreshSidebarCounts(){
   document.querySelectorAll('#tabs button').forEach(b=>{
     const span = b.querySelector('.count');
-    if(span) span.textContent = b.dataset.cat === 'apptuner' ? '' : catItemCount(b.dataset.cat);
+    if(span) span.textContent = NON_TWEAK_CATS.includes(b.dataset.cat) ? '' : catItemCount(b.dataset.cat);
   });
 }
 
 function renderPanel(catId){
   const cat = DATA[catId];
   const panel = document.getElementById('panel-'+catId);
+
+  if (catId === 'debloat'){ dbRenderPanel(panel, cat); return; }
 
   if (catId === 'apptuner'){
     panel.innerHTML = `<div class="panel-head">
@@ -9358,8 +9394,229 @@ async function appTunerClick(e){
   switchTab = function(id){
     _switch.apply(this, arguments);
     if (id === 'apptuner') refreshAppTuner();
+    if (id === 'debloat') dbLoad();
   };
 })();
+
+// ===== Aba Debloat: catálogo organizado + remoção dos apps realmente instalados =====
+const DB_GROUPS = [
+  { id:'xbox',   title:'Xbox e jogos da Microsoft', sub:'App Xbox, Game Bar e componentes de login/overlay.' },
+  { id:'games',  title:'Jogos pré-instalados',      sub:'Jogos que vêm de fábrica ou por anúncio do Windows.' },
+  { id:'m365',   title:'Office, Copilot e produtividade', sub:'Apps da Microsoft que costumam vir só pra divulgar assinatura.' },
+  { id:'info',   title:'Notícias, clima e informação', sub:'Apps de conteúdo que rodam em segundo plano e mostram anúncios.' },
+  { id:'comms',  title:'Comunicação e conta Microsoft', sub:'Mensagens, contatos, celular e conexão remota.' },
+  { id:'help',   title:'Ajuda, dicas e feedback',   sub:'Apps de suporte e coleta de comentários do Windows.' },
+  { id:'media',  title:'Mídia, câmera e utilitários', sub:'Player, gravador, mapas e ferramentas do dia a dia.' },
+  { id:'mr',     title:'3D e Realidade Mista',      sub:'Visualizadores 3D e o portal de realidade mista.' },
+  { id:'third',  title:'Apps de terceiros pré-instalados', sub:'Streaming, redes sociais e apps parceiros que vêm instalados.' },
+  { id:'other',  title:'Outros apps instalados (sem descrição)', sub:'Não estão no catálogo. Só remova se você souber o que são.' },
+];
+// [pacote, nome, o que faz, grupo, risco: s = seguro, c = cuidado]
+const DB_CATALOG = [
+  ['Microsoft.XboxApp','Xbox (app antigo)','Central de jogos e conta Xbox das versões antigas do Windows 10.','xbox','s'],
+  ['Microsoft.GamingApp','Xbox (app atual)','App Xbox do Windows 11: biblioteca, Game Pass e amigos. Necessário pra instalar e abrir jogos do Game Pass.','xbox','c'],
+  ['Microsoft.XboxGamingOverlay','Xbox Game Bar','Barra de jogo (Win+G) com captura de tela, gravação e widgets de desempenho.','xbox','c'],
+  ['Microsoft.XboxGameOverlay','Sobreposição de jogo Xbox','Componente auxiliar da Game Bar que mostra notificações dentro dos jogos.','xbox','s'],
+  ['Microsoft.Xbox.TCUI','Xbox TCUI','Telas de login, convites e conquistas Xbox dentro de jogos.','xbox','c'],
+  ['Microsoft.XboxIdentityProvider','Xbox Identity Provider','Faz o login Xbox em apps e jogos da Microsoft Store. Jogos como Minecraft da Store precisam dele.','xbox','c'],
+  ['Microsoft.XboxSpeechToTextOverlay','Xbox fala em texto','Acessibilidade: transcreve o chat de voz em texto nos jogos.','xbox','s'],
+  ['king.com.CandyCrushSaga','Candy Crush Saga','Jogo instalado por sugestão do Windows.','games','s'],
+  ['king.com.CandyCrushSodaSaga','Candy Crush Soda Saga','Jogo instalado por sugestão do Windows.','games','s'],
+  ['king.com.CandyCrushFriends','Candy Crush Friends Saga','Jogo instalado por sugestão do Windows.','games','s'],
+  ['Microsoft.MicrosoftSolitaireCollection','Paciência (Solitaire Collection)','Coleção de jogos de cartas com anúncios.','games','s'],
+  ['Microsoft.MinecraftUWP','Minecraft para Windows 10','Versão da Store do Minecraft. Remover apaga o jogo (o mundo salvo fica em backup se você usar a nuvem).','games','c'],
+  ['Microsoft.MicrosoftOfficeHub','Microsoft 365 (Office)','Atalho que divulga e abre os apps do Office. Não é o Word/Excel em si.','m365','s'],
+  ['Microsoft.Office.OneNote','OneNote para Windows 10','Versão antiga do OneNote.','m365','s'],
+  ['Microsoft.Office.Sway','Sway','Criador de apresentações online.','m365','s'],
+  ['Microsoft.Todos','Microsoft To Do','Lista de tarefas ligada à conta Microsoft.','m365','s'],
+  ['Microsoft.PowerAutomateDesktop','Power Automate','Automação de tarefas repetitivas.','m365','s'],
+  ['Microsoft.MicrosoftStickyNotes','Notas Autoadesivas','Post-its na área de trabalho. Remova só se não usa.','m365','c'],
+  ['Microsoft.OutlookForWindows','Outlook (novo)','Cliente de e-mail novo da Microsoft. Remova só se usa outro e-mail.','m365','c'],
+  ['microsoft.windowscommunicationsapps','Email e Calendário','App padrão de e-mail e agenda do Windows.','m365','c'],
+  ['Clipchamp.Clipchamp','Clipchamp','Editor de vídeo da Microsoft.','m365','s'],
+  ['Microsoft.Copilot','Copilot','Assistente de IA da Microsoft integrado ao Windows.','m365','s'],
+  ['Microsoft.549981C3F5F10','Cortana','Assistente de voz antigo, descontinuado.','m365','s'],
+  ['Microsoft.BingNews','Notícias','Feed de notícias do Bing, com anúncios.','info','s'],
+  ['Microsoft.BingWeather','Clima','Previsão do tempo (também alimenta o widget).','info','s'],
+  ['Microsoft.BingSports','Esportes','Placar e notícias esportivas.','info','s'],
+  ['Microsoft.BingFinance','Finanças','Cotações e notícias do mercado.','info','s'],
+  ['Microsoft.BingSearch','Pesquisa Bing','Integra busca na web ao menu Iniciar.','info','s'],
+  ['Microsoft.People','Pessoas','Agenda de contatos da conta Microsoft.','comms','s'],
+  ['Microsoft.Messaging','Mensagens','App de SMS antigo.','comms','s'],
+  ['Microsoft.SkypeApp','Skype','Chamadas e mensagens (versão que vem com o Windows).','comms','s'],
+  ['MicrosoftTeams','Microsoft Teams (pessoal)','Teams pré-instalado para uso pessoal.','comms','s'],
+  ['MSTeams','Microsoft Teams (pessoal)','Teams pré-instalado para uso pessoal.','comms','s'],
+  ['Microsoft.YourPhone','Vincular ao Celular','Espelha notificações e fotos do celular no PC.','comms','s'],
+  ['MicrosoftCorporationII.MicrosoftFamily','Microsoft Family','Controle parental e segurança familiar.','comms','s'],
+  ['MicrosoftCorporationII.QuickAssist','Assistência Rápida','Permite que alguém acesse seu PC remotamente pra ajudar. Remova se não usa.','comms','c'],
+  ['Microsoft.RemoteDesktop','Área de Trabalho Remota','Cliente pra controlar outro PC à distância.','comms','s'],
+  ['Microsoft.GroupMe10','GroupMe','Mensagens em grupo.','comms','s'],
+  ['Microsoft.OneConnect','Planos móveis','Contratação de plano de dados celular.','comms','s'],
+  ['Microsoft.Wallet','Carteira','Pagamentos pela conta Microsoft, em desuso.','comms','s'],
+  ['Microsoft.GetHelp','Obter Ajuda','Abre o suporte virtual da Microsoft.','help','s'],
+  ['Microsoft.Getstarted','Dicas','Dicas de uso do Windows.','help','s'],
+  ['Microsoft.WindowsFeedbackHub','Hub de Comentários','Envia feedback e relatórios de erro à Microsoft.','help','s'],
+  ['Microsoft.ZuneMusic','Media Player / Groove Música','Player de música padrão do Windows.','media','c'],
+  ['Microsoft.ZuneVideo','Filmes e TV','Player de vídeo e loja de filmes da Microsoft.','media','s'],
+  ['Microsoft.WindowsMaps','Mapas','Mapas offline e navegação.','media','s'],
+  ['Microsoft.WindowsAlarms','Alarmes e Relógio','Despertador, timer e cronômetro.','media','s'],
+  ['Microsoft.WindowsSoundRecorder','Gravador de Voz','Grava áudio pelo microfone.','media','s'],
+  ['Microsoft.WindowsCamera','Câmera','App pra tirar fotos e gravar com a webcam.','media','c'],
+  ['Microsoft.ScreenSketch','Ferramenta de Recorte','Captura e edita prints (Win+Shift+S usa ela).','media','c'],
+  ['Microsoft.Paint','Paint','Editor de imagens simples.','media','c'],
+  ['Microsoft.MSPaint','Paint 3D','Editor 3D simples, descontinuado.','media','s'],
+  ['Microsoft.NetworkSpeedTest','Teste de velocidade de rede','Mede a velocidade da conexão.','media','s'],
+  ['Microsoft.3DBuilder','3D Builder','Cria e imprime modelos 3D.','mr','s'],
+  ['Microsoft.Microsoft3DViewer','Visualizador 3D','Abre arquivos de modelos 3D.','mr','s'],
+  ['Microsoft.Print3D','Print 3D','Envia modelos pra impressora 3D.','mr','s'],
+  ['Microsoft.MixedReality.Portal','Portal de Realidade Mista','Só serve pra óculos de realidade mista (VR).','mr','s'],
+  ['SpotifyAB.SpotifyMusic','Spotify','Streaming de música. Remova só se usa o site/outro app.','third','c'],
+  ['Disney.37853FC22B2CE','Disney+','Streaming de vídeo.','third','s'],
+  ['4DF9E0F8.Netflix','Netflix','Streaming de vídeo.','third','s'],
+  ['AmazonVideo.PrimeVideo','Prime Video','Streaming de vídeo da Amazon.','third','s'],
+  ['Facebook.Facebook','Facebook','Rede social.','third','s'],
+  ['Facebook.InstagramBeta','Instagram','Rede social.','third','s'],
+  ['BytedancePte.Ltd.TikTok','TikTok','Rede social de vídeos curtos.','third','s'],
+  ['9E2F88E3.Twitter','Twitter / X','Rede social.','third','s'],
+  ['5319275A.WhatsAppDesktop','WhatsApp','Mensageiro. Remova só se não usa no PC.','third','c'],
+  ['7EE7776C.LinkedInforWindows','LinkedIn','Rede social profissional.','third','s'],
+  ['Flipboard.Flipboard','Flipboard','Leitor de notícias.','third','s'],
+  ['ShazamEntertainmentLtd.Shazam','Shazam','Reconhece músicas.','third','s'],
+  ['D5EA27B7.Duolingo-LearnLanguagesforFree','Duolingo','Curso de idiomas.','third','s'],
+  ['AdobeSystemsIncorporated.AdobePhotoshopExpress','Photoshop Express','Editor de fotos da Adobe.','third','s'],
+  ['PandoraMediaInc.29680B314EFC2','Pandora','Rádio online.','third','s'],
+  ['ClearChannelRadioDigital.iHeartRadio','iHeartRadio','Rádio online.','third','s'],
+  ['57540AMZNMobileLLC.AmazonAlexa','Amazon Alexa','Assistente de voz da Amazon.','third','s'],
+  ['46928bounde.EclipseManager','Eclipse Manager','App parceiro pré-instalado.','third','s'],
+  ['ActiproSoftwareLLC.562882FEEB491','Actipro (editor de código)','App parceiro pré-instalado.','third','s'],
+];
+const DB = { apps:null, loading:false, removing:false, sel:new Set(), filter:'', err:null };
+const dbCat = new Map(DB_CATALOG.map(c => [c[0].toLowerCase(), c]));
+const dbEsc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function dbEntries(){
+  // junta o que está instalado com o catálogo
+  return (DB.apps || []).map(a => {
+    const c = dbCat.get(a.name.toLowerCase());
+    return c ? { pkg:a.name, name:c[1], desc:c[2], group:c[3], risk:c[4] }
+             : { pkg:a.name, name:a.name.replace(/^[^.]+\./,'').replace(/([a-z])([A-Z])/g,'$1 $2'), desc:'Sem descrição no catálogo do FluxTweakers.', group:'other', risk:'u' };
+  });
+}
+function dbRenderPanel(panel, cat){
+  panel.innerHTML = `<div class="panel-head">
+      <div class="panel-head-left"><div class="panel-icon-badge">${ICONS.debloat}</div>
+        <div><h2>${cat.label}</h2><p class="panel-desc">${cat.desc}</p></div></div>
+      <div class="panel-head-actions"><button class="tab-selectall" id="dbReload">atualizar lista</button></div>
+    </div><div class="db-root" id="dbRoot"><div class="db-empty">Procurando os apps instalados...</div></div>`;
+  document.getElementById('dbReload').addEventListener('click', () => dbLoad(true));
+  panel.addEventListener('click', dbClick);
+  panel.addEventListener('input', e => { if (e.target.id === 'dbSearch'){ DB.filter = e.target.value.trim().toLowerCase(); dbRenderList(); } });
+}
+async function dbLoad(force){
+  const root = document.getElementById('dbRoot'); if (!root) return;
+  if (!window.__TAURI__){ root.innerHTML = '<div class="db-empty">A lista de apps só funciona no app instalado.</div>'; return; }
+  if (DB.loading || DB.removing || (DB.apps && !force)) return;
+  DB.loading = true; DB.err = null;
+  root.innerHTML = '<div class="db-empty">Procurando os apps instalados...</div>';
+  try{ DB.apps = await window.__TAURI__.core.invoke('debloat_list'); DB.sel.clear(); }
+  catch(e){ DB.err = String(e); DB.apps = null; }
+  DB.loading = false; dbRender();
+}
+function dbRender(){
+  const root = document.getElementById('dbRoot'); if (!root) return;
+  if (DB.err){ root.innerHTML = `<div class="db-empty">Não consegui listar os apps: ${dbEsc(DB.err)}</div>`; return; }
+  root.innerHTML = `
+    <div class="db-note">Remover um app tira ele só da sua conta de usuário e dá pra reinstalar depois pela Microsoft Store. Mesmo assim, crie um ponto de restauração antes (botão no topo do painel). Itens marcados como <b>Cuidado</b> podem ser usados por jogos, pela Store ou no dia a dia.</div>
+    <div class="db-bar">
+      <div class="db-bar-info" id="dbInfo"></div>
+      <div class="db-bar-actions">
+        <input type="text" id="dbSearch" class="db-search" placeholder="Buscar app..." value="${dbEsc(DB.filter)}">
+        <button class="db-btn" data-db="safe">Marcar todos os seguros</button>
+        <button class="db-btn" data-db="clear">Limpar</button>
+        <button class="db-btn danger" data-db="remove" id="dbRemoveBtn">Remover selecionados</button>
+      </div>
+    </div>
+    <div class="db-progress"><i id="dbProg"></i></div>
+    <div id="dbList"></div>`;
+  dbRenderList();
+}
+function dbRenderList(){
+  const box = document.getElementById('dbList'); if (!box) return;
+  const all = dbEntries();
+  const f = DB.filter;
+  const shown = all.filter(e => !f || e.name.toLowerCase().includes(f) || e.pkg.toLowerCase().includes(f) || e.desc.toLowerCase().includes(f));
+  if (!all.length){ box.innerHTML = '<div class="db-empty">Nenhum app removível encontrado. O Windows já está limpo.</div>'; dbInfo(); return; }
+  if (!shown.length){ box.innerHTML = '<div class="db-empty">Nenhum app bate com a busca.</div>'; dbInfo(); return; }
+  box.innerHTML = DB_GROUPS.map(g => {
+    const items = shown.filter(e => e.group === g.id);
+    if (!items.length) return '';
+    const open = g.id !== 'other' || f ? 'open' : '';
+    return `<details class="db-group" ${open} style="margin-bottom:10px">
+      <summary><span class="db-gtitle">${g.title}<small>${g.sub}</small></span>
+        <span class="db-gcount">${items.length}</span>
+        <button class="db-btn db-gsel" data-db="grp" data-g="${g.id}">marcar grupo</button></summary>
+      <div class="db-list">${items.map(e => `
+        <label class="db-row ${DB.sel.has(e.pkg) ? 'sel' : ''}" data-pkg="${dbEsc(e.pkg)}">
+          <input type="checkbox" ${DB.sel.has(e.pkg) ? 'checked' : ''} ${DB.removing ? 'disabled' : ''}>
+          <div><div class="db-name">${dbEsc(e.name)}<span class="db-id">${dbEsc(e.pkg)}</span></div><p class="db-desc">${dbEsc(e.desc)}</p></div>
+          <span class="db-tag ${e.risk}" data-st>${e.risk === 's' ? 'Seguro' : e.risk === 'c' ? 'Cuidado' : 'Desconhecido'}</span>
+        </label>`).join('')}</div></details>`;
+  }).join('');
+  dbInfo();
+}
+function dbInfo(){
+  const info = document.getElementById('dbInfo'); if (!info) return;
+  const n = DB.sel.size;
+  info.innerHTML = `<b>${(DB.apps||[]).length}</b> apps removíveis instalados · <b>${n}</b> selecionado${n === 1 ? '' : 's'}`;
+  const btn = document.getElementById('dbRemoveBtn');
+  if (btn){ btn.disabled = n === 0 || DB.removing; btn.textContent = DB.removing ? 'Removendo...' : (n ? `Remover ${n} selecionado${n === 1 ? '' : 's'}` : 'Remover selecionados'); }
+}
+function dbClick(e){
+  const row = e.target.closest('.db-row');
+  if (row && !DB.removing){
+    if (e.target.tagName !== 'INPUT'){ e.preventDefault(); }
+    const pkg = row.dataset.pkg;
+    const on = !DB.sel.has(pkg);
+    on ? DB.sel.add(pkg) : DB.sel.delete(pkg);
+    row.classList.toggle('sel', on); row.querySelector('input').checked = on; dbInfo();
+    return;
+  }
+  const b = e.target.closest('[data-db]'); if (!b || DB.removing) return;
+  e.preventDefault(); e.stopPropagation();
+  const act = b.dataset.db, all = dbEntries();
+  if (act === 'safe'){ all.filter(x => x.risk === 's').forEach(x => DB.sel.add(x.pkg)); dbRenderList(); }
+  else if (act === 'clear'){ DB.sel.clear(); dbRenderList(); }
+  else if (act === 'grp'){
+    const items = all.filter(x => x.group === b.dataset.g);
+    const allOn = items.every(x => DB.sel.has(x.pkg));
+    items.forEach(x => allOn ? DB.sel.delete(x.pkg) : DB.sel.add(x.pkg)); dbRenderList();
+  }
+  else if (act === 'remove') dbRemove();
+}
+async function dbRemove(){
+  const all = dbEntries(); const chosen = all.filter(x => DB.sel.has(x.pkg));
+  if (!chosen.length || DB.removing) return;
+  const risky = chosen.filter(x => x.risk !== 's').length;
+  const msg = `Remover ${chosen.length} app(s)?` + (risky ? `\n\n${risky} deles estão marcados como Cuidado ou Desconhecido.` : '') + '\n\nVocê pode reinstalar pela Microsoft Store depois.';
+  if (!confirm(msg)) return;
+  DB.removing = true; dbInfo();
+  const prog = document.getElementById('dbProg'); let ok = 0, fail = 0;
+  for (let i = 0; i < chosen.length; i++){
+    const x = chosen[i];
+    const tag = document.querySelector(`.db-row[data-pkg="${CSS.escape(x.pkg)}"] [data-st]`);
+    if (tag){ tag.className = 'db-tag run'; tag.textContent = 'Removendo...'; }
+    try{
+      await window.__TAURI__.core.invoke('debloat_remove', { name: x.pkg });
+      ok++; if (tag){ tag.className = 'db-tag ok'; tag.textContent = 'Removido'; }
+    }catch(err){
+      fail++; if (tag){ tag.className = 'db-tag err'; tag.textContent = 'Falhou'; tag.title = String(err); }
+    }
+    if (prog) prog.style.width = Math.round(((i + 1) / chosen.length) * 100) + '%';
+  }
+  DB.removing = false;
+  showToast(fail ? `${ok} removido(s), ${fail} falharam (passe o mouse em "Falhou" pra ver o motivo)` : `${ok} app(s) removido(s)`);
+  setTimeout(() => { DB.sel.clear(); dbLoad(true); }, fail ? 4000 : 1200);
+}
 
 catIds.forEach(renderPanel);
 

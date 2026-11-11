@@ -5337,6 +5337,127 @@ async fn perf_top_processes(state: State<'_, SysState>) -> Result<PerfProcs, Str
 }
 
 
+// ===== Aba Debloat: lista e remove apps (AppX) instalados de verdade =====
+
+#[derive(Serialize)]
+struct DebloatApp {
+    name: String,
+    full_name: String,
+}
+
+/// Componentes do Windows que nunca podem ser removidos por esta aba.
+const DEBLOAT_PROTECTED_PREFIXES: &[&str] = &[
+    "microsoft.windowsstore",
+    "microsoft.storepurchaseapp",
+    "microsoft.desktopappinstaller",
+    "microsoft.sechealthui",
+    "microsoft.vclibs",
+    "microsoft.net.",
+    "microsoft.ui.xaml",
+    "microsoft.windows.",
+    "microsoftwindows.",
+    "microsoft.aad.",
+    "microsoft.lockapp",
+    "microsoft.accountscontrol",
+    "microsoft.creddialoghost",
+    "microsoft.asynctextservice",
+    "microsoft.bioenrollment",
+    "microsoft.ecapp",
+    "windows.",
+    "nvidiacorp.",
+    "realtek",
+    "fluxtweakers",
+];
+
+fn debloat_is_protected(name: &str) -> bool {
+    let l = name.to_lowercase();
+    DEBLOAT_PROTECTED_PREFIXES.iter().any(|p| l.starts_with(p))
+}
+
+/// Apps instalados (usuário atual) que o Windows permite remover.
+#[tauri::command]
+async fn debloat_list() -> Result<Vec<DebloatApp>, String> {
+    tauri::async_runtime::spawn_blocking(|| -> Result<Vec<DebloatApp>, String> {
+        #[cfg(target_os = "windows")]
+        {
+            let ps = "[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-AppxPackage | Where-Object { $_.NonRemovable -ne $true -and $_.IsFramework -ne $true -and $_.SignatureKind -ne 'System' } | ForEach-Object { $_.Name + '|' + $_.PackageFullName }";
+            let output = Command::new("powershell")
+                .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps])
+                .creation_flags(CREATE_NO_WINDOW)
+                .output()
+                .map_err(|e| format!("Não consegui listar os apps: {e}"))?;
+            let mut seen = std::collections::HashSet::new();
+            let mut out: Vec<DebloatApp> = Vec::new();
+            for line in String::from_utf8_lossy(&output.stdout).lines() {
+                let mut parts = line.trim().splitn(2, '|');
+                let name = parts.next().unwrap_or("").trim().to_string();
+                let full = parts.next().unwrap_or("").trim().to_string();
+                if name.is_empty() || debloat_is_protected(&name) {
+                    continue;
+                }
+                if seen.insert(name.to_lowercase()) {
+                    out.push(DebloatApp { name, full_name: full });
+                }
+            }
+            out.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+            Ok(out)
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+/// Remove UM app pelo nome do pacote (o front chama um por vez pra mostrar o progresso).
+#[tauri::command]
+async fn debloat_remove(name: String) -> Result<String, String> {
+    let name = name.trim().to_string();
+    if name.is_empty()
+        || name.len() > 120
+        || !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == '-')
+    {
+        return Err("Nome de app inválido".to_string());
+    }
+    if debloat_is_protected(&name) {
+        return Err(format!("{name} é um componente essencial do Windows e não pode ser removido por aqui"));
+    }
+    tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
+        #[cfg(target_os = "windows")]
+        {
+            let ps = format!(
+                "[Console]::OutputEncoding=[Text.Encoding]::UTF8; try {{ $p=@(Get-AppxPackage -Name '{name}' | Where-Object {{ $_.NonRemovable -ne $true -and $_.IsFramework -ne $true }}); if($p.Count -eq 0){{ 'NOTFOUND' }} else {{ foreach($x in $p){{ Remove-AppxPackage -Package $x.PackageFullName -ErrorAction Stop }}; 'OK' }} }} catch {{ 'ERR|' + ($_.Exception.Message -replace '[\\r\\n]+',' ') }}"
+            );
+            let output = Command::new("powershell")
+                .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps])
+                .creation_flags(CREATE_NO_WINDOW)
+                .output()
+                .map_err(|e| format!("Não consegui executar a remoção: {e}"))?;
+            let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if text.starts_with("OK") {
+                Ok("removido".to_string())
+            } else if text.starts_with("NOTFOUND") {
+                Ok("já não estava instalado".to_string())
+            } else if let Some(msg) = text.strip_prefix("ERR|") {
+                let short: String = msg.chars().take(220).collect();
+                Err(short)
+            } else {
+                Err("O Windows não confirmou a remoção".to_string())
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = name;
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+
 fn main() {
     #[cfg(target_os = "windows")]
     {
@@ -5352,7 +5473,7 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
         .manage(PdhState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes, debloat_list, debloat_remove])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));
