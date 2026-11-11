@@ -277,48 +277,75 @@
   .bench-note{font-size:10px;color:var(--muted2);position:relative;z-index:1;line-height:1.4;}
   .bench-metric-title{font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.04em;margin:2px 0 0;position:relative;z-index:1;}
 
-  /* estimativa de FPS */
-  .fps-form-row{display:flex;gap:9px;position:relative;z-index:1;}
-  .fps-form-row select, .fps-form-row input{
-    flex:1;min-width:0;background:var(--card);border:1px solid var(--border);color:var(--text);
-    padding:9px 12px;border-radius:9px;font-size:12px;font-family:var(--sans);
-    transition:.15s;
-  }
-  .fps-form-row select{
-    appearance:none;-webkit-appearance:none;-moz-appearance:none;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat:no-repeat;background-position:right 10px center;background-size:14px;
-    padding-right:32px;cursor:pointer;color-scheme:dark;
-  }
-  .fps-form-row select:hover{border-color:var(--muted2);}
-  .fps-form-row select:focus, .fps-form-row input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
-  .fps-form-row select option, .fps-form-row select optgroup{background:#15151c;color:var(--text);}
-  .fps-compare{position:relative;z-index:1;display:flex;flex-direction:column;gap:8px;margin-top:4px;}
-  .fps-big-row{display:flex;align-items:baseline;gap:8px;justify-content:space-between;}
-  .fps-big-num{font-size:22px;font-weight:800;color:var(--text);font-family:var(--mono);}
-  .fps-big-num.after{color:var(--accent);}
-  .fps-big-label{font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.04em;}
-  .fps-arrow{color:var(--muted2);font-size:14px;}
-  .fps-gain-tag{
-    display:inline-block;font-size:11px;font-weight:700;color:var(--ok);background:#22c55e1a;
-    border:1px solid #22c55e33;border-radius:999px;padding:2px 9px;position:relative;z-index:1;width:fit-content;
-  }
-  .fps-breakdown{font-size:10.5px;color:var(--muted2);position:relative;z-index:1;line-height:1.7;}
-  .fps-breakdown b{color:var(--muted);}
-  .fps-result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;position:relative;z-index:1;}
-  .fps-result-card{
-    background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 10px;text-align:center;
-  }
-  .fps-result-card.rec{border-color:color-mix(in srgb, var(--accent) 35%, var(--border));}
-  .fps-result-card.perf{border-color:#f59e0b55;}
-  .fps-result-card.ultra{border-color:#ef444455;}
-  .fps-result-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted2);margin:0 0 5px;font-weight:700;}
-  .fps-result-card.rec .fps-result-label{color:var(--accent);}
-  .fps-result-card.perf .fps-result-label{color:#f59e0b;}
-  .fps-result-card.ultra .fps-result-label{color:#ef4444;}
-  .fps-result-num{font-size:19px;font-weight:800;color:var(--text);font-family:var(--mono);margin:0;}
-  .fps-result-gain{font-size:10.5px;color:var(--ok);font-weight:700;margin:2px 0 0;}
-  @media (max-width:560px){ .fps-result-grid{grid-template-columns:1fr;} }
+  /* ===== Aba Desempenho (medições reais) ===== */
+  .pf-wrap{display:flex;flex-direction:column;gap:14px;padding:2px 0 8px;}
+  .pf-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+  .pf-title{font-size:20px;font-weight:800;margin:0;letter-spacing:-.01em;color:var(--text);}
+  .pf-sub{font-size:12px;color:var(--muted);margin:3px 0 0;line-height:1.5;}
+  .pf-hw{font-size:11px;color:var(--muted2);margin:6px 0 0;font-family:var(--mono);}
+  .pf-badge{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,transparent);border:1px solid color-mix(in srgb,var(--ok) 30%,transparent);padding:4px 10px;border-radius:999px;white-space:nowrap;}
+  .pf-badge i{width:6px;height:6px;border-radius:50%;background:var(--ok);animation:pfPulse 1.6s ease-in-out infinite;}
+  @keyframes pfPulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(.7);}}
+  .pf-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  @media (max-width:900px){ .pf-tiles{grid-template-columns:repeat(2,1fr);} }
+  .pf-tile{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 14px 8px;position:relative;overflow:hidden;min-width:0;}
+  .pf-tile-top{display:flex;align-items:baseline;justify-content:space-between;gap:6px;}
+  .pf-tile-label{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted2);}
+  .pf-tile-val{font-size:26px;font-weight:800;font-family:var(--mono);color:var(--text);line-height:1.1;margin:4px 0 0;}
+  .pf-tile-val small{font-size:13px;color:var(--muted);font-weight:600;margin-left:1px;}
+  .pf-tile-sub{font-size:10.5px;color:var(--muted2);margin:2px 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pf-spark{display:block;width:100%;height:34px;margin-top:2px;}
+  .pf-spark .line{fill:none;stroke:var(--accent);stroke-width:1.6;vector-effect:non-scaling-stroke;stroke-linejoin:round;}
+  .pf-spark .area{fill:url(#pfGrad);opacity:.9;}
+  .pf-tile.hot .pf-tile-val{color:#f59e0b;} .pf-tile.crit .pf-tile-val{color:var(--off);}
+  .pf-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden;}
+  .pf-card::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(320px 180px at 100% 0%,var(--accent-dim) 0%,transparent 65%);}
+  .pf-card>*{position:relative;z-index:1;}
+  .pf-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .pf-card-title{font-size:14px;font-weight:700;margin:0;color:var(--text);}
+  .pf-card-note{font-size:11px;color:var(--muted2);margin:2px 0 0;line-height:1.5;}
+  .pf-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:0;border-radius:9px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform .12s,opacity .12s;}
+  .pf-btn:hover{transform:translateY(-1px);} .pf-btn:disabled{opacity:.5;cursor:default;transform:none;}
+  .pf-btn.ghost{background:var(--card);border:1px solid var(--border);color:var(--text);padding:6px 11px;font-size:11px;font-weight:600;}
+  .pf-btn.ghost:hover{border-color:var(--accent);color:var(--accent);}
+  .pf-steps{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+  @media (max-width:760px){ .pf-steps{grid-template-columns:repeat(2,1fr);} }
+  .pf-step{background:var(--card);border:1px solid var(--border-soft);border-radius:10px;padding:9px 10px;display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);transition:border-color .2s,color .2s;}
+  .pf-step .dot{width:9px;height:9px;border-radius:50%;background:var(--border);flex-shrink:0;}
+  .pf-step.run{border-color:var(--accent);color:var(--text);} .pf-step.run .dot{background:var(--accent);animation:pfPulse 1s ease-in-out infinite;}
+  .pf-step.done{color:var(--text);} .pf-step.done .dot{background:var(--ok);}
+  .pf-step.fail{border-color:var(--off);color:var(--off);} .pf-step.fail .dot{background:var(--off);}
+  .pf-progress{height:4px;border-radius:999px;background:var(--card);overflow:hidden;}
+  .pf-progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .4s cubic-bezier(.2,.8,.2,1);}
+  .pf-table{display:flex;flex-direction:column;gap:2px;}
+  .pf-row{display:grid;grid-template-columns:minmax(120px,1.3fr) minmax(90px,1fr) minmax(90px,1fr) minmax(110px,1fr);gap:10px;align-items:center;padding:9px 4px;border-bottom:1px solid var(--border-soft);}
+  .pf-row:last-child{border-bottom:0;}
+  .pf-row.head{padding:0 4px 4px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted2);border-bottom:1px solid var(--border);}
+  .pf-row .name{font-size:12px;color:var(--text);font-weight:600;} .pf-row .name small{display:block;font-size:10px;color:var(--muted2);font-weight:400;margin-top:1px;}
+  .pf-val{font-family:var(--mono);font-size:13px;color:var(--text);font-weight:700;} .pf-val small{font-size:10px;color:var(--muted2);font-weight:500;margin-left:3px;}
+  .pf-val.ref{color:var(--muted);}
+  .pf-delta{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;justify-self:start;white-space:nowrap;}
+  .pf-delta.good{color:var(--ok);background:color-mix(in srgb,var(--ok) 13%,transparent);}
+  .pf-delta.bad{color:var(--off);background:color-mix(in srgb,var(--off) 13%,transparent);}
+  .pf-delta.flat{color:var(--muted);background:var(--card);}
+  .pf-bar{grid-column:1/-1;height:8px;position:relative;margin-top:-2px;}
+  .pf-bar i{position:absolute;left:0;height:3px;border-radius:999px;} .pf-bar i.a{top:0;background:linear-gradient(90deg,var(--accent),var(--accent2));} .pf-bar i.b{top:5px;background:var(--muted2);opacity:.5;}
+  .pf-warn{font-size:11px;color:#f59e0b;background:color-mix(in srgb,#f59e0b 10%,transparent);border:1px solid color-mix(in srgb,#f59e0b 28%,transparent);border-radius:9px;padding:8px 11px;line-height:1.5;}
+  .pf-empty{font-size:12px;color:var(--muted2);line-height:1.6;padding:6px 0;}
+  .pf-hist{display:flex;flex-direction:column;gap:6px;}
+  .pf-hist-item{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border-soft);border-radius:10px;padding:8px 10px;font-size:11px;color:var(--muted);}
+  .pf-hist-item.ref{border-color:color-mix(in srgb,var(--accent) 45%,var(--border));}
+  .pf-hist-item .when{color:var(--text);font-weight:600;min-width:112px;} .pf-hist-item .vals{flex:1;font-family:var(--mono);font-size:10.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pf-tag{font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);background:var(--accent-dim);padding:2px 7px;border-radius:999px;}
+  .pf-procs{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media (max-width:760px){ .pf-procs{grid-template-columns:1fr;} }
+  .pf-proc-col h4{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted2);margin:0 0 6px;}
+  .pf-proc{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-soft);font-size:12px;}
+  .pf-proc:last-child{border-bottom:0;} .pf-proc .pn{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} .pf-proc .pn small{color:var(--muted2);margin-left:5px;}
+  .pf-proc .pv{font-family:var(--mono);font-weight:700;color:var(--text);font-size:12px;}
+  .pf-how summary{cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:6px;}
+  .pf-how summary::before{content:"▸";transition:transform .15s;} .pf-how[open] summary::before{transform:rotate(90deg);}
+  .pf-how-body{margin-top:10px;display:flex;flex-direction:column;gap:8px;} .pf-how-body p{margin:0;font-size:12px;color:var(--muted);line-height:1.6;} .pf-how-body b{color:var(--text);}
 
   @media (max-width:900px){ .dash-row{flex-direction:column;} }
 
@@ -693,16 +720,6 @@
   .home-nav-item svg{width:20px;height:20px;}
   .home-nav-item span{font-size:11px;font-weight:600;text-align:center;}
 
-  .fps-methodology{margin-top:14px;border-top:1px solid var(--border-soft);padding-top:12px;}
-  .fps-methodology summary{
-    cursor:pointer;font-size:12.5px;font-weight:600;color:var(--accent);list-style:none;
-    display:flex;align-items:center;gap:6px;
-  }
-  .fps-methodology summary::before{content:"▸";transition:transform .15s;}
-  .fps-methodology[open] summary::before{transform:rotate(90deg);}
-  .fps-methodology-body{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
-  .fps-methodology-body p{margin:0;font-size:12px;color:var(--muted);line-height:1.6;}
-  .fps-methodology-body b{color:var(--text);}
 
   .profile-form-grid{
     display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;
@@ -5137,7 +5154,7 @@ homePanel.innerHTML = `
 `;
 panelsEl.appendChild(homePanel);
 
-// ===== Aba Desempenho: estimador de FPS, com metodologia visível =====
+// ===== Aba Desempenho: medições reais (monitor ao vivo + benchmark + processos) =====
 const fpsBtn = document.createElement('button');
 fpsBtn.innerHTML = `${lineIcon('<path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3v2.4M21 12h-2.4M12 12l4.8-4.8"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/>')}<span class="label">Desempenho</span>`;
 fpsBtn.dataset.cat = 'fps';
@@ -5148,40 +5165,294 @@ const fpsPanel = document.createElement('div');
 fpsPanel.className = 'panel';
 fpsPanel.id = 'panel-fps';
 fpsPanel.innerHTML = `
-  <div class="bench-card">
-    <div class="bench-head">
-      <p class="bench-title">Estimativa de ganho de FPS</p>
+  <div class="pf-wrap">
+    <svg width="0" height="0" style="position:absolute"><defs><linearGradient id="pfGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent)" stop-opacity=".35"/><stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs></svg>
+    <div class="pf-hero">
+      <div>
+        <h2 class="pf-title">Desempenho</h2>
+        <p class="pf-sub">Medições reais do seu PC, feitas agora. Nada aqui é estimado: o teste executa trabalho de verdade e compara com a sua última referência.</p>
+        <p class="pf-hw" id="pfHw"></p>
+      </div>
+      <span class="pf-badge"><i></i>Ao vivo</span>
     </div>
-    <p class="bench-note" style="margin:-4px 0 0;">Digite sua placa e processador e veja a estimativa nos 3 modos de ajuste. É uma estimativa por faixas típicas — não substitui medir FPS de verdade no jogo com um overlay (RTSS, MSI Afterburner, etc.).</p>
-    <div class="fps-form-row">
-      <select id="fpsGameSelect">
-        <option value="">Selecione o jogo...</option>
-      </select>
-    </div>
-    <p class="bench-note" id="fpsGameNote" style="display:none;margin:-4px 0 0;color:var(--accent);"></p>
-    <div class="fps-form-row">
-      <input type="text" id="fpsGpuText" placeholder="Sua placa de vídeo (ex: RTX 3060)">
-      <input type="text" id="fpsCpuText" placeholder="Seu processador (ex: Ryzen 5 5600)">
-    </div>
-    <div class="fps-form-row">
-      <input type="number" id="fpsCurrentInput" placeholder="FPS atual medido no jogo (ex: 72)" min="1" max="600">
-      <button type="button" class="bench-run-btn" id="fpsCalcBtn">Calcular</button>
-    </div>
-    <p class="bench-note" id="fpsHwNote" style="display:none;margin:0;"></p>
-    <div id="fpsBody"></div>
 
-    <details class="fps-methodology">
-      <summary>Como essa estimativa é calculada?</summary>
-      <div class="fps-methodology-body">
-        <p><b>1. Peso por categoria de ajuste.</b> Cada categoria de tweak (GPU, CPU, RAM, Sistema, etc.) tem um teto de ganho conservador baseado no que testes da comunidade costumam observar em otimizações de SO/driver — nada acima de 35% de ganho total combinado, porque otimização de sistema não substitui hardware melhor.</p>
-        <p><b>2. Fator de gargalo do seu hardware.</b> Quanto mais limitada sua placa/processador, maior o espaço pra otimização de sistema ajudar — porque em hardware potente, o overhead do Windows já é uma fração pequena da capacidade total; em hardware mais antigo, esse mesmo overhead consome uma fatia proporcionalmente maior. Por isso o cálculo <i>aumenta</i> o peso pra hardware mais fraco, e reduz pra hardware topo de linha (o oposto de "quanto melhor sua placa, mais você ganha").</p>
-        <p><b>3. Gênero do jogo.</b> Jogos competitivos/FPS costumam ser mais limitados por CPU; jogos de mundo aberto costumam ser mais limitados por GPU. A estimativa pondera isso ao saber qual jogo você selecionou.</p>
-        <p style="color:var(--muted2);margin-top:10px;">Isso é uma estimativa de faixa, não uma medição real — o único jeito de saber o ganho exato é medir o FPS antes/depois com uma ferramenta como RTSS ou MSI Afterburner.</p>
+    <div class="pf-tiles" id="pfTiles">
+      <div class="pf-tile" data-k="cpu"><div class="pf-tile-top"><span class="pf-tile-label">CPU</span></div><p class="pf-tile-val">–</p><p class="pf-tile-sub">aguardando leitura</p><svg class="pf-spark" viewBox="0 0 100 30" preserveAspectRatio="none"></svg></div>
+      <div class="pf-tile" data-k="ram"><div class="pf-tile-top"><span class="pf-tile-label">Memória</span></div><p class="pf-tile-val">–</p><p class="pf-tile-sub">aguardando leitura</p><svg class="pf-spark" viewBox="0 0 100 30" preserveAspectRatio="none"></svg></div>
+      <div class="pf-tile" data-k="gpu"><div class="pf-tile-top"><span class="pf-tile-label">GPU</span></div><p class="pf-tile-val">–</p><p class="pf-tile-sub">aguardando leitura</p><svg class="pf-spark" viewBox="0 0 100 30" preserveAspectRatio="none"></svg></div>
+      <div class="pf-tile" data-k="disk"><div class="pf-tile-top"><span class="pf-tile-label">Disco (atividade)</span></div><p class="pf-tile-val">–</p><p class="pf-tile-sub">aguardando leitura</p><svg class="pf-spark" viewBox="0 0 100 30" preserveAspectRatio="none"></svg></div>
+    </div>
+
+    <div class="pf-card">
+      <div class="pf-card-head">
+        <div>
+          <p class="pf-card-title">Teste de desempenho</p>
+          <p class="pf-card-note">Leva cerca de 15 a 25 segundos. Feche jogos e navegadores antes pra um resultado fiel.</p>
+        </div>
+        <button type="button" class="pf-btn" id="pfRunBtn">Rodar teste agora</button>
+      </div>
+      <div class="pf-steps" id="pfSteps"></div>
+      <div class="pf-progress"><i id="pfProgress"></i></div>
+      <div id="pfWarn"></div>
+      <div id="pfResult"></div>
+    </div>
+
+    <div class="pf-card">
+      <div class="pf-card-head">
+        <div>
+          <p class="pf-card-title">Histórico e comparação</p>
+          <p class="pf-card-note">Rode o teste antes de aplicar ajustes e de novo depois. A referência é o ponto de comparação.</p>
+        </div>
+      </div>
+      <div class="pf-hist" id="pfHist"></div>
+    </div>
+
+    <div class="pf-card">
+      <div class="pf-card-head">
+        <div>
+          <p class="pf-card-title">O que mais pesa agora</p>
+          <p class="pf-card-note" id="pfProcNote">Processos agrupados por programa, atualizados a cada poucos segundos.</p>
+        </div>
+      </div>
+      <div class="pf-procs">
+        <div class="pf-proc-col"><h4>Mais CPU</h4><div id="pfProcCpu"><p class="pf-empty">Medindo...</p></div></div>
+        <div class="pf-proc-col"><h4>Mais memória</h4><div id="pfProcRam"><p class="pf-empty">Medindo...</p></div></div>
+      </div>
+    </div>
+
+    <details class="pf-how pf-card">
+      <summary>Como o teste mede</summary>
+      <div class="pf-how-body">
+        <p><b>CPU 1 núcleo / todos os núcleos.</b> Um laço fixo de operações inteiras e de ponto flutuante roda por tempo determinado; o resultado é quantas milhões de operações por segundo (Mops/s) a CPU entregou. Reflete frequência real, plano de energia e programas disputando a CPU.</p>
+        <p><b>Memória.</b> Copia um bloco de 128 MB várias vezes e usa a melhor passagem. Resultado em GB/s de leitura + escrita.</p>
+        <p><b>Disco.</b> Grava 256 MB em sequência e 200 arquivos de 4 KB, forçando a confirmação no disco (flush). Mede escrita de verdade, não cache. Usa a pasta temporária do Windows, então mede o disco onde ela está.</p>
+        <p><b>Latência.</b> Mede o tempo real que o Windows leva pra acordar a thread depois de um sleep de 1 ms. Quanto menor e mais estável, mais responsivo o sistema.</p>
+        <p style="color:var(--muted2)">Os números só têm sentido comparados com outro teste da mesma máquina. Diferenças abaixo de uns 5% são variação normal entre execuções e o app avisa quando é o caso.</p>
       </div>
     </details>
   </div>
 `;
 panelsEl.appendChild(fpsPanel);
+
+(function(){
+  const PF_KEY = 'flux_perf_runs_v1';
+  const PF_REF_KEY = 'flux_perf_ref_v1';
+  const PF_STEPS = [
+    { id:'cpu_single', label:'CPU 1 núcleo' },
+    { id:'cpu_multi',  label:'CPU todos os núcleos' },
+    { id:'memory',     label:'Memória RAM' },
+    { id:'disk',       label:'Disco' },
+    { id:'latency',    label:'Latência' },
+  ];
+  const PF_METRICS = [
+    { id:'cpu_single',  label:'CPU 1 núcleo',          sub:'velocidade por núcleo',        unit:'Mops/s', dec:1, hb:true },
+    { id:'cpu_multi',   label:'CPU todos os núcleos',  sub:'trabalho em paralelo',         unit:'Mops/s', dec:1, hb:true },
+    { id:'memory',      label:'Memória RAM',           sub:'cópia de dados',               unit:'GB/s',   dec:1, hb:true },
+    { id:'disk_seq',    label:'Disco sequencial',      sub:'escrita com flush',            unit:'MB/s',   dec:0, hb:true },
+    { id:'disk_small',  label:'Disco arquivos pequenos', sub:'4 KB confirmados no disco',  unit:'ops/s',  dec:0, hb:true },
+    { id:'latency_avg', label:'Latência média',        sub:'sleep de 1 ms',                unit:'ms',     dec:2, hb:false },
+    { id:'latency_p99', label:'Latência pior 1%',      sub:'estabilidade',                 unit:'ms',     dec:2, hb:false },
+  ];
+  const NOISE = 5; // % abaixo do qual a diferença é variação normal
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const $ = id => document.getElementById(id);
+  const hasTauri = !!window.__TAURI__;
+
+  const hist = { cpu:[], ram:[], gpu:[], disk:[] };
+  const last = { gpu:null, disk:null, ghz:null, gpuName:'' };
+  let lastStats = null;
+  let running = false;
+  let viewId = null;
+  let procWarm = false;
+
+  function loadRuns(){ try{ const a = JSON.parse(localStorage.getItem(PF_KEY)||'[]'); return Array.isArray(a) ? a : []; }catch(e){ return []; } }
+  function saveRuns(a){ try{ localStorage.setItem(PF_KEY, JSON.stringify(a.slice(0,12))); }catch(e){} }
+  function getRef(){ try{ return localStorage.getItem(PF_REF_KEY); }catch(e){ return null; } }
+  function setRef(id){ try{ localStorage.setItem(PF_REF_KEY, String(id)); }catch(e){} }
+  const fmt = (v, d) => (v === null || v === undefined || Number.isNaN(v)) ? '–' : Number(v).toLocaleString('pt-BR', { minimumFractionDigits:d, maximumFractionDigits:d });
+  const fmtWhen = ts => new Date(ts).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+
+  // ---------- monitor ao vivo ----------
+  function spark(vals){
+    if(!vals.length) return '';
+    const n = vals.length, W = 100, H = 30;
+    const pts = vals.map((v,i)=>{
+      const x = n === 1 ? W : (i/(n-1))*W;
+      const y = H - Math.max(0, Math.min(100, v)) * 0.28 - 1;
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    });
+    return `<polygon class="area" points="0,${H} ${pts.join(' ')} ${W},${H}"/><polyline class="line" points="${pts.join(' ')}"/>`;
+  }
+  function setTile(k, pct, sub){
+    const t = document.querySelector(`#pfTiles .pf-tile[data-k="${k}"]`);
+    if(!t) return;
+    const known = pct !== null && pct !== undefined && !Number.isNaN(pct);
+    t.querySelector('.pf-tile-val').innerHTML = known ? `${Math.round(pct)}<small>%</small>` : '–';
+    t.querySelector('.pf-tile-sub').textContent = sub;
+    t.querySelector('.pf-spark').innerHTML = spark(hist[k]);
+    t.classList.toggle('crit', known && pct >= 90);
+    t.classList.toggle('hot', known && pct >= 75 && pct < 90);
+  }
+  window.perfOnStats = function(stats){
+    if(!stats) return;
+    lastStats = stats;
+    if(stats.slow_read){
+      last.gpu = stats.gpu_percent ?? null;
+      last.disk = stats.disk_active_pct ?? null;
+      last.ghz = stats.cpu_freq_ghz ?? null;
+    }
+    hist.cpu.push(stats.cpu_percent); hist.ram.push(stats.ram_percent);
+    hist.gpu.push(last.gpu ?? 0);     hist.disk.push(last.disk ?? 0);
+    Object.keys(hist).forEach(k=>{ if(hist[k].length > 60) hist[k].shift(); });
+    if(!fpsPanel.classList.contains('active')) return;
+    const cpuSub = [last.ghz ? `${last.ghz.toFixed(2)} GHz` : null, stats.cpu_cores ? `${stats.cpu_cores}N/${stats.cpu_threads}T` : `${stats.cpu_threads}T`].filter(Boolean).join(' · ');
+    setTile('cpu', stats.cpu_percent, cpuSub);
+    setTile('ram', stats.ram_percent, `${stats.ram_used_gb} de ${stats.ram_total_gb} GB` + (stats.cached_gb ? ` · cache ${stats.cached_gb}` : ''));
+    setTile('gpu', last.gpu, last.gpu === null ? 'sem leitura da GPU' : (last.gpuName || 'GPU'));
+    setTile('disk', last.disk, `ligado há ${fmtUptime(stats.uptime_secs)}`);
+  };
+
+  // ---------- teste ----------
+  function renderSteps(state){
+    $('pfSteps').innerHTML = PF_STEPS.map(s=>`<div class="pf-step ${state[s.id]||''}"><span class="dot"></span>${s.label}</div>`).join('');
+  }
+  function renderResult(){
+    const runs = loadRuns();
+    const box = $('pfResult');
+    if(!runs.length){
+      box.innerHTML = `<p class="pf-empty">Nenhum teste feito ainda. O primeiro resultado vira a sua referência, e os próximos mostram o quanto melhorou ou piorou.</p>`;
+      return;
+    }
+    const cur = runs.find(r=>String(r.id) === String(viewId)) || runs[0];
+    const refId = getRef();
+    const ref = runs.find(r=>String(r.id) === String(refId)) || null;
+    const isRef = ref && ref.id === cur.id;
+    const rows = PF_METRICS.filter(m => cur.vals[m.id] !== undefined).map(m=>{
+      const c = cur.vals[m.id];
+      const r = ref && !isRef ? ref.vals[m.id] : undefined;
+      let delta = '<span class="pf-delta flat">referência</span>', bar = '';
+      if(r !== undefined && r > 0){
+        const pct = ((c - r) / r) * 100;
+        const better = m.hb ? pct : -pct;
+        const cls = better >= NOISE ? 'good' : better <= -NOISE ? 'bad' : 'flat';
+        const txt = cls === 'flat' ? 'igual (variação normal)' : `${Math.abs(pct).toFixed(1).replace('.',',')}% ${better > 0 ? 'melhor' : 'pior'}`;
+        delta = `<span class="pf-delta ${cls}">${txt}</span>`;
+        const mx = Math.max(c, r) || 1;
+        bar = `<div class="pf-bar"><i class="b" style="width:${(r/mx*100).toFixed(1)}%"></i><i class="a" style="width:${(c/mx*100).toFixed(1)}%;opacity:.9"></i></div>`;
+      }
+      return `<div class="pf-row"><div class="name">${m.label}<small>${m.sub}</small></div>
+        <div class="pf-val ref">${r !== undefined ? fmt(r, m.dec) + `<small>${m.unit}</small>` : '–'}</div>
+        <div class="pf-val">${fmt(c, m.dec)}<small>${m.unit}</small></div>${delta}${bar}</div>`;
+    }).join('');
+    const head = `<div class="pf-row head"><div>Teste</div><div>${isRef ? '' : 'Referência'}</div><div>${isRef ? 'Referência (este teste)' : 'Este teste'}</div><div>Diferença</div></div>`;
+    const info = ref && !isRef ? `Comparando o teste de ${fmtWhen(cur.ts)} com a referência de ${fmtWhen(ref.ts)}.` : `Teste de ${fmtWhen(cur.ts)}.`;
+    box.innerHTML = `<p class="pf-card-note" style="margin:0 0 4px">${info}</p><div class="pf-table">${head}${rows}</div>`;
+  }
+  function renderWarn(run){
+    const w = $('pfWarn');
+    if(run && run.load !== null && run.load !== undefined && run.load >= 25){
+      w.innerHTML = `<div class="pf-warn">A CPU estava com ${Math.round(run.load)}% de uso quando o teste começou. Isso puxa o resultado pra baixo. Feche os programas pesados e repita pra um número mais fiel.</div>`;
+    } else w.innerHTML = '';
+  }
+  function renderHist(){
+    const runs = loadRuns(); const refId = getRef();
+    const box = $('pfHist');
+    if(!runs.length){ box.innerHTML = `<p class="pf-empty">Os testes que você fizer aparecem aqui.</p>`; return; }
+    box.innerHTML = runs.map(r=>{
+      const isRef = String(r.id) === String(refId);
+      const v = r.vals;
+      const vals = [`CPU ${fmt(v.cpu_single,0)}/${fmt(v.cpu_multi,0)}`, `RAM ${fmt(v.memory,1)} GB/s`, `Disco ${fmt(v.disk_seq,0)} MB/s`, `Lat ${fmt(v.latency_avg,2)} ms`].join(' · ');
+      return `<div class="pf-hist-item ${isRef?'ref':''}" data-id="${r.id}">
+        <span class="when">${fmtWhen(r.ts)}</span><span class="vals">${vals}</span>
+        ${isRef ? '<span class="pf-tag">referência</span>' : `<button class="pf-btn ghost" data-act="ref">Usar como referência</button>`}
+        <button class="pf-btn ghost" data-act="view">Ver</button>
+        <button class="pf-btn ghost" data-act="del" title="Apagar">✕</button></div>`;
+    }).join('');
+  }
+  function refreshAll(){ renderResult(); renderHist(); }
+
+  async function runBench(){
+    if(running) return;
+    if(!hasTauri){ showToast('O teste de desempenho só funciona no app instalado'); return; }
+    running = true;
+    const btn = $('pfRunBtn'); btn.disabled = true; btn.textContent = 'Testando...';
+    const state = {}; renderSteps(state); $('pfProgress').style.width = '0%'; $('pfWarn').innerHTML = '';
+    const load = lastStats ? lastStats.cpu_percent : null;
+    const vals = {}; const t0 = Date.now(); let ok = true;
+    for(let i=0; i<PF_STEPS.length; i++){
+      const s = PF_STEPS[i];
+      state[s.id] = 'run'; renderSteps(state);
+      try{
+        const out = await window.__TAURI__.core.invoke('perf_bench_step', { step: s.id });
+        (out||[]).forEach(r => { vals[r.step] = r.value; });
+        state[s.id] = 'done';
+      }catch(err){
+        state[s.id] = 'fail'; ok = false;
+        showToast(`Falha em "${s.label}": ${err}`);
+      }
+      renderSteps(state);
+      $('pfProgress').style.width = Math.round(((i+1)/PF_STEPS.length)*100) + '%';
+      if(!ok) break;
+    }
+    if(ok){
+      const run = { id: Date.now(), ts: Date.now(), vals, load, secs: Math.round((Date.now()-t0)/1000) };
+      const runs = loadRuns(); runs.unshift(run); saveRuns(runs);
+      if(!getRef()) setRef(run.id);
+      viewId = run.id;
+      renderWarn(run);
+      showToast('Teste concluído');
+    }
+    refreshAll();
+    running = false; btn.disabled = false; btn.textContent = 'Rodar teste agora';
+  }
+  $('pfRunBtn').addEventListener('click', runBench);
+  $('pfHist').addEventListener('click', e=>{
+    const b = e.target.closest('button[data-act]'); if(!b) return;
+    const id = b.closest('.pf-hist-item').dataset.id;
+    const act = b.dataset.act;
+    if(act === 'view'){ viewId = id; renderResult(); }
+    else if(act === 'ref'){ setRef(id); refreshAll(); showToast('Nova referência definida'); }
+    else if(act === 'del'){
+      const runs = loadRuns().filter(r=>String(r.id) !== String(id)); saveRuns(runs);
+      if(String(getRef()) === String(id)){ try{ localStorage.removeItem(PF_REF_KEY); }catch(e){} if(runs.length) setRef(runs[runs.length-1].id); }
+      if(String(viewId) === String(id)) viewId = null;
+      refreshAll();
+    }
+  });
+
+  // ---------- processos ----------
+  function procList(arr, key){
+    if(!arr || !arr.length) return '<p class="pf-empty">Sem dados.</p>';
+    return arr.map(p=>`<div class="pf-proc"><span class="pn">${esc(p.name)}${p.instances > 1 ? `<small>x${p.instances}</small>` : ''}</span><span class="pv">${key === 'cpu' ? fmt(p.cpu_percent,1) + '%' : (p.ram_mb >= 1024 ? fmt(p.ram_mb/1024,2) + ' GB' : fmt(p.ram_mb,0) + ' MB')}</span></div>`).join('');
+  }
+  async function procTick(){
+    if(!hasTauri || !fpsPanel.classList.contains('active') || document.hidden) return;
+    try{
+      const r = await window.__TAURI__.core.invoke('perf_top_processes');
+      if(!procWarm){ procWarm = true; return; } // a 1ª leitura de CPU por processo ainda não tem intervalo pra comparar
+      $('pfProcCpu').innerHTML = procList(r.by_cpu, 'cpu');
+      $('pfProcRam').innerHTML = procList(r.by_ram, 'ram');
+      $('pfProcNote').textContent = `${r.process_count} processos em execução. Atualiza a cada poucos segundos.`;
+    }catch(e){}
+  }
+  setInterval(procTick, 2500);
+  fpsBtn.addEventListener('click', ()=>{ setTimeout(procTick, 400); });
+
+  // ---------- inicialização ----------
+  renderSteps({});
+  refreshAll();
+  if(hasTauri){
+    window.__TAURI__.core.invoke('get_hardware_info').then(h=>{
+      last.gpuName = shortGpuName(h.gpu_name);
+      const cpu = String(h.cpu_brand||'').replace(/\(R\)|\(TM\)|CPU|Processor/gi,'').replace(/\s+/g,' ').trim();
+      $('pfHw').textContent = [cpu, `${Math.round(h.ram_total_gb)} GB RAM`, shortGpuName(h.gpu_name), h.os_name].filter(Boolean).join('  ·  ');
+    }).catch(()=>{});
+  } else {
+    $('pfRunBtn').disabled = true;
+    $('pfRunBtn').title = 'Disponível só no app instalado';
+    $('pfProcNote').textContent = 'As leituras reais só existem dentro do app instalado.';
+  }
+})();
 
 // ===== Aba Perfil de Otimização: formulário que analisa a config e recomenda =====
 const GPU_MODELS = {
@@ -7733,6 +8004,7 @@ if (window.__TAURI__){
   window.__TAURI__.event.listen('system-stats', (event) => {
     renderHomeStats(event.payload);
     renderLiveMonitor(event.payload);
+    if (typeof window.perfOnStats === 'function') window.perfOnStats(event.payload);
   });
 }
 
@@ -9332,196 +9604,6 @@ document.getElementById('deleteProfileBtn').addEventListener('click', ()=>{
   saveSavedProfiles(profiles);
   renderSavedProfilesSelect();
   showToast(`Perfil "${name}" excluído`);
-});
-
-/* ---------- estimativa de FPS (por faixas típicas, não medição real) ---------- */
-const FPS_CATEGORY_WEIGHT = {
-  gpu: 0.07,
-  cpu: 0.05,
-  ram: 0.03,
-  storage: 0.01,
-  system: 0.02,
-  games: 0.04,
-  power: 0.02,
-  startup: 0.02,
-  mouse: 0,
-  network: 0,
-  monitor: 0,
-};
-const FPS_CATEGORY_LABEL = {
-  gpu:'GPU', cpu:'CPU', ram:'RAM', storage:'Armazenamento', system:'Sistema',
-  games:'Prioridade de jogo', power:'Energia', startup:'Inicialização'
-};
-const FPS_GAIN_CAP = 0.35;
-
-const FPS_GENRE_BIAS = {
-  'FPS Competitivo': { cpu:1.35, gpu:0.75, games:1.3 },
-  'Battle Royale':   { cpu:1.1,  gpu:1.15, games:1.15 },
-  'MOBA':            { cpu:1.35, gpu:0.7,  games:1.3 },
-  'Mundo Aberto':    { cpu:0.75, gpu:1.35, games:1.0 },
-  'Outros':          { cpu:1.0,  gpu:1.0,  games:1.0 },
-};
-
-function populateFpsGameSelect(){
-  const sel = document.getElementById('fpsGameSelect');
-  const groups = {};
-  DATA.games.items.forEach(it=>{
-    if(!groups[it.group]) groups[it.group] = [];
-    groups[it.group].push(it);
-  });
-  let html = '<option value="">Selecione o jogo...</option>';
-  Object.keys(groups).forEach(groupName=>{
-    html += `<optgroup label="${groupName}">`;
-    groups[groupName].forEach(it=>{
-      html += `<option value="${it.id}" data-group="${groupName}">${it.title}</option>`;
-    });
-    html += '</optgroup>';
-  });
-  sel.innerHTML = html;
-}
-populateFpsGameSelect();
-
-document.getElementById('fpsGameSelect').addEventListener('change', (e)=>{
-  const opt = e.target.selectedOptions[0];
-  const note = document.getElementById('fpsGameNote');
-  const gameId = e.target.value;
-  if(!gameId){ note.style.display = 'none'; return; }
-
-  const chk = document.getElementById('chk_'+gameId);
-  if(chk && !chk.checked){
-    chk.checked = true;
-    const row = document.getElementById('row_'+gameId);
-    if(row) row.classList.add('on');
-    updateCount();
-    note.textContent = `Prioridade alta pra "${opt.textContent}" marcada automaticamente na aba Jogos.`;
-  } else {
-    note.textContent = `Usando o perfil de desempenho de "${opt.textContent}" pra ajustar a estimativa.`;
-  }
-  note.style.display = 'block';
-});
-
-
-/* reconhecimento de placa/processador digitados como texto livre */
-const GPU_TEXT_PATTERNS = [
-  [/5090/i,1.32],[/5080/i,1.28],[/5070\s*ti/i,1.22],[/5070/i,1.22],
-  [/4090/i,1.25],[/4080\s*super/i,1.2],[/4080/i,1.2],[/4070\s*ti\s*super/i,1.16],[/4070\s*ti/i,1.16],[/4070\s*super/i,1.16],[/4070/i,1.15],[/4060\s*ti/i,1.03],[/4060/i,1],
-  [/3090\s*ti/i,1.18],[/3090/i,1.18],[/3080\s*ti/i,1.13],[/3080/i,1.12],[/3070\s*ti/i,1.1],[/3070/i,1.08],[/3060\s*ti/i,1.02],[/3060/i,1],[/3050/i,0.87],
-  [/2080\s*ti/i,1.1],[/2080\s*super/i,1.08],[/2080/i,1.08],[/2070\s*super/i,1],[/2070/i,1],[/2060\s*super/i,0.97],[/2060/i,0.97],
-  [/1660\s*ti/i,0.95],[/1660\s*super/i,0.95],[/1660/i,0.85],[/1650\s*super/i,0.85],[/1650/i,0.85],[/1050\s*ti/i,0.85],[/1050/i,0.85],[/1030/i,0.82],
-  [/7900\s*xtx/i,1.22],[/7900\s*xt/i,1.18],[/7900\s*gre/i,1.15],[/7800\s*xt/i,1.14],[/7700\s*xt/i,1.12],[/7600/i,1],
-  [/6950\s*xt/i,1.13],[/6900\s*xt/i,1.13],[/6800\s*xt/i,1.12],[/6800/i,1.1],[/6700\s*xt/i,1.03],[/6650\s*xt/i,1],[/6600/i,1],[/6500\s*xt/i,0.85],[/6400/i,0.85],
-  [/5700\s*xt/i,1],[/5700/i,0.98],[/5600\s*xt/i,0.98],
-  [/\b580\b/i,0.85],[/\b570\b/i,0.85],[/\b560\b/i,0.85],[/\b550\b/i,0.85],
-  [/arc\s*a770/i,0.98],[/arc\s*a750/i,0.98],[/arc\s*a380/i,0.85],
-  [/iris\s*xe/i,0.7],[/\buhd\b/i,0.7],[/vega/i,0.75],[/780m/i,0.8],[/880m/i,0.8],
-];
-const CPU_TEXT_PATTERNS = [
-  [/9950x3d/i,1.3],[/7950x3d/i,1.3],[/7800x3d/i,1.15],[/5800x3d/i,1.18],
-  [/7950x/i,1.25],[/7900x/i,1.25],[/5950x/i,1.2],[/5900x/i,1.2],[/3950x/i,1.15],[/3900x/i,1.15],
-  [/7700x/i,1.15],[/5800x/i,1.12],[/5700x/i,1.12],[/3800x/i,1.08],[/3700x/i,1.08],
-  [/7600x/i,1.03],[/\b7600\b/i,1.03],[/5600x/i,1],[/\b5600\b/i,1],[/\b3600\b/i,0.95],[/\b2600\b/i,0.95],
-  [/5300g/i,0.88],[/\b4100\b/i,0.88],[/3200g/i,0.85],[/\b1200\b/i,0.85],
-  [/i9.?14/i,1.22],[/i9.?13/i,1.22],[/i9.?12/i,1.18],[/i9.?11/i,1.18],[/i9.?10/i,1.18],[/i9/i,1.18],
-  [/i7.?14700k/i,1.15],[/i7.?14/i,1.12],[/i7.?13/i,1.12],[/i7.?12/i,1.12],[/i7.?11/i,1.12],[/i7.?10/i,1.08],[/i7.?9/i,1.08],[/i7.?8/i,1.08],[/i7/i,1.1],
-  [/i5.?14/i,1.02],[/i5.?13/i,1.02],[/i5.?12/i,1],[/i5.?11/i,1],[/i5.?10/i,0.95],[/i5.?9/i,0.95],[/i5.?8/i,0.95],[/i5/i,1],
-  [/i3.?14/i,0.88],[/i3.?13/i,0.88],[/i3.?12/i,0.88],[/i3/i,0.85],
-  [/pentium/i,0.82],[/celeron/i,0.82],[/athlon/i,0.8],
-];
-
-function matchHardwareScalar(text, patterns){
-  if(!text || !text.trim()) return null;
-  for(const [re, scalar] of patterns){
-    if(re.test(text)) return scalar;
-  }
-  return 'unknown';
-}
-
-/* ---------- estimativa de FPS nos 3 modos (Recomendado / Performance / Ultra) ---------- */
-function countPresetInCat(presetIds, catId){
-  const total = catItemCount(catId);
-  if(!total || !DATA[catId]) return { checked:0, total:0 };
-  const idsInCat = new Set(DATA[catId].items.map(it=>it.id));
-  const checked = presetIds.filter(id => idsInCat.has(id)).length;
-  return { checked, total };
-}
-
-function computeFpsEstimateForPreset(presetIds, gpuScalar, cpuScalar, bias){
-  // Fator de gargalo: hardware mais fraco (scalar menor) tem mais overhead
-  // proporcional do Windows consumindo sua capacidade, então tem mais espaço
-  // pra ganhar com otimização de sistema. Hardware topo de linha já "sobra"
-  // capacidade, então o mesmo ajuste rende proporcionalmente menos.
-  // Clampado entre 0.7 (hardware muito forte, pouco espaço) e 1.4 (hardware
-  // mais limitado, mais espaço) pra não exagerar em nenhuma direção.
-  const gpuHeadroom = Math.max(0.7, Math.min(1.4, 2 - gpuScalar));
-  const cpuHeadroom = Math.max(0.7, Math.min(1.4, 2 - cpuScalar));
-  const avgHeadroom = (gpuHeadroom + cpuHeadroom) / 2;
-
-  let multiplier = 1;
-  Object.keys(FPS_CATEGORY_WEIGHT).forEach(catId=>{
-    let weight = FPS_CATEGORY_WEIGHT[catId];
-    if(weight <= 0 || !DATA[catId]) return;
-    if(bias[catId]) weight *= bias[catId];
-    if(catId === 'gpu') weight *= gpuHeadroom;
-    else if(catId === 'cpu') weight *= cpuHeadroom;
-    else weight *= avgHeadroom;
-    const { checked, total } = countPresetInCat(presetIds, catId);
-    if(!total || checked <= 0) return;
-    const fraction = checked/total;
-    multiplier *= (1 + weight*fraction);
-  });
-  return Math.min(multiplier - 1, FPS_GAIN_CAP);
-}
-
-document.getElementById('fpsCalcBtn').addEventListener('click', ()=>{
-  const gpuText = document.getElementById('fpsGpuText').value;
-  const cpuText = document.getElementById('fpsCpuText').value;
-  const fpsInput = document.getElementById('fpsCurrentInput');
-  const fpsBefore = parseInt(fpsInput.value, 10);
-  const hwNote = document.getElementById('fpsHwNote');
-
-  if(!gpuText.trim()){ showToast('Digite sua placa de vídeo'); return; }
-  if(!cpuText.trim()){ showToast('Digite seu processador'); return; }
-  if(!fpsBefore || fpsBefore <= 0){ showToast('Informe o FPS atual que você mede no jogo'); return; }
-
-  let gpuScalar = matchHardwareScalar(gpuText, GPU_TEXT_PATTERNS);
-  let cpuScalar = matchHardwareScalar(cpuText, CPU_TEXT_PATTERNS);
-  const notes = [];
-  if(gpuScalar === 'unknown'){ notes.push('placa não reconhecida, usando valor médio'); gpuScalar = 1; }
-  if(cpuScalar === 'unknown'){ notes.push('processador não reconhecido, usando valor médio'); cpuScalar = 1; }
-  if(notes.length){
-    hwNote.textContent = 'Obs: ' + notes.join(' · ') + '.';
-    hwNote.style.display = 'block';
-  } else {
-    hwNote.style.display = 'none';
-  }
-
-  const gameSelect = document.getElementById('fpsGameSelect');
-  const selectedOpt = gameSelect.selectedOptions[0];
-  const genreGroup = selectedOpt ? selectedOpt.dataset.group : null;
-  const bias = FPS_GENRE_BIAS[genreGroup] || { cpu:1, gpu:1, games:1 };
-
-  const modes = [
-    { key:'rec', label:'Recomendado', ids: RECOMMENDED_PRESET },
-    { key:'perf', label:'Performance', ids: PERFORMANCE_PRESET },
-    { key:'ultra', label:'Ultra Performance', ids: ULTRA_PRESET },
-  ];
-
-  const results = modes.map(m=>{
-    const gain = computeFpsEstimateForPreset(m.ids, gpuScalar, cpuScalar, bias);
-    const fpsAfter = Math.round(fpsBefore * (1+gain));
-    return { ...m, gain, fpsAfter };
-  });
-
-  const body = document.getElementById('fpsBody');
-  body.innerHTML = `<div class="fps-result-grid">` + results.map(r=>{
-    const pct = Math.round(r.gain*100);
-    return `<div class="fps-result-card ${r.key}">
-      <p class="fps-result-label">${r.label}</p>
-      <p class="fps-result-num">${r.fpsAfter}</p>
-      <p class="fps-result-gain">+${pct}%</p>
-    </div>`;
-  }).join('') + `</div>
-  <p class="bench-note" style="margin-top:10px;">FPS atual informado: ${fpsBefore}. Estimativa baseada no que cada modo costuma ativar — clique num dos perfis acima do painel pra aplicar o modo escolhido de verdade.</p>`;
 });
 
 // ---------- busca dentro da aba ativa ----------

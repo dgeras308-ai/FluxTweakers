@@ -5045,6 +5045,298 @@ fn rawaccel_open_download() -> Result<(), String> {
     Ok(())
 }
 
+// ===== Aba Desempenho: benchmark REAL (CPU, RAM, disco, latência) + processos =====
+// Nada aqui é estimativa: cada etapa executa um trabalho de verdade na máquina
+// e mede o tempo com Instant. O front roda as etapas uma por vez e guarda os
+// resultados pra comparar antes/depois de aplicar ajustes.
+
+#[derive(Serialize)]
+struct PerfStepResult {
+    step: String,
+    value: f64,
+    unit: String,
+    higher_better: bool,
+    detail: String,
+}
+
+fn perf_cpu_kernel(deadline: std::time::Instant) -> u64 {
+    let mut x: u64 = 0x9E37_79B9_7F4A_7C15;
+    let mut f: f64 = 1.0;
+    let mut ops: u64 = 0;
+    loop {
+        for _ in 0..50_000u32 {
+            x ^= x << 13;
+            x ^= x >> 7;
+            x ^= x << 17;
+            f = f * 1.000_000_1 + (x & 0xFF) as f64 * 1e-9;
+            if f > 1e6 {
+                f = 1.0;
+            }
+        }
+        ops += 50_000;
+        if std::time::Instant::now() >= deadline {
+            break;
+        }
+    }
+    std::hint::black_box((x, f));
+    ops
+}
+
+fn perf_cpu_single() -> f64 {
+    let mut runs: Vec<f64> = Vec::new();
+    for _ in 0..3 {
+        let start = std::time::Instant::now();
+        let ops = perf_cpu_kernel(start + std::time::Duration::from_millis(700));
+        let secs = start.elapsed().as_secs_f64().max(0.001);
+        runs.push(ops as f64 / secs / 1e6);
+    }
+    runs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    runs[1]
+}
+
+fn perf_cpu_multi() -> (f64, usize) {
+    let n = std::thread::available_parallelism().map(|v| v.get()).unwrap_or(1);
+    let start = std::time::Instant::now();
+    let deadline = start + std::time::Duration::from_millis(1500);
+    let handles: Vec<_> = (0..n)
+        .map(|_| std::thread::spawn(move || perf_cpu_kernel(deadline)))
+        .collect();
+    let mut total: u64 = 0;
+    for h in handles {
+        total += h.join().unwrap_or(0);
+    }
+    let secs = start.elapsed().as_secs_f64().max(0.001);
+    (total as f64 / secs / 1e6, n)
+}
+
+fn perf_memory() -> f64 {
+    const N: usize = 128 * 1024 * 1024;
+    let src: Vec<u8> = (0..N).map(|i| (i & 0xFF) as u8).collect();
+    let mut dst: Vec<u8> = vec![1u8; N];
+    dst.copy_from_slice(&src);
+    let mut best = 0.0f64;
+    for _ in 0..4 {
+        let t = std::time::Instant::now();
+        dst.copy_from_slice(&src);
+        std::hint::black_box(&dst);
+        let secs = t.elapsed().as_secs_f64().max(0.000_001);
+        // uma cópia lê N bytes e escreve N bytes
+        let gbs = (N as f64 * 2.0) / secs / 1_073_741_824.0;
+        if gbs > best {
+            best = gbs;
+        }
+    }
+    best
+}
+
+/// Retorna (escrita sequencial em MB/s, gravações pequenas com flush por segundo).
+fn perf_disk() -> Result<(f64, f64), String> {
+    use std::io::Write;
+    let dir = std::env::temp_dir().join("fluxtweakers-bench");
+    fs::create_dir_all(&dir).map_err(|e| format!("Não consegui criar a pasta temporária: {e}"))?;
+
+    // bloco com dados pseudo-aleatórios (evita que controladores que comprimem inflem o número)
+    let mut block = vec![0u8; 4 * 1024 * 1024];
+    let mut s: u64 = 0x2545_F491_4F6C_DD1D;
+    for chunk in block.chunks_mut(8) {
+        s ^= s << 13;
+        s ^= s >> 7;
+        s ^= s << 17;
+        let b = s.to_le_bytes();
+        let n = chunk.len();
+        chunk.copy_from_slice(&b[..n]);
+    }
+
+    let big = dir.join("seq.bin");
+    let t = std::time::Instant::now();
+    {
+        let mut f = fs::File::create(&big).map_err(|e| format!("Falha ao criar arquivo de teste: {e}"))?;
+        for _ in 0..64 {
+            f.write_all(&block).map_err(|e| format!("Falha ao gravar no disco: {e}"))?;
+        }
+        f.sync_all().map_err(|e| format!("Falha ao confirmar gravação no disco: {e}"))?;
+    }
+    let seq_mbs = 256.0 / t.elapsed().as_secs_f64().max(0.001);
+    let _ = fs::remove_file(&big);
+
+    let small = vec![0x5Au8; 4096];
+    let t = std::time::Instant::now();
+    for i in 0..200 {
+        let p = dir.join(format!("s{i}.bin"));
+        let mut f = fs::File::create(&p).map_err(|e| format!("Falha ao criar arquivo de teste: {e}"))?;
+        f.write_all(&small).map_err(|e| format!("Falha ao gravar no disco: {e}"))?;
+        f.sync_data().map_err(|e| format!("Falha ao confirmar gravação no disco: {e}"))?;
+    }
+    let ops = 200.0 / t.elapsed().as_secs_f64().max(0.001);
+    for i in 0..200 {
+        let _ = fs::remove_file(dir.join(format!("s{i}.bin")));
+    }
+    let _ = fs::remove_dir(&dir);
+    Ok((seq_mbs, ops))
+}
+
+/// Retorna (média, p99, máximo) em ms do tempo real de um sleep(1ms).
+fn perf_latency() -> (f64, f64, f64) {
+    let mut v: Vec<f64> = Vec::with_capacity(300);
+    for _ in 0..300 {
+        let t = std::time::Instant::now();
+        std::thread::sleep(std::time::Duration::from_millis(1));
+        v.push(t.elapsed().as_secs_f64() * 1000.0);
+    }
+    v.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    let avg = v.iter().sum::<f64>() / v.len() as f64;
+    let p99 = v[(v.len() * 99 / 100).min(v.len() - 1)];
+    let max = v[v.len() - 1];
+    (avg, p99, max)
+}
+
+fn perf_round(x: f64, d: i32) -> f64 {
+    let m = 10f64.powi(d);
+    (x * m).round() / m
+}
+
+/// Roda UMA etapa do benchmark (o front chama uma por vez pra animar e
+/// montar o relatório): cpu_single, cpu_multi, memory, disk, latency.
+#[tauri::command]
+async fn perf_bench_step(step: String) -> Result<Vec<PerfStepResult>, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<Vec<PerfStepResult>, String> {
+        match step.as_str() {
+            "cpu_single" => {
+                let v = perf_cpu_single();
+                Ok(vec![PerfStepResult {
+                    step: "cpu_single".into(),
+                    value: perf_round(v, 1),
+                    unit: "Mops/s".into(),
+                    higher_better: true,
+                    detail: "1 núcleo, mediana de 3 passagens de 0,7 s".into(),
+                }])
+            }
+            "cpu_multi" => {
+                let (v, n) = perf_cpu_multi();
+                Ok(vec![PerfStepResult {
+                    step: "cpu_multi".into(),
+                    value: perf_round(v, 1),
+                    unit: "Mops/s".into(),
+                    higher_better: true,
+                    detail: format!("{n} threads ao mesmo tempo por 1,5 s"),
+                }])
+            }
+            "memory" => {
+                let v = perf_memory();
+                Ok(vec![PerfStepResult {
+                    step: "memory".into(),
+                    value: perf_round(v, 1),
+                    unit: "GB/s".into(),
+                    higher_better: true,
+                    detail: "cópia de 128 MB, melhor de 4 passagens".into(),
+                }])
+            }
+            "disk" => {
+                let (seq, ops) = perf_disk()?;
+                Ok(vec![
+                    PerfStepResult {
+                        step: "disk_seq".into(),
+                        value: perf_round(seq, 0),
+                        unit: "MB/s".into(),
+                        higher_better: true,
+                        detail: "escrita sequencial de 256 MB com flush até o disco".into(),
+                    },
+                    PerfStepResult {
+                        step: "disk_small".into(),
+                        value: perf_round(ops, 0),
+                        unit: "ops/s".into(),
+                        higher_better: true,
+                        detail: "200 arquivos de 4 KB, cada um confirmado no disco".into(),
+                    },
+                ])
+            }
+            "latency" => {
+                let (avg, p99, max) = perf_latency();
+                Ok(vec![
+                    PerfStepResult {
+                        step: "latency_avg".into(),
+                        value: perf_round(avg, 2),
+                        unit: "ms".into(),
+                        higher_better: false,
+                        detail: format!("tempo real de um sleep de 1 ms (300 amostras, pior caso {:.2} ms)", max),
+                    },
+                    PerfStepResult {
+                        step: "latency_p99".into(),
+                        value: perf_round(p99, 2),
+                        unit: "ms".into(),
+                        higher_better: false,
+                        detail: "99% das amostras ficaram abaixo disso".into(),
+                    },
+                ])
+            }
+            _ => Err("Etapa desconhecida".to_string()),
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+#[derive(Serialize, Clone)]
+struct PerfProc {
+    name: String,
+    cpu_percent: f64,
+    ram_mb: f64,
+    instances: u32,
+}
+
+#[derive(Serialize)]
+struct PerfProcs {
+    by_cpu: Vec<PerfProc>,
+    by_ram: Vec<PerfProc>,
+    process_count: usize,
+}
+
+/// Processos que mais pesam agora (agrupados por nome), com CPU normalizada
+/// pelo número de threads — o mesmo critério do Gerenciador de Tarefas.
+#[tauri::command]
+async fn perf_top_processes(state: State<'_, SysState>) -> Result<PerfProcs, String> {
+    let (list, count) = {
+        let mut sys = state.0.lock().unwrap();
+        sys.refresh_processes(ProcessesToUpdate::All, true);
+        let threads = sys.cpus().len().max(1) as f64;
+        let mut map: std::collections::HashMap<String, PerfProc> = std::collections::HashMap::new();
+        for (pid, p) in sys.processes() {
+            if pid.as_u32() == 0 {
+                continue;
+            }
+            let name = p.name().to_string_lossy().to_string();
+            let e = map.entry(name.clone()).or_insert(PerfProc {
+                name,
+                cpu_percent: 0.0,
+                ram_mb: 0.0,
+                instances: 0,
+            });
+            e.cpu_percent += p.cpu_usage() as f64 / threads;
+            e.ram_mb += p.memory() as f64 / 1_048_576.0;
+            e.instances += 1;
+        }
+        let count = sys.processes().len();
+        (map.into_values().collect::<Vec<PerfProc>>(), count)
+    };
+
+    let mut by_cpu = list.clone();
+    by_cpu.sort_by(|a, b| b.cpu_percent.partial_cmp(&a.cpu_percent).unwrap_or(std::cmp::Ordering::Equal));
+    by_cpu.truncate(6);
+    for p in by_cpu.iter_mut() {
+        p.cpu_percent = perf_round(p.cpu_percent, 1);
+        p.ram_mb = perf_round(p.ram_mb, 0);
+    }
+    let mut by_ram = list;
+    by_ram.sort_by(|a, b| b.ram_mb.partial_cmp(&a.ram_mb).unwrap_or(std::cmp::Ordering::Equal));
+    by_ram.truncate(6);
+    for p in by_ram.iter_mut() {
+        p.cpu_percent = perf_round(p.cpu_percent, 1);
+        p.ram_mb = perf_round(p.ram_mb, 0);
+    }
+    Ok(PerfProcs { by_cpu, by_ram, process_count: count })
+}
+
+
 fn main() {
     #[cfg(target_os = "windows")]
     {
@@ -5060,7 +5352,7 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
         .manage(PdhState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));
