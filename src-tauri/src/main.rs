@@ -4423,6 +4423,628 @@ async fn game_icons(paths: Vec<String>) -> Result<std::collections::HashMap<Stri
     .map_err(|e| format!("Falha interna: {e}"))
 }
 
+// ================= Mouse e teclado: entrada do Windows, Raw Accel, mira e cor da tela =================
+
+#[cfg(target_os = "windows")]
+mod winapi_input {
+    use std::ffi::c_void;
+    #[link(name = "user32")]
+    extern "system" {
+        pub fn SystemParametersInfoW(ui_action: u32, ui_param: u32, pv_param: *mut c_void, f_win_ini: u32) -> i32;
+    }
+}
+
+#[derive(Serialize, Clone, PartialEq)]
+struct InputState {
+    mouse_speed: i32,
+    precision: bool,
+    kb_delay: i32,
+    kb_speed: i32,
+}
+
+#[cfg(target_os = "windows")]
+fn input_read_state() -> Result<InputState, String> {
+    use std::ffi::c_void;
+    use winapi_input::SystemParametersInfoW as spi;
+    unsafe {
+        let mut speed: i32 = 0;
+        if spi(0x0070, 0, &mut speed as *mut i32 as *mut c_void, 0) == 0 { return Err("Não consegui ler a velocidade do mouse".to_string()); }
+        let mut m: [i32; 3] = [0; 3];
+        if spi(0x0003, 0, m.as_mut_ptr() as *mut c_void, 0) == 0 { return Err("Não consegui ler a precisão do ponteiro".to_string()); }
+        let mut delay: u32 = 0;
+        if spi(0x0016, 0, &mut delay as *mut u32 as *mut c_void, 0) == 0 { return Err("Não consegui ler o atraso do teclado".to_string()); }
+        let mut kspeed: u32 = 0;
+        if spi(0x000A, 0, &mut kspeed as *mut u32 as *mut c_void, 0) == 0 { return Err("Não consegui ler a repetição do teclado".to_string()); }
+        Ok(InputState { mouse_speed: speed, precision: m[2] != 0, kb_delay: delay as i32, kb_speed: kspeed as i32 })
+    }
+}
+#[cfg(not(target_os = "windows"))]
+fn input_read_state() -> Result<InputState, String> { Err("Disponível apenas no Windows".to_string()) }
+
+/// Grava o valor no Windows e já avisa os programas (SPIF_UPDATEINIFILE | SPIF_SENDCHANGE).
+#[cfg(target_os = "windows")]
+fn input_write(what: &str, value: i32) -> bool {
+    use std::ffi::c_void;
+    use winapi_input::SystemParametersInfoW as spi;
+    unsafe {
+        match what {
+            "mouse" => spi(0x0071, 0, value as isize as *mut c_void, 3) != 0,
+            "precision" => {
+                let mut m: [i32; 3] = if value != 0 { [6, 10, 1] } else { [0, 0, 0] };
+                spi(0x0004, 0, m.as_mut_ptr() as *mut c_void, 3) != 0
+            }
+            "kb_delay" => spi(0x0017, value as u32, std::ptr::null_mut(), 3) != 0,
+            "kb_speed" => spi(0x000B, value as u32, std::ptr::null_mut(), 3) != 0,
+            _ => false,
+        }
+    }
+}
+#[cfg(not(target_os = "windows"))]
+fn input_write(_what: &str, _value: i32) -> bool { false }
+
+fn input_human(what: &str, st: &InputState) -> String {
+    match what {
+        "mouse" => format!("{}/20", st.mouse_speed),
+        "precision" => if st.precision { "Ligada".to_string() } else { "Desligada".to_string() },
+        "kb_delay" => ["250 ms", "500 ms", "750 ms", "1000 ms"].get(st.kb_delay as usize).map(|s| s.to_string()).unwrap_or_else(|| st.kb_delay.to_string()),
+        _ => format!("{:.1} caracteres/s", 2.5 + (st.kb_speed as f64) * 27.5 / 31.0),
+    }
+}
+
+#[tauri::command]
+async fn input_read() -> Result<InputState, String> {
+    tauri::async_runtime::spawn_blocking(input_read_state)
+        .await
+        .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+/// Uma etapa da otimização de entrada: "mouse", "precision", "kb_delay", "kb_speed" ou "verify".
+#[tauri::command]
+async fn input_step(step: String, mouse_speed: i32, precision: bool, kb_delay: i32, kb_speed: i32) -> Result<GameStepResult, String> {
+    if !(1..=20).contains(&mouse_speed) { return Err("Velocidade do mouse fora do limite (1 a 20)".to_string()); }
+    if !(0..=3).contains(&kb_delay) { return Err("Atraso do teclado fora do limite (0 a 3)".to_string()); }
+    if !(0..=31).contains(&kb_speed) { return Err("Repetição do teclado fora do limite (0 a 31)".to_string()); }
+    tauri::async_runtime::spawn_blocking(move || -> Result<GameStepResult, String> {
+        let before = input_read_state()?;
+        let want = InputState { mouse_speed, precision, kb_delay, kb_speed };
+        let labels = [("mouse", "Velocidade do ponteiro"), ("precision", "Precisão do ponteiro (aceleração do Windows)"), ("kb_delay", "Atraso do teclado"), ("kb_speed", "Repetição do teclado")];
+        match step.as_str() {
+            "mouse" | "precision" | "kb_delay" | "kb_speed" => {
+                let value = match step.as_str() { "mouse" => mouse_speed, "precision" => precision as i32, "kb_delay" => kb_delay, _ => kb_speed };
+                if !input_write(&step, value) { return Err("O Windows recusou a alteração".to_string()); }
+                let label = labels.iter().find(|(k, _)| *k == step).map(|(_, l)| *l).unwrap_or("");
+                let change = GameChange { label: label.to_string(), before: input_human(&step, &before), after: input_human(&step, &want) };
+                Ok(GameStepResult { message: format!("{label}: {} → {}", change.before, change.after), done: 1, total: 1, changes: vec![change], path: None })
+            }
+            "verify" => {
+                let now = input_read_state()?;
+                let mut ok = 0u32;
+                for (k, _) in labels.iter() {
+                    let same = match *k { "mouse" => now.mouse_speed == want.mouse_speed, "precision" => now.precision == want.precision, "kb_delay" => now.kb_delay == want.kb_delay, _ => now.kb_speed == want.kb_speed };
+                    if same { ok += 1; }
+                }
+                if ok == 4 {
+                    Ok(GameStepResult { message: "Conferi no Windows: 4 de 4 valores confirmados".into(), done: 4, total: 4, changes: vec![], path: None })
+                } else {
+                    Err(format!("Só {ok} de 4 valores ficaram gravados no Windows"))
+                }
+            }
+            _ => Err("Etapa desconhecida".to_string()),
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+// ---------- cor da tela (saturação, brilho, contraste) pelo próprio Windows ----------
+
+type ColorMatrix = [[f32; 5]; 5];
+
+#[cfg(target_os = "windows")]
+mod winmag {
+    use std::ffi::c_void;
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn LoadLibraryW(name: *const u16) -> *mut c_void;
+        fn GetProcAddress(module: *mut c_void, name: *const u8) -> *mut c_void;
+    }
+    pub type Matrix = [[f32; 5]; 5];
+    pub struct Mag {
+        pub init: unsafe extern "system" fn() -> i32,
+        pub set: unsafe extern "system" fn(*const Matrix) -> i32,
+        pub get: unsafe extern "system" fn(*mut Matrix) -> i32,
+        pub uninit: unsafe extern "system" fn() -> i32,
+    }
+    impl Mag {
+        /// Carrega a API de Lupa do Windows (Magnification.dll) só quando precisa.
+        pub fn load() -> Result<Mag, String> {
+            unsafe {
+                let name: Vec<u16> = "Magnification.dll\0".encode_utf16().collect();
+                let lib = LoadLibraryW(name.as_ptr());
+                if lib.is_null() { return Err("Não achei a Magnification.dll do Windows".to_string()); }
+                let find = |n: &str| -> Result<*mut c_void, String> {
+                    let c = format!("{n}\0");
+                    let p = GetProcAddress(lib, c.as_ptr());
+                    if p.is_null() { Err(format!("Função {n} não encontrada no Windows")) } else { Ok(p) }
+                };
+                Ok(Mag {
+                    init: std::mem::transmute(find("MagInitialize")?),
+                    set: std::mem::transmute(find("MagSetFullscreenColorEffect")?),
+                    get: std::mem::transmute(find("MagGetFullscreenColorEffect")?),
+                    uninit: std::mem::transmute(find("MagUninitialize")?),
+                })
+            }
+        }
+    }
+}
+
+enum DisplayMsg {
+    Init(std::sync::mpsc::Sender<Result<(), String>>),
+    Apply(ColorMatrix, std::sync::mpsc::Sender<Result<(), String>>),
+    Get(std::sync::mpsc::Sender<Result<ColorMatrix, String>>),
+    Reset(std::sync::mpsc::Sender<Result<(), String>>),
+}
+
+static DISPLAY_TX: std::sync::OnceLock<Mutex<Option<std::sync::mpsc::Sender<DisplayMsg>>>> = std::sync::OnceLock::new();
+
+fn display_identity() -> ColorMatrix {
+    let mut m = [[0f32; 5]; 5];
+    for i in 0..5 { m[i][i] = 1.0; }
+    m
+}
+
+/// Matriz de cor 5x5: saturação (cruzando os canais pelo brilho percebido), contraste e brilho.
+fn display_matrix(sat: f32, bright: f32, contrast: f32) -> ColorMatrix {
+    let luma = [0.2126f32, 0.7152, 0.0722];
+    let mut m = [[0f32; 5]; 5];
+    for i in 0..3 {
+        for j in 0..3 {
+            m[i][j] = ((1.0 - sat) * luma[i] + if i == j { sat } else { 0.0 }) * contrast;
+        }
+    }
+    for j in 0..3 { m[4][j] = 0.5 * (1.0 - contrast) + bright; }
+    m[3][3] = 1.0;
+    m[4][4] = 1.0;
+    m
+}
+
+/// O efeito de cor só dura enquanto a Lupa estiver inicializada, então uma thread própria
+/// (que fica viva) cuida disso.
+fn display_worker(rx: std::sync::mpsc::Receiver<DisplayMsg>) {
+    #[cfg(target_os = "windows")]
+    {
+        let mag = winmag::Mag::load();
+        let mut inited = false;
+        while let Ok(msg) = rx.recv() {
+            match msg {
+                DisplayMsg::Init(reply) => {
+                    let r = match &mag {
+                        Ok(m) => unsafe { if inited || (m.init)() != 0 { inited = true; Ok(()) } else { Err("O Windows recusou iniciar o motor de cor".to_string()) } },
+                        Err(e) => Err(e.clone()),
+                    };
+                    let _ = reply.send(r);
+                }
+                DisplayMsg::Apply(matrix, reply) => {
+                    let r = match &mag {
+                        Ok(m) => unsafe {
+                            if !inited && (m.init)() == 0 { Err("O Windows recusou iniciar o motor de cor".to_string()) }
+                            else { inited = true; if (m.set)(&matrix) != 0 { Ok(()) } else { Err("O Windows recusou aplicar o efeito de cor".to_string()) } }
+                        },
+                        Err(e) => Err(e.clone()),
+                    };
+                    let _ = reply.send(r);
+                }
+                DisplayMsg::Get(reply) => {
+                    let r = match &mag {
+                        Ok(m) => unsafe {
+                            let mut out: ColorMatrix = [[0f32; 5]; 5];
+                            if inited && (m.get)(&mut out) != 0 { Ok(out) } else { Err("Não consegui ler o efeito atual".to_string()) }
+                        },
+                        Err(e) => Err(e.clone()),
+                    };
+                    let _ = reply.send(r);
+                }
+                DisplayMsg::Reset(reply) => {
+                    let r = match &mag {
+                        Ok(m) => unsafe {
+                            if inited { let id = display_identity(); let _ = (m.set)(&id); let _ = (m.uninit)(); inited = false; }
+                            Ok(())
+                        },
+                        Err(e) => Err(e.clone()),
+                    };
+                    let _ = reply.send(r);
+                }
+            }
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    { let _ = rx; }
+}
+
+fn display_send<T: Send + 'static>(make: impl FnOnce(std::sync::mpsc::Sender<T>) -> DisplayMsg) -> Result<T, String> {
+    let cell = DISPLAY_TX.get_or_init(|| Mutex::new(None));
+    let (rtx, rrx) = std::sync::mpsc::channel::<T>();
+    {
+        let mut guard = cell.lock().map_err(|_| "Estado interno bloqueado".to_string())?;
+        if guard.is_none() {
+            let (tx, rx) = std::sync::mpsc::channel::<DisplayMsg>();
+            std::thread::spawn(move || display_worker(rx));
+            *guard = Some(tx);
+        }
+        guard.as_ref().unwrap().send(make(rtx)).map_err(|_| "Falha ao falar com o motor de cor".to_string())?;
+    }
+    rrx.recv_timeout(std::time::Duration::from_secs(5)).map_err(|_| "O Windows não respondeu a tempo".to_string())
+}
+
+/// Uma etapa do efeito de cor: "init", "apply", "verify" ou "reset".
+#[tauri::command]
+async fn display_step(step: String, saturation: f32, brightness: f32, contrast: f32) -> Result<GameStepResult, String> {
+    if !(0.0..=2.0).contains(&saturation) { return Err("Saturação fora do limite (0% a 200%)".to_string()); }
+    if !(-0.3..=0.3).contains(&brightness) { return Err("Brilho fora do limite (-30% a +30%)".to_string()); }
+    if !(0.5..=1.5).contains(&contrast) { return Err("Contraste fora do limite (50% a 150%)".to_string()); }
+    tauri::async_runtime::spawn_blocking(move || -> Result<GameStepResult, String> {
+        let done = |message: String, changes: Vec<GameChange>| Ok(GameStepResult { message, done: 1, total: 1, changes, path: None });
+        match step.as_str() {
+            "init" => { display_send(DisplayMsg::Init)??; done("Motor de cor do Windows iniciado".into(), vec![]) }
+            "apply" => {
+                let m = display_matrix(saturation, brightness, contrast);
+                display_send(|r| DisplayMsg::Apply(m, r))??;
+                let pct = |v: f32| format!("{}%", (v * 100.0).round() as i32);
+                let changes = vec![
+                    GameChange { label: "Saturação".into(), before: "100%".into(), after: pct(saturation) },
+                    GameChange { label: "Contraste".into(), before: "100%".into(), after: pct(contrast) },
+                    GameChange { label: "Brilho".into(), before: "0%".into(), after: format!("{:+}%", (brightness * 100.0).round() as i32) },
+                ];
+                done("Efeito de cor aplicado na tela inteira".into(), changes)
+            }
+            "verify" => {
+                let want = display_matrix(saturation, brightness, contrast);
+                let got = display_send(DisplayMsg::Get)??;
+                let mut ok = true;
+                for i in 0..5 { for j in 0..5 { if (want[i][j] - got[i][j]).abs() > 0.02 { ok = false; } } }
+                if ok { done("Conferi no Windows: o efeito está ativo como pedido".into(), vec![]) } else { Err("O Windows não manteve o efeito pedido".to_string()) }
+            }
+            "reset" => { display_send(DisplayMsg::Reset)??; done("Cores da tela voltaram ao normal".into(), vec![]) }
+            _ => Err("Etapa desconhecida".to_string()),
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+// ---------- overlay de mira (janela transparente, sempre no topo, que o clique atravessa) ----------
+
+const OVERLAY_LABEL: &str = "crosshair";
+const OVERLAY_SIZE: f64 = 420.0;
+
+/// Uma etapa do overlay: "create", "position", "clickthrough" ou "show".
+#[tauri::command]
+async fn overlay_step(app: tauri::AppHandle, step: String) -> Result<GameStepResult, String> {
+    let res = |message: &str| Ok(GameStepResult { message: message.to_string(), done: 1, total: 1, changes: vec![], path: None });
+    match step.as_str() {
+        "create" => {
+            if app.get_webview_window(OVERLAY_LABEL).is_some() { return res("Janela da mira já existia — reaproveitada"); }
+            tauri::WebviewWindowBuilder::new(&app, OVERLAY_LABEL, tauri::WebviewUrl::App("overlay.html".into()))
+                .title("FluxTweakers - Mira")
+                .inner_size(OVERLAY_SIZE, OVERLAY_SIZE)
+                .decorations(false)
+                .transparent(true)
+                .always_on_top(true)
+                .skip_taskbar(true)
+                .resizable(false)
+                .focused(false)
+                .shadow(false)
+                .visible(false)
+                .build()
+                .map_err(|e| format!("Não consegui criar a janela da mira: {e}"))?;
+            res("Janela transparente da mira criada")
+        }
+        "position" => {
+            let win = app.get_webview_window(OVERLAY_LABEL).ok_or_else(|| "A janela da mira não existe".to_string())?;
+            let mon = win.primary_monitor().map_err(|e| e.to_string())?.ok_or_else(|| "Não achei o monitor principal".to_string())?;
+            let side = (OVERLAY_SIZE * mon.scale_factor()) as i32;
+            let x = mon.position().x + (mon.size().width as i32 - side) / 2;
+            let y = mon.position().y + (mon.size().height as i32 - side) / 2;
+            win.set_position(tauri::PhysicalPosition::new(x, y)).map_err(|e| e.to_string())?;
+            res("Mira centralizada no monitor principal")
+        }
+        "clickthrough" => {
+            let win = app.get_webview_window(OVERLAY_LABEL).ok_or_else(|| "A janela da mira não existe".to_string())?;
+            win.set_ignore_cursor_events(true).map_err(|e| e.to_string())?;
+            win.set_always_on_top(true).map_err(|e| e.to_string())?;
+            res("Cliques atravessam a mira e ela fica sempre no topo")
+        }
+        "show" => {
+            let win = app.get_webview_window(OVERLAY_LABEL).ok_or_else(|| "A janela da mira não existe".to_string())?;
+            win.show().map_err(|e| e.to_string())?;
+            res("Mira visível na tela")
+        }
+        _ => Err("Etapa desconhecida".to_string()),
+    }
+}
+
+#[tauri::command]
+async fn overlay_close(app: tauri::AppHandle) -> Result<bool, String> {
+    if let Some(win) = app.get_webview_window(OVERLAY_LABEL) {
+        win.close().map_err(|e| e.to_string())?;
+        return Ok(true);
+    }
+    Ok(false)
+}
+
+#[tauri::command]
+async fn overlay_status(app: tauri::AppHandle) -> bool {
+    app.get_webview_window(OVERLAY_LABEL).is_some()
+}
+
+// ---------- Raw Accel ----------
+
+#[derive(Serialize)]
+struct RawAccelStatus {
+    folder: Option<String>,
+    has_settings: bool,
+    driver: String, // running | stopped | missing
+    version: Option<String>,
+    mode: Option<String>,
+    sens: Option<f64>,
+}
+
+#[derive(serde::Deserialize, Clone)]
+struct RaParams {
+    mode: String, // classic | linear | natural | off
+    sens: f64,
+    accel: f64,
+    cap: f64,
+    offset: f64,
+    power: f64,
+    limit: f64,
+}
+
+fn ra_dir_ok(d: &Path) -> bool { d.join("writer.exe").exists() && d.join("rawaccel.exe").exists() }
+
+fn ra_scan(dir: &Path, depth: u32) -> Option<PathBuf> {
+    if ra_dir_ok(dir) { return Some(dir.to_path_buf()); }
+    if depth == 0 { return None; }
+    for entry in fs::read_dir(dir).ok()?.flatten() {
+        let path = entry.path();
+        if !path.is_dir() { continue; }
+        let name = entry.file_name().to_string_lossy().to_lowercase().replace([' ', '_', '-'], "");
+        if name.contains("rawaccel") {
+            if let Some(found) = ra_scan(&path, depth - 1) { return Some(found); }
+        }
+    }
+    None
+}
+
+/// Procura a pasta do Raw Accel (a que tem rawaccel.exe e writer.exe) nos lugares comuns.
+fn ra_find_dir() -> Option<PathBuf> {
+    let mut roots: Vec<PathBuf> = Vec::new();
+    if let Some(up) = env_path("USERPROFILE") {
+        for n in ["Downloads", "Desktop", "Documents", "OneDrive\\Desktop", "OneDrive\\Documents", "OneDrive\\Área de Trabalho"] { roots.push(up.join(n)); }
+    }
+    for p in ["C:\\Program Files\\RawAccel", "C:\\Program Files (x86)\\RawAccel", "C:\\RawAccel", "D:\\RawAccel", "C:\\Program Files", "C:\\"] { roots.push(PathBuf::from(p)); }
+    for root in roots {
+        if let Some(found) = ra_scan(&root, 3) { return Some(found); }
+    }
+    None
+}
+
+fn ra_driver_state() -> String {
+    let mut cmd = Command::new("sc");
+    cmd.args(["query", "rawaccel"]);
+    #[cfg(target_os = "windows")]
+    { cmd.creation_flags(CREATE_NO_WINDOW); }
+    match cmd.output() {
+        Ok(o) if o.status.success() => {
+            let t = String::from_utf8_lossy(&o.stdout).to_uppercase();
+            if t.contains("RUNNING") { "running".to_string() } else { "stopped".to_string() }
+        }
+        _ => "missing".to_string(),
+    }
+}
+
+fn ra_read_json(dir: &Path) -> Option<serde_json::Value> {
+    let text = fs::read_to_string(dir.join("settings.json")).ok()?;
+    serde_json::from_str(text.trim_start_matches('\u{feff}')).ok()
+}
+
+fn ra_set_existing(obj: &mut serde_json::Map<String, serde_json::Value>, key: &str, value: serde_json::Value) -> Result<(), String> {
+    if !obj.contains_key(key) {
+        return Err(format!("o settings.json não tem o campo '{key}' — o Raw Accel instalado deve ser de outra versão (este app foi feito pra v1.7)"));
+    }
+    obj.insert(key.to_string(), value);
+    Ok(())
+}
+
+fn ra_validate(p: &RaParams) -> Result<(), String> {
+    if !(0.05..=10.0).contains(&p.sens) { return Err("Multiplicador de sensibilidade deve ficar entre 0,05 e 10".to_string()); }
+    match p.mode.as_str() {
+        "off" => Ok(()),
+        "classic" | "linear" => {
+            if p.accel <= 0.0 { return Err("A aceleração precisa ser maior que zero".to_string()); }
+            if p.mode == "classic" && p.power <= 1.0 { return Err("O Power do modo Classic precisa ser maior que 1".to_string()); }
+            if p.offset < 0.0 { return Err("O Input Offset não pode ser negativo".to_string()); }
+            if p.cap != 0.0 && p.cap < 1.0 { return Err("O Cap deve ser 0 (sem limite) ou pelo menos 1".to_string()); }
+            Ok(())
+        }
+        "natural" => {
+            if p.accel <= 0.0 { return Err("A aceleração precisa ser maior que zero".to_string()); }
+            if p.limit <= 1.0 { return Err("O limite do modo Natural precisa ser maior que 1".to_string()); }
+            if p.offset < 0.0 { return Err("O Input Offset não pode ser negativo".to_string()); }
+            Ok(())
+        }
+        _ => Err("Modo de aceleração desconhecido".to_string()),
+    }
+}
+
+/// Altera SÓ os campos de aceleração do perfil 1 no settings.json (formato do Raw Accel 1.7).
+fn ra_apply_params(v: &mut serde_json::Value, p: &RaParams) -> Result<(), String> {
+    use serde_json::json;
+    let prof = v.get_mut("profiles").and_then(|x| x.as_array_mut()).and_then(|a| a.get_mut(0)).and_then(|x| x.as_object_mut())
+        .ok_or_else(|| "o settings.json não tem nenhum perfil".to_string())?;
+    ra_set_existing(prof, "Output DPI", json!(p.sens * 1000.0))?;
+    for key in ["Whole or horizontal accel parameters", "Vertical accel parameters"] {
+        let args = prof.get_mut(key).and_then(|x| x.as_object_mut()).ok_or_else(|| format!("o settings.json não tem o campo '{key}'"))?;
+        match p.mode.as_str() {
+            "off" => { ra_set_existing(args, "mode", json!("noaccel"))?; }
+            "classic" | "linear" => {
+                ra_set_existing(args, "mode", json!("classic"))?;
+                ra_set_existing(args, "Gain / Velocity", json!(false))?;
+                ra_set_existing(args, "inputOffset", json!(p.offset))?;
+                ra_set_existing(args, "acceleration", json!(p.accel))?;
+                ra_set_existing(args, "exponentClassic", json!(if p.mode == "linear" { 2.0 } else { p.power }))?;
+                ra_set_existing(args, "Cap / Jump", json!({ "x": 0.0, "y": p.cap }))?;
+                ra_set_existing(args, "Cap mode", json!("output"))?;
+            }
+            _ => {
+                ra_set_existing(args, "mode", json!("natural"))?;
+                ra_set_existing(args, "Gain / Velocity", json!(false))?;
+                ra_set_existing(args, "inputOffset", json!(p.offset))?;
+                ra_set_existing(args, "decayRate", json!(p.accel))?;
+                ra_set_existing(args, "limit", json!(p.limit))?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Roda o writer.exe do Raw Accel (ele mostra uma janela de erro se algo estiver errado,
+/// então damos um tempo e, se ainda estiver aberto, fechamos e avisamos).
+fn ra_run_writer(dir: &Path) -> Result<(), String> {
+    let settings = dir.join("settings.json");
+    let mut child = Command::new(dir.join("writer.exe"))
+        .arg(&settings)
+        .current_dir(dir)
+        .spawn()
+        .map_err(|e| format!("Não consegui abrir o writer.exe do Raw Accel: {e}"))?;
+    let start = std::time::Instant::now();
+    loop {
+        match child.try_wait() {
+            Ok(Some(st)) => {
+                return if st.success() { Ok(()) } else { Err("O writer do Raw Accel recusou a configuração (ele fecha com erro quando o driver não está instalado/reiniciado ou o arquivo é inválido).".to_string()) };
+            }
+            Ok(None) => {
+                if start.elapsed() > std::time::Duration::from_secs(8) {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    return Err("O writer do Raw Accel abriu uma mensagem de erro e foi fechado. Confira se o driver está instalado (e se você reiniciou o PC depois de instalar).".to_string());
+                }
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
+            Err(e) => return Err(format!("Erro ao esperar o writer: {e}")),
+        }
+    }
+}
+
+#[tauri::command]
+async fn rawaccel_status() -> Result<RawAccelStatus, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        let dir = ra_find_dir();
+        let json = dir.as_ref().and_then(|d| ra_read_json(d));
+        let args = json.as_ref().and_then(|j| j.get("profiles")).and_then(|p| p.get(0)).and_then(|p| p.get("Whole or horizontal accel parameters"));
+        RawAccelStatus {
+            has_settings: json.is_some(),
+            version: json.as_ref().and_then(|j| j.get("version")).and_then(|v| v.as_str()).map(|s| s.to_string()),
+            mode: args.and_then(|a| a.get("mode")).and_then(|m| m.as_str()).map(|s| s.to_string()),
+            sens: json.as_ref().and_then(|j| j.get("profiles")).and_then(|p| p.get(0)).and_then(|p| p.get("Output DPI")).and_then(|v| v.as_f64()).map(|d| d / 1000.0),
+            driver: ra_driver_state(),
+            folder: dir.map(|d| d.to_string_lossy().to_string()),
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))
+}
+
+/// Uma etapa de aplicar a curva no Raw Accel: "locate", "backup", "build", "apply" ou "verify".
+#[tauri::command]
+async fn rawaccel_step(step: String, params: RaParams) -> Result<GameStepResult, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<GameStepResult, String> {
+        let ok = |message: String, path: Option<String>| Ok(GameStepResult { message, done: 1, total: 1, changes: vec![], path });
+        let dir = ra_find_dir().ok_or_else(|| "Não achei o Raw Accel neste PC. Baixe, extraia a pasta (em Downloads ou Documentos), rode o instalador do driver e reinicie o PC.".to_string())?;
+        let settings = dir.join("settings.json");
+        let backup = dir.join("settings.json.fluxtweakers-backup");
+        match step.as_str() {
+            "locate" => {
+                let drv = ra_driver_state();
+                let note = match drv.as_str() { "running" => "driver ativo", "stopped" => "driver instalado mas parado (reinicie o PC)", _ => "driver NÃO instalado — rode o installer.exe e reinicie" };
+                ok(format!("Raw Accel encontrado ({note})"), Some(dir.to_string_lossy().to_string()))
+            }
+            "backup" => {
+                if !settings.exists() {
+                    return Err("O Raw Accel ainda não criou o settings.json. Abra o rawaccel.exe uma vez (com o driver instalado), feche e tente de novo.".to_string());
+                }
+                if backup.exists() { ok("Cópia de segurança original já existia — foi mantida".into(), Some(backup.to_string_lossy().to_string())) }
+                else {
+                    fs::copy(&settings, &backup).map_err(|e| format!("Não consegui criar a cópia de segurança: {e}"))?;
+                    ok("Cópia de segurança do settings.json criada".into(), Some(backup.to_string_lossy().to_string()))
+                }
+            }
+            "build" => {
+                ra_validate(&params)?;
+                let mut json = ra_read_json(&dir).ok_or_else(|| "Não consegui ler o settings.json do Raw Accel".to_string())?;
+                ra_apply_params(&mut json, &params)?;
+                let text = serde_json::to_string_pretty(&json).map_err(|e| format!("Falha ao montar o JSON: {e}"))?;
+                fs::write(&settings, text).map_err(|e| format!("Não consegui salvar o settings.json: {e}"))?;
+                ok("Configuração montada e salva no settings.json".into(), Some(settings.to_string_lossy().to_string()))
+            }
+            "apply" => {
+                ra_run_writer(&dir).map_err(|e| { if backup.exists() { let _ = fs::copy(&backup, &settings); } e })?;
+                ok("Driver do Raw Accel atualizado".into(), None)
+            }
+            "verify" => {
+                let json = ra_read_json(&dir).ok_or_else(|| "Não consegui reler o settings.json".to_string())?;
+                let prof = json.get("profiles").and_then(|p| p.get(0)).ok_or_else(|| "settings.json sem perfil".to_string())?;
+                let mode = prof.get("Whole or horizontal accel parameters").and_then(|a| a.get("mode")).and_then(|m| m.as_str()).unwrap_or("");
+                let dpi = prof.get("Output DPI").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                let want_mode = match params.mode.as_str() { "off" => "noaccel", "natural" => "natural", _ => "classic" };
+                if mode != want_mode || (dpi - params.sens * 1000.0).abs() > 0.5 {
+                    return Err("O settings.json não ficou como pedido.".to_string());
+                }
+                if ra_driver_state() != "running" {
+                    return Err("O arquivo está certo, mas o driver do Raw Accel não está rodando — instale o driver e reinicie o PC.".to_string());
+                }
+                ok("Conferi: arquivo e driver estão com a curva pedida".into(), None)
+            }
+            _ => Err("Etapa desconhecida".to_string()),
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+#[tauri::command]
+async fn rawaccel_restore() -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(|| -> Result<String, String> {
+        let dir = ra_find_dir().ok_or_else(|| "Não achei o Raw Accel neste PC.".to_string())?;
+        let backup = dir.join("settings.json.fluxtweakers-backup");
+        if !backup.exists() { return Err("Ainda não existe cópia de segurança — aplique uma curva primeiro.".to_string()); }
+        fs::copy(&backup, dir.join("settings.json")).map_err(|e| format!("Não consegui restaurar: {e}"))?;
+        ra_run_writer(&dir)?;
+        Ok("Configuração original do Raw Accel restaurada".to_string())
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+#[tauri::command]
+fn rawaccel_open() -> Result<String, String> {
+    let dir = ra_find_dir().ok_or_else(|| "Não achei o Raw Accel neste PC.".to_string())?;
+    Command::new(dir.join("rawaccel.exe")).current_dir(&dir).spawn().map_err(|e| format!("Não consegui abrir o Raw Accel: {e}"))?;
+    Ok("Raw Accel aberto".to_string())
+}
+
+/// Abre no navegador só a página oficial de downloads do Raw Accel.
+#[tauri::command]
+fn rawaccel_open_download() -> Result<(), String> {
+    let url = "https://github.com/RawAccelOfficial/rawaccel/releases/latest";
+    let mut cmd = Command::new("rundll32");
+    cmd.args(["url.dll,FileProtocolHandler", url]);
+    #[cfg(target_os = "windows")]
+    { cmd.creation_flags(CREATE_NO_WINDOW); }
+    cmd.spawn().map_err(|e| format!("Não consegui abrir o navegador: {e}"))?;
+    Ok(())
+}
+
 fn main() {
     #[cfg(target_os = "windows")]
     {
@@ -4438,7 +5060,7 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
         .manage(PdhState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));

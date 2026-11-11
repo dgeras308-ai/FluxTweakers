@@ -2281,6 +2281,79 @@
   .gm-in:focus{border-color:var(--accent);}
   @media (max-width:1000px){.gm-hero{grid-template-columns:1fr;}.gm-seg{min-width:0;width:100%;}}
 
+
+  /* ===================== MOUSE E TECLADO ===================== */
+  .mk-wrap{display:flex;flex-direction:column;gap:16px;margin:4px 0 22px;}
+  .mk-hub{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;}
+  .mk-card{display:flex;align-items:center;gap:14px;padding:16px 16px;border-radius:15px;border:1px solid var(--item-border);background:var(--item-bg);color:var(--text);font-family:inherit;text-align:left;cursor:pointer;transition:all .15s;}
+  .mk-card:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--item-border));transform:translateY(-1px);}
+  .mk-card.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);box-shadow:0 0 0 1px var(--accent);}
+  .mk-card-ico{width:44px;height:44px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.2);border:1px solid var(--item-border);color:var(--muted);}
+  .mk-card.on .mk-card-ico{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent);}
+  .mk-card-ico svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .mk-card-txt{flex:1;min-width:0;}
+  .mk-card-txt small{display:block;font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--muted2);}
+  .mk-card-txt b{display:block;margin-top:3px;font-size:16px;font-weight:800;}
+  .mk-card-txt span{display:flex;align-items:center;gap:6px;margin-top:4px;font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mk-chev{width:16px;height:16px;fill:none;stroke:var(--muted2);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+  .mk-presets{display:flex;gap:8px;flex-wrap:wrap;}
+  .mk-cols{display:grid;grid-template-columns:1.2fr 1fr;gap:26px;align-items:start;margin:6px 0 20px;}
+  .mk-field{margin-bottom:18px;}
+  .mk-field-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px;}
+  .mk-field-top > span{font-size:12.5px;font-weight:700;color:var(--text);}
+  .mk-field-top em{font-style:normal;display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;margin-left:7px;border-radius:50%;border:1px solid var(--muted2);color:var(--muted2);font-size:9.5px;font-weight:800;cursor:help;vertical-align:1px;}
+  .mk-stepper{display:flex;align-items:center;gap:0;border:1px solid var(--item-border);border-radius:9px;overflow:hidden;background:rgba(0,0,0,.18);}
+  .mk-stepper button{width:28px;height:28px;border:0;background:transparent;color:var(--muted);font-size:15px;cursor:pointer;font-family:inherit;}
+  .mk-stepper button:hover{background:var(--item-bg-hover);color:var(--text);}
+  .mk-stepper output{min-width:68px;text-align:center;font-size:12px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;padding:0 6px;}
+  .mk-range{width:100%;height:5px;-webkit-appearance:none;appearance:none;border-radius:5px;background:rgba(255,255,255,.1);outline:none;}
+  .mk-range::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);cursor:pointer;box-shadow:0 0 0 1px var(--accent);}
+  .mk-toggle{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 14px;margin:0 0 18px;border-radius:12px;background:rgba(0,0,0,.14);border:1px solid var(--item-border);}
+  .mk-toggle b{display:block;font-size:12.8px;color:var(--text);}
+  .mk-toggle span{display:block;margin-top:2px;font-size:11.5px;color:var(--muted);line-height:1.4;}
+  .mk-now{padding:16px;border-radius:14px;background:rgba(0,0,0,.14);border:1px solid var(--item-border);}
+  .mk-now h4{margin:0 0 12px;font-size:12.5px;font-weight:800;color:var(--text);}
+  .mk-now-row{display:grid;grid-template-columns:1fr auto auto auto 44px;gap:9px;align-items:center;padding:8px 0;border-bottom:1px solid var(--item-border);font-size:12px;}
+  .mk-now-row:last-of-type{border-bottom:0;}
+  .mk-now-row span{color:var(--muted);font-weight:600;}
+  .mk-now-row em{font-style:normal;color:var(--muted2);}
+  .mk-now-row i{font-style:normal;color:var(--muted2);}
+  .mk-now-row b{color:var(--text);font-weight:800;}
+  .mk-now-row u{text-decoration:none;text-align:right;font-size:10.5px;font-weight:800;color:var(--accent);}
+  .mk-now-row.ok b,.mk-now-row.ok u{color:var(--ok);}
+  .mk-curve{margin:4px 0 20px;padding:16px;border-radius:14px;background:rgba(0,0,0,.14);border:1px solid var(--item-border);}
+  .mk-curve-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+  .mk-modeseg{grid-template-columns:repeat(4,auto);min-width:0;}
+  .mk-modeseg button{padding:7px 14px;}
+  .mk-chart{width:100%;}
+  .mk-svg{width:100%;height:auto;display:block;}
+  .mk-svg text{font-size:8.5px;fill:var(--muted2);font-family:inherit;}
+  .mk-svg .g{stroke:rgba(255,255,255,.07);stroke-width:1;}
+  .mk-svg .c{fill:none;stroke:var(--accent);stroke-width:2.4;stroke-linejoin:round;}
+  .mk-svg .o{stroke:var(--muted2);stroke-width:1;stroke-dasharray:4 4;}
+  .mk-svg .u{font-size:8.5px;}
+  .mk-fields2{display:grid;grid-template-columns:1fr 1fr;gap:6px 28px;margin-bottom:6px;}
+  .mk-fields-tight{margin-bottom:14px;}
+  .mk-note{margin:0 0 16px;padding:12px 14px;border-radius:11px;font-size:12.5px;line-height:1.55;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--item-border);}
+  .mk-note.warn{color:#f5c542;border-color:rgba(245,197,66,.35);background:rgba(245,197,66,.07);}
+  .mk-note b{color:inherit;}
+  .mk-note code,.gm-hint code{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;padding:1px 6px;border-radius:5px;background:rgba(0,0,0,.25);color:var(--text);}
+  .mk-xh-prev{text-align:center;}
+  .mk-xh-prev small{display:block;margin-top:9px;font-size:11px;color:var(--muted2);}
+  .mk-xh-stage{width:220px;height:220px;margin:0 auto;border-radius:14px;border:1px solid var(--item-border);background:
+    linear-gradient(45deg,rgba(255,255,255,.05) 25%,transparent 25%,transparent 75%,rgba(255,255,255,.05) 75%),
+    linear-gradient(45deg,rgba(255,255,255,.05) 25%,transparent 25%,transparent 75%,rgba(255,255,255,.05) 75%),#2a2f39;background-size:20px 20px;background-position:0 0,10px 10px;overflow:hidden;}
+  .mk-xhseg{grid-template-columns:repeat(5,1fr);min-width:0;margin-bottom:18px;}
+  .mk-xhseg button{padding:8px 4px;font-size:11.5px;}
+  .mk-color{width:100%;height:36px;padding:2px;border-radius:9px;border:1px solid var(--item-border);background:rgba(0,0,0,.18);cursor:pointer;}
+  .mk-imgbox{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+  .mk-imgbox span{font-size:11.5px;color:var(--muted2);}
+  .mk-toggles .mk-toggle{margin-bottom:10px;}
+  .mk-swatches{position:relative;width:260px;margin:0 auto;display:grid;grid-template-columns:repeat(8,1fr);border-radius:12px;overflow:hidden;border:1px solid var(--item-border);}
+  .mk-swatches i{height:96px;display:block;}
+  .mk-gradient{grid-column:1 / -1;height:46px;background:linear-gradient(90deg,#000,#fff);}
+  @media (max-width:1000px){.mk-cols{grid-template-columns:1fr;}.mk-fields2{grid-template-columns:1fr;}}
+
   /* ===================== LOGIN (layout dividido, sóbrio) ===================== */
   #loginScreen{display:block;padding:0;background:var(--bg);}
   #loginScreen::before,#loginScreen::after{display:none;}
@@ -4354,7 +4427,7 @@ reg add "%%a" /v "%%i" /t REG_DWORD /d 0 /f
 pause` },
   ]},
 
-  mouse: { label:"Mouse & Teclado", desc:"Remoção de aceleração e ajustes de acessibilidade que atrapalham o input.", items:[
+  mouse: { label:"Mouse & Teclado", special:"mouse", desc:"Remoção de aceleração e ajustes de acessibilidade que atrapalham o input.", items:[
     { id:"mk_threshold", group:"Mouse", title:"Desativar aceleração do ponteiro", desc:"Desliga o 'Enhance Pointer Precision' de verdade (MouseSpeed), zera os thresholds de aceleração e fixa a sensibilidade em 10.",
       cmd:`reg add "HKCU\\Control Panel\\Mouse" /v MouseSpeed /t REG_SZ /d "0" /f
 reg add "HKCU\\Control Panel\\Mouse" /v MouseThreshold1 /t REG_SZ /d "0" /f
@@ -6261,6 +6334,527 @@ async function loadDetectedGames(){
   }
 }
 
+// ================= Mouse e Teclado: entrada, Raw Accel, mira e cor da tela =================
+Object.assign(GM_PIPE_ICON, {
+  mouse:  '<rect x="6.5" y="3" width="11" height="18" rx="5.5"/><path d="M12 7v4"/>',
+  pointer:'<path d="M6 3l13 7-5.5 2L11 18z"/>',
+  key:    '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>',
+  timer:  '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/>',
+  accel:  '<path d="M3 20h18M3 20V4"/><path d="M5 17c4 0 5-1 7-5s4-6 8-6"/>',
+  aim:    '<circle cx="12" cy="12" r="8"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/>',
+  palette:'<circle cx="12" cy="12" r="9"/><circle cx="8" cy="10" r="1.1"/><circle cx="12" cy="7.5" r="1.1"/><circle cx="16" cy="10" r="1.1"/><path d="M12 21a2.5 2.5 0 0 1 0-5h2a3 3 0 0 0 0-6"/>',
+  save:   '<path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/>',
+  eye:    '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  find:   '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>',
+  layers: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
+});
+
+const MK_RA_DEFAULT = { mode:'classic', sens:1.0, accel:0.05, cap:3.6, offset:20, power:3.3, limit:2.0 };
+const MK_XH_DEFAULT = { style:'cross', color:'#00ff66', size:18, thick:2, gap:5, outline:true, opacity:100, dot:false, dotSize:3, x:0, y:0, img:null, enabled:false };
+const MK_DISP_DEFAULT = { sat:1, bright:0, contrast:1, active:false };
+const MK_RA_MODES = { classic:'Classic', linear:'Linear', natural:'Natural', off:'Desligado', noaccel:'Sem aceleração' };
+const MK_XH_STYLES = { cross:'Cruz', dot:'Ponto', circle:'Círculo', crossdot:'Cruz + ponto', image:'Imagem' };
+
+function mkLoad(key, def){
+  try{ const v = JSON.parse(safeLocalGet2(key) || 'null'); return v && typeof v === 'object' ? { ...def, ...v } : { ...def }; }catch(e){ return { ...def }; }
+}
+const MK = {
+  sel: 'input', running: false,
+  input: null, want: { mouse:11, precision:false, kbDelay:0, kbSpeed:31 },
+  ra: null, raP: mkLoad('fx_mk_ra', MK_RA_DEFAULT),
+  xh: mkLoad('fx_crosshair', MK_XH_DEFAULT), overlayOn: false,
+  disp: mkLoad('fx_display', MK_DISP_DEFAULT),
+};
+const MP = fxPipe('mkPipeRoot');
+const mkSave = (key, obj) => safeLocalSet2(key, JSON.stringify(obj));
+const mkNum = (v, d) => Number(v).toFixed(d).replace('.', ',');
+
+// ---------- curva de aceleração (mesma conta do Raw Accel 1.7, modo sensibilidade) ----------
+function mkRaFactor(p, x){
+  if(p.mode === 'off' || x <= p.offset) return 1;
+  if(p.mode === 'natural'){
+    const lim = p.limit - 1; if(lim <= 0) return 1;
+    const accel = p.accel / lim, ox = p.offset - x, decay = Math.exp(accel * ox);
+    return lim * (1 - (p.offset - decay * ox) / x) + 1;
+  }
+  const e = p.mode === 'linear' ? 2 : p.power;
+  let v = Math.pow(p.accel, e - 1) * Math.pow(x - p.offset, e) / x;
+  if(p.cap > 0) v = Math.min(v, p.cap - 1);
+  return v + 1;
+}
+function mkCurveSvg(p){
+  const W = 640, H = 260, L = 46, R = 14, T = 12, B = 38, XM = 60;
+  const pts = [];
+  let ymax = p.sens * 1.25, ymin = p.sens * 0.8;
+  for(let i = 0; i <= 240; i++){ const x = XM * i / 240, y = p.sens * mkRaFactor(p, Math.max(x, 1e-6)); pts.push([x, y]); ymax = Math.max(ymax, y); ymin = Math.min(ymin, y); }
+  ymax = Math.ceil(ymax * 10) / 10 + 0.1; ymin = Math.max(0, Math.floor(ymin * 10) / 10 - 0.1);
+  const sx = x => L + (W - L - R) * x / XM, sy = y => T + (H - T - B) * (1 - (y - ymin) / (ymax - ymin));
+  let grid = '';
+  for(let i = 0; i <= 4; i++){ const y = ymin + (ymax - ymin) * i / 4; grid += `<line x1="${L}" x2="${W - R}" y1="${sy(y)}" y2="${sy(y)}" class="g"/><text x="${L - 8}" y="${sy(y) + 4}" text-anchor="end">${y.toFixed(2).replace('.', ',')}</text>`; }
+  for(let i = 0; i <= 4; i++){ const x = XM * i / 4; grid += `<line y1="${T}" y2="${H - B}" x1="${sx(x)}" x2="${sx(x)}" class="g"/><text x="${sx(x)}" y="${H - 20}" text-anchor="middle">${x}</text>`; }
+  const d = pts.map(([x, y], i) => (i ? 'L' : 'M') + sx(x).toFixed(1) + ' ' + sy(y).toFixed(1)).join('');
+  const off = p.mode !== 'off' && p.offset > 0 && p.offset < XM ? `<line x1="${sx(p.offset)}" x2="${sx(p.offset)}" y1="${T}" y2="${H - B}" class="o"/>` : '';
+  return `<svg viewBox="0 0 ${W} ${H}" class="mk-svg" role="img" aria-label="Curva de aceleração">${grid}${off}<path d="${d}" class="c"/><text x="${(L + W - R) / 2}" y="${H - 4}" text-anchor="middle" class="u">velocidade de entrada (counts/ms)</text></svg>`;
+}
+
+// ---------- mira (um único desenho, usado na prévia e na janela do overlay) ----------
+function mkCrosshairSvg(c, view){
+  const cx = 210 + (c.x || 0), cy = 210 + (c.y || 0), col = c.color, t = c.thick, g = c.gap, s = c.size;
+  const out = c.outline ? '#000' : null;
+  const line = (x1, y1, x2, y2) => (out ? `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${out}" stroke-width="${t + 2}" stroke-linecap="butt"/>` : '') + `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="${t}" stroke-linecap="butt"/>`;
+  const dot = r => (out ? `<circle cx="${cx}" cy="${cy}" r="${r + 1}" fill="${out}"/>` : '') + `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${col}"/>`;
+  let body = '';
+  const cross = () => line(cx - g - s, cy, cx - g, cy) + line(cx + g, cy, cx + g + s, cy) + line(cx, cy - g - s, cx, cy - g) + line(cx, cy + g, cx, cy + g + s);
+  if(c.style === 'cross' || c.style === 'crossdot') body += cross();
+  if(c.style === 'circle') body += (out ? `<circle cx="${cx}" cy="${cy}" r="${s}" fill="none" stroke="${out}" stroke-width="${t + 2}"/>` : '') + `<circle cx="${cx}" cy="${cy}" r="${s}" fill="none" stroke="${col}" stroke-width="${t}"/>`;
+  if(c.style === 'dot') body += dot(Math.max(1, s / 4));
+  if(c.style === 'crossdot' || (c.dot && c.style !== 'dot' && c.style !== 'image')) body += dot(c.dotSize);
+  if(c.style === 'image' && c.img){ const h = s * 2; body += `<image href="${c.img}" x="${cx - h / 2}" y="${cy - h / 2}" width="${h}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`; }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${view || '0 0 420 420'}" width="100%" height="100%"><g opacity="${(c.opacity || 100) / 100}">${body}</g></svg>`;
+}
+
+// ---------- fluxo animado genérico (mesmo visual dos outros painéis) ----------
+async function mkRunFlow(title, sub, steps, finalMsg){
+  if(MK.running) return false;
+  if(!window.__TAURI__){ showToast('Só funciona no app instalado'); return false; }
+  MK.running = true; mkRenderAll(); mkRenderChanges(null);
+  MP.mount(title, sub, steps, '');
+  MP.msg('Começando...', true);
+  document.getElementById('mkPipeRoot')?.scrollIntoView({ behavior:'smooth', block:'center' });
+  await MP.start();
+  const all = [];
+  let ok = true;
+  for(let i = 0; i < steps.length; i++){
+    const st = steps[i];
+    await MP.enter(i + 1); MP.msg(st.msg, true);
+    const t0 = Date.now();
+    let r;
+    try{ r = await st.call(); }
+    catch(err){ MP.fail(i + 1, 'falhou'); MP.msg(gmEsc(String(err))); showToast(String(err), 'error'); ok = false; break; }
+    const wait = 850 - (Date.now() - t0); if(wait > 0) await gmSleep(wait);
+    if(r){ if(r.changes) all.push(...r.changes); MP.count(i + 1, r.total ? `${r.done}/${r.total}` : '✓'); MP.msg(gmEsc(r.message)); }
+    MP.finish(i + 1);
+    await gmSleep(300);
+  }
+  if(ok){ await MP.end(); MP.msg(finalMsg); }
+  mkRenderChanges(all, ok ? null : null);
+  MK.running = false; mkRenderAll();
+  return ok;
+}
+
+function mkRenderChanges(changes){
+  const root = document.getElementById('mkChanges');
+  if(!root) return;
+  if(!changes || !changes.length){ root.innerHTML = ''; return; }
+  root.innerHTML = `<div class="gm-card gm-changes"><div class="gm-section-head"><div><h3>O que mudou</h3></div></div>
+    <div class="gm-diff">${changes.map((c, i) => `<div class="gm-diff-row" style="animation-delay:${i * 90}ms"><span>${gmEsc(c.label)}</span><em>${gmEsc(c.before)}</em><i>→</i><b class="${c.before === c.after ? 'same' : ''}">${gmEsc(c.after)}</b></div>`).join('')}</div></div>`;
+}
+
+// ---------- hub (4 quadros) ----------
+function mkRaStatusText(){
+  const r = MK.ra;
+  if(!window.__TAURI__) return ['Só no app instalado', false];
+  if(!r) return ['Procurando...', false];
+  if(!r.folder) return ['Não instalado', false];
+  if(r.driver === 'running') return [`Driver ativo${r.mode ? ' · ' + (MK_RA_MODES[r.mode] || r.mode) : ''}`, true];
+  return ['Pasta encontrada · driver não está rodando', false];
+}
+function mkRenderHub(){
+  const hub = document.getElementById('mkHub');
+  if(!hub) return;
+  const i = MK.input, ra = mkRaStatusText();
+  const cards = [
+    { id:'input', k:'Teclado e mouse', n:'Entrada', ico:'mouse',
+      st: i ? [`${i.mouse_speed}/20 · precisão ${i.precision ? 'ligada' : 'desligada'}`, !i.precision] : ['Lendo o Windows...', false] },
+    { id:'ra', k:'Aceleração de mouse', n:'Raw Accel', ico:'accel', st: ra },
+    { id:'xh', k:'Mira por imagem', n:'Overlay de mira', ico:'aim', st: MK.overlayOn ? ['Ligado', true] : ['Desligado', false] },
+    { id:'disp', k:'Saturação · cor · brilho', n:'Display', ico:'palette', st: MK.disp.active ? [`Saturação ${Math.round(MK.disp.sat * 100)}%`, true] : ['Padrão', false] },
+  ];
+  hub.innerHTML = cards.map(c => `<button type="button" class="mk-card${MK.sel === c.id ? ' on' : ''}" data-mk-sel="${c.id}">
+      <div class="mk-card-ico"><svg viewBox="0 0 24 24">${GM_PIPE_ICON[c.ico]}</svg></div>
+      <div class="mk-card-txt"><small>${c.k}</small><b>${c.n}</b><span><i class="gm-dot${c.st[1] ? ' ok' : ''}"></i>${gmEsc(c.st[0])}</span></div>
+      <svg class="mk-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+    </button>`).join('');
+}
+
+// ---------- componentes de campo ----------
+function mkSlider(scope, field, label, min, max, step, value, fmt, hint){
+  return `<div class="mk-field">
+    <div class="mk-field-top"><span>${label}${hint ? `<em title="${gmEsc(hint)}">?</em>` : ''}</span>
+      <div class="mk-stepper"><button type="button" data-mk-step="${scope}.${field}" data-dir="-1" aria-label="diminuir">−</button><output data-mk-val="${scope}.${field}">${fmt(value)}</output><button type="button" data-mk-step="${scope}.${field}" data-dir="1" aria-label="aumentar">+</button></div></div>
+    <input type="range" class="mk-range" data-mk-field="${scope}.${field}" min="${min}" max="${max}" step="${step}" value="${value}">
+  </div>`;
+}
+const mkToggle = (scope, field, label, sub, on) => `<div class="mk-toggle"><div><b>${label}</b><span>${sub}</span></div>
+  <label class="switch"><input type="checkbox" data-mk-field="${scope}.${field}" ${on ? 'checked' : ''}><span class="track"></span><span class="thumb"></span></label></div>`;
+const MK_RANGES = {
+  'input.mouse': [1, 20, 1], 'input.kbDelay': [0, 3, 1], 'input.kbSpeed': [0, 31, 1],
+  'ra.sens': [0.05, 5, 0.01], 'ra.accel': [0.001, 0.5, 0.001], 'ra.accelNat': [0.005, 1, 0.005], 'ra.cap': [0, 10, 0.1], 'ra.limit': [1.05, 10, 0.05], 'ra.offset': [0, 60, 1], 'ra.power': [1.1, 6, 0.1],
+  'xh.size': [4, 120, 1], 'xh.thick': [1, 10, 1], 'xh.gap': [0, 40, 1], 'xh.opacity': [20, 100, 1], 'xh.dotSize': [1, 12, 1], 'xh.x': [-120, 120, 1], 'xh.y': [-120, 120, 1],
+  'disp.sat': [0, 2, 0.01], 'disp.contrast': [0.5, 1.5, 0.01], 'disp.bright': [-0.3, 0.3, 0.01],
+};
+
+// ---------- editor: ENTRADA ----------
+function mkRenderInput(){
+  const w = MK.want, cur = MK.input;
+  const delayTxt = v => ['250 ms', '500 ms', '750 ms', '1000 ms'][v];
+  const rateTxt = v => (2.5 + v * 27.5 / 31).toFixed(1).replace('.', ',') + ' car/s';
+  const rows = cur ? [
+    ['Velocidade do ponteiro', `${cur.mouse_speed}/20`, `${w.mouse}/20`, cur.mouse_speed === w.mouse],
+    ['Precisão do ponteiro', cur.precision ? 'Ligada' : 'Desligada', w.precision ? 'Ligada' : 'Desligada', cur.precision === w.precision],
+    ['Atraso do teclado', delayTxt(cur.kb_delay), delayTxt(w.kbDelay), cur.kb_delay === w.kbDelay],
+    ['Repetição do teclado', rateTxt(cur.kb_speed), rateTxt(w.kbSpeed), cur.kb_speed === w.kbSpeed],
+  ] : [];
+  return `<div class="gm-card">
+    <div class="gm-section-head"><div><h3>Entrada do Windows</h3><p>Ajusta o mouse e o teclado direto no Windows — o mesmo que você mexeria no Painel de Controle, só que de uma vez e com conferência no final.</p></div>
+      <div class="mk-presets"><button type="button" class="gm-btn sm" data-mk-act="input-comp">Competitivo</button><button type="button" class="gm-btn sm" data-mk-act="input-win">Padrão do Windows</button></div></div>
+    <div class="mk-cols">
+      <div>
+        ${mkSlider('input', 'mouse', 'Velocidade do ponteiro', 1, 20, 1, w.mouse, v => v + '/20', '11 = 1:1 com o movimento da mão (sem multiplicar)')}
+        ${mkToggle('input', 'precision', 'Precisão do ponteiro', 'É a aceleração do Windows. Pra jogo, o ideal é desligar.', w.precision)}
+        ${mkSlider('input', 'kbDelay', 'Atraso do teclado', 0, 3, 1, w.kbDelay, delayTxt, 'Tempo segurando uma tecla até ela começar a repetir. 0 = mais curto')}
+        ${mkSlider('input', 'kbSpeed', 'Repetição do teclado', 0, 31, 1, w.kbSpeed, rateTxt, 'Velocidade com que a tecla repete enquanto você segura')}
+      </div>
+      <div class="mk-now"><h4>Agora no Windows</h4>
+        ${rows.length ? rows.map(r => `<div class="mk-now-row${r[3] ? ' ok' : ''}"><span>${r[0]}</span><em>${r[1]}</em><i>→</i><b>${r[2]}</b><u>${r[3] ? '✓' : 'mudar'}</u></div>`).join('') : '<p class="gm-hint">Lendo as configurações do Windows...</p>'}
+        <p class="gm-hint">As mudanças valem na hora e continuam depois de reiniciar.</p></div>
+    </div>
+    <div class="gm-an-actions"><button type="button" class="gm-btn primary" data-mk-act="input-apply" ${MK.running ? 'disabled' : ''}>${GM_ICON.bolt}${MK.running ? 'Aplicando...' : 'Aplicar no Windows'}</button></div>
+  </div>`;
+}
+
+// ---------- editor: RAW ACCEL ----------
+function mkRaFields(p){
+  const nat = p.mode === 'natural';
+  let h = mkSlider('ra', 'sens', 'Sens multiplier', 0.05, 5, 0.01, p.sens, v => mkNum(v, 2) + 'x', 'Multiplica a sensibilidade toda (1,00 = igual à atual)');
+  if(p.mode === 'off') return h;
+  h += mkSlider('ra', nat ? 'accelNat' : 'accel', nat ? 'Aceleração (decay)' : 'Gain / Aceleração', nat ? 0.005 : 0.001, nat ? 1 : 0.5, nat ? 0.005 : 0.001, p.accel, v => mkNum(v, 3), nat ? 'Quão rápido a curva sobe até o limite' : 'Quanto a sensibilidade cresce com a velocidade');
+  h += nat ? mkSlider('ra', 'limit', 'Cap / Limite', 1.05, 10, 0.05, p.limit, v => mkNum(v, 2) + 'x', 'Sensibilidade máxima que a curva alcança')
+           : mkSlider('ra', 'cap', 'Cap / Limite', 0, 10, 0.1, p.cap, v => v > 0 ? mkNum(v, 1) + 'x' : 'sem limite', 'Sensibilidade máxima (0 = sem limite)');
+  h += mkSlider('ra', 'offset', 'Input offset', 0, 60, 1, p.offset, v => v + '/ms', 'Abaixo dessa velocidade o mouse não acelera');
+  if(p.mode === 'classic') h += mkSlider('ra', 'power', 'Power', 1.1, 6, 0.1, p.power, v => mkNum(v, 1), 'Formato da curva: quanto maior, mais brusca a subida');
+  return h;
+}
+function mkRenderRa(){
+  const p = MK.raP, r = MK.ra;
+  const found = !!(r && r.folder);
+  const driverNote = !r ? 'Procurando o Raw Accel neste PC...' : !r.folder ? 'Não achei o Raw Accel neste PC.' : r.driver === 'running' ? 'Raw Accel encontrado e o driver está ativo.' : r.driver === 'stopped' ? 'Raw Accel encontrado, mas o driver está parado — reinicie o PC.' : 'Raw Accel encontrado, mas o driver NÃO está instalado — rode o installer.exe da pasta dele e reinicie o PC.';
+  const missing = r && !r.folder ? `<div class="mk-note warn"><b>Raw Accel não instalado.</b> É um driver gratuito e de código aberto. Baixe o zip, extraia numa pasta (Downloads ou Documentos), rode o <code>installer.exe</code> e reinicie o PC. Depois volte aqui e clique em "Procurar de novo".</div>` : '';
+  return `<div class="gm-card">
+    <div class="gm-section-head"><div><h3>Raw Accel</h3><p>${driverNote}${r && r.version ? ` Versão do arquivo: <b>${gmEsc(r.version)}</b>.` : ''}</p></div>
+      <div class="mk-presets">
+        <button type="button" class="gm-btn sm" data-mk-act="ra-open" ${found ? '' : 'disabled'}>Abrir Raw Accel</button>
+        <button type="button" class="gm-btn sm" data-mk-act="ra-download">Baixar Raw Accel</button>
+        <button type="button" class="gm-btn sm" data-mk-act="ra-rescan">Procurar de novo</button>
+      </div></div>
+    ${missing}
+    <div class="mk-curve">
+      <div class="mk-curve-top"><span class="gm-label">Editor de curva</span>
+        <div class="gm-seg mk-modeseg">${Object.entries(MK_RA_MODES).filter(([k]) => k !== 'noaccel').map(([k, v]) => `<button type="button" data-mk-act="ra-mode" data-val="${k}" class="${p.mode === k ? 'on' : ''}">${v}</button>`).join('')}</div></div>
+      <div id="mkChart" class="mk-chart">${mkCurveSvg(p)}</div>
+    </div>
+    <div class="mk-fields2" id="mkRaFields">${mkRaFields(p)}</div>
+    <div class="gm-an-actions"><button type="button" class="gm-btn primary" data-mk-act="ra-apply" ${MK.running || !found ? 'disabled' : ''}>${GM_ICON.bolt}${MK.running ? 'Aplicando...' : 'Aplicar no Raw Accel'}</button>
+      <button type="button" class="gm-btn" data-mk-act="ra-restore" ${MK.running || !found ? 'disabled' : ''}>${GM_ICON.undo}Restaurar original</button></div>
+    <p class="gm-hint">Altera só os campos de aceleração do perfil 1 do <code>settings.json</code> (com cópia de segurança ao lado) e manda o driver recarregar. A curva acima usa a mesma conta do Raw Accel 1.7.</p>
+  </div>`;
+}
+
+// ---------- editor: MIRA ----------
+function mkXhSync(){
+  const c = MK.xh;
+  mkSave('fx_crosshair', c);
+  safeLocalSet2('fx_crosshair_svg', MK.overlayOn || c.enabled ? mkCrosshairSvg(c) : '');
+  const pv = document.getElementById('mkXhPreview');
+  if(pv) pv.innerHTML = mkCrosshairSvg(c, '110 110 200 200');
+}
+function mkRenderXh(){
+  const c = MK.xh;
+  const img = c.style === 'image';
+  return `<div class="gm-card">
+    <div class="gm-section-head"><div><h3>Overlay de mira</h3><p>Uma mira que fica por cima do jogo, no centro da tela. O clique atravessa ela, então não atrapalha em nada. Funciona em jogos em janela ou tela cheia sem bordas.</p></div>
+      <div class="mk-presets"><button type="button" class="gm-btn sm" data-mk-act="xh-preset" data-val="green">Cruz verde</button><button type="button" class="gm-btn sm" data-mk-act="xh-preset" data-val="dot">Ponto vermelho</button><button type="button" class="gm-btn sm" data-mk-act="xh-preset" data-val="circle">Círculo ciano</button></div></div>
+    <div class="mk-cols">
+      <div class="mk-xh-prev"><div class="mk-xh-stage" id="mkXhPreview">${mkCrosshairSvg(c, '110 110 200 200')}</div><small>Prévia no tamanho real</small></div>
+      <div>
+        <div class="gm-seg mk-xhseg">${Object.entries(MK_XH_STYLES).map(([k, v]) => `<button type="button" data-mk-act="xh-style" data-val="${k}" class="${c.style === k ? 'on' : ''}">${v}</button>`).join('')}</div>
+        <div class="mk-fields2 mk-fields-tight">
+          <div class="mk-field"><div class="mk-field-top"><span>Cor</span></div><input type="color" class="mk-color" data-mk-field="xh.color" value="${c.color}"></div>
+          ${mkSlider('xh', 'size', img ? 'Tamanho da imagem' : 'Tamanho', 4, 120, 1, c.size, v => v + ' px')}
+          ${img ? '' : mkSlider('xh', 'thick', 'Espessura', 1, 10, 1, c.thick, v => v + ' px')}
+          ${img || c.style === 'circle' || c.style === 'dot' ? '' : mkSlider('xh', 'gap', 'Espaço central', 0, 40, 1, c.gap, v => v + ' px')}
+          ${mkSlider('xh', 'opacity', 'Opacidade', 20, 100, 1, c.opacity, v => v + '%')}
+          ${mkSlider('xh', 'x', 'Deslocar X', -120, 120, 1, c.x, v => (v > 0 ? '+' : '') + v)}
+          ${mkSlider('xh', 'y', 'Deslocar Y', -120, 120, 1, c.y, v => (v > 0 ? '+' : '') + v)}
+        </div>
+        ${img ? `<div class="mk-imgbox"><input type="file" id="mkXhFile" accept="image/png,image/jpeg,image/webp" hidden><button type="button" class="gm-btn sm" data-mk-act="xh-pick">${c.img ? 'Trocar imagem' : 'Escolher imagem da mira'}</button>${c.img ? '<button type="button" class="gm-btn sm" data-mk-act="xh-clear">Remover</button>' : ''}<span>PNG com fundo transparente funciona melhor.</span></div>`
+          : `<div class="mk-toggles">${mkToggle('xh', 'outline', 'Contorno preto', 'Ajuda a enxergar a mira em fundo claro.', c.outline)}${c.style === 'circle' || c.style === 'cross' ? mkToggle('xh', 'dot', 'Ponto no centro', 'Adiciona um ponto no meio da mira.', c.dot) : ''}</div>`}
+      </div>
+    </div>
+    <div class="gm-an-actions">
+      <button type="button" class="gm-btn primary" data-mk-act="xh-on" ${MK.running || MK.overlayOn ? 'disabled' : ''}>${GM_ICON.bolt}${MK.overlayOn ? 'Mira ligada' : 'Ligar a mira'}</button>
+      <button type="button" class="gm-btn" data-mk-act="xh-off" ${MK.running || !MK.overlayOn ? 'disabled' : ''}>Desligar</button></div>
+    <p class="gm-hint">Alguns jogos com anti-cheat (principalmente os competitivos) podem não gostar de qualquer overlay por cima da tela. Se tiver dúvida, confira as regras do jogo antes de usar.</p>
+  </div>`;
+}
+
+// ---------- editor: DISPLAY ----------
+function mkRenderDisp(){
+  const d = MK.disp;
+  const filter = `saturate(${d.sat}) contrast(${d.contrast}) brightness(${1 + d.bright})`;
+  const bars = ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#00acc1', '#1e88e5', '#8e24aa', '#ec407a'];
+  return `<div class="gm-card">
+    <div class="gm-section-head"><div><h3>Display</h3><p>Saturação, contraste e brilho feitos pelo próprio FluxTweakers, usando o motor de cor do Windows — não precisa de programa extra nem do painel da placa de vídeo.</p></div>
+      <div class="mk-presets"><button type="button" class="gm-btn sm" data-mk-act="disp-preset" data-val="normal">Padrão</button><button type="button" class="gm-btn sm" data-mk-act="disp-preset" data-val="vivid">Vibrante</button><button type="button" class="gm-btn sm" data-mk-act="disp-preset" data-val="comp">Competitivo</button></div></div>
+    <div class="mk-cols">
+      <div class="mk-xh-prev"><div class="mk-swatches" id="mkSwatches" style="filter:${filter}">${bars.map(c => `<i style="background:${c}"></i>`).join('')}<div class="mk-gradient"></div></div><small>Prévia aproximada das cores</small></div>
+      <div class="mk-fields2 mk-fields-tight">
+        ${mkSlider('disp', 'sat', 'Saturação', 0, 2, 0.01, d.sat, v => Math.round(v * 100) + '%', '100% = normal. 0% deixa a tela em preto e branco.')}
+        ${mkSlider('disp', 'contrast', 'Contraste', 0.5, 1.5, 0.01, d.contrast, v => Math.round(v * 100) + '%')}
+        ${mkSlider('disp', 'bright', 'Brilho', -0.3, 0.3, 0.01, d.bright, v => (v > 0 ? '+' : '') + Math.round(v * 100) + '%')}
+      </div>
+    </div>
+    <div class="gm-an-actions"><button type="button" class="gm-btn primary" data-mk-act="disp-apply" ${MK.running ? 'disabled' : ''}>${GM_ICON.bolt}${MK.running ? 'Aplicando...' : 'Aplicar na tela'}</button>
+      <button type="button" class="gm-btn" data-mk-act="disp-reset" ${MK.running || !d.active ? 'disabled' : ''}>${GM_ICON.undo}Voltar ao normal</button></div>
+    <p class="gm-hint">O efeito vale pra tela inteira enquanto o FluxTweakers estiver aberto (e volta ao normal quando você fecha o app). Jogos em tela cheia exclusiva podem ignorar — em "tela cheia sem bordas" funciona.</p>
+  </div>`;
+}
+
+function mkRenderEditor(){
+  const root = document.getElementById('mkEditor');
+  if(!root) return;
+  root.innerHTML = MK.sel === 'input' ? mkRenderInput() : MK.sel === 'ra' ? mkRenderRa() : MK.sel === 'xh' ? mkRenderXh() : mkRenderDisp();
+}
+function mkRenderAll(){ mkRenderHub(); mkRenderEditor(); }
+
+// ---------- carregamento do estado real ----------
+async function mkLoadInput(){
+  if(!window.__TAURI__) return;
+  try{
+    MK.input = await window.__TAURI__.core.invoke('input_read');
+    if(!MK.inputInit){ MK.inputInit = true; }
+  }catch(err){ MK.input = null; }
+  mkRenderAll();
+}
+async function mkLoadRa(){
+  if(!window.__TAURI__) return;
+  try{ MK.ra = await window.__TAURI__.core.invoke('rawaccel_status'); }catch(err){ MK.ra = { folder:null, driver:'missing', has_settings:false }; }
+  mkRenderAll();
+}
+
+// ---------- ações ----------
+const mkInv = (cmd, args) => window.__TAURI__.core.invoke(cmd, args);
+
+async function mkApplyInput(){
+  const w = MK.want;
+  const a = { mouseSpeed: w.mouse, precision: w.precision, kbDelay: w.kbDelay, kbSpeed: w.kbSpeed };
+  const step = id => () => mkInv('input_step', { step: id, ...a });
+  const ok = await mkRunFlow('Otimizando mouse e teclado', 'Cada etapa grava no Windows e é conferida no final', [
+    { id:'read',      label:'Lendo o Windows',  icon:'cpu',     msg:'Lendo as configurações atuais do <b>Windows</b>...', call: async () => { const s = await mkInv('input_read'); return { message:`Agora: mouse ${s.mouse_speed}/20, precisão ${s.precision ? 'ligada' : 'desligada'}`, done:1, total:1 }; } },
+    { id:'mouse',     label:'Ponteiro',         icon:'mouse',   msg:`Ajustando a <b>velocidade do ponteiro</b> pra ${w.mouse}/20...`, call: step('mouse') },
+    { id:'precision', label:'Precisão',         icon:'pointer', msg:`${w.precision ? 'Ligando' : 'Desligando'} a <b>precisão do ponteiro</b> (aceleração do Windows)...`, call: step('precision') },
+    { id:'kb_delay',  label:'Atraso do teclado',icon:'timer',   msg:'Ajustando o <b>atraso</b> antes da tecla repetir...', call: step('kb_delay') },
+    { id:'kb_speed',  label:'Repetição',        icon:'key',     msg:'Ajustando a <b>velocidade de repetição</b> das teclas...', call: step('kb_speed') },
+    { id:'verify',    label:'Verificando',      icon:'verify',  msg:'Conferindo no Windows se tudo ficou <b>gravado</b>...', call: step('verify') },
+  ], '<b>Pronto!</b> Mouse e teclado ajustados — já está valendo.');
+  if(ok) showToast('Mouse e teclado otimizados');
+  await mkLoadInput();
+}
+
+async function mkApplyRa(mode){
+  const p = MK.raP;
+  const params = { mode: p.mode, sens: p.sens, accel: p.accel, cap: p.mode === 'natural' ? 0 : p.cap, offset: p.offset, power: p.power, limit: p.limit };
+  const step = id => () => mkInv('rawaccel_step', { step: id, params });
+  const ok = await mkRunFlow('Aplicando no Raw Accel', 'Altera o settings.json e manda o driver recarregar', [
+    { id:'locate', label:'Raw Accel',      icon:'find',    msg:'Procurando o <b>Raw Accel</b> neste PC...', call: step('locate') },
+    { id:'backup', label:'Cópia de segurança', icon:'copy', msg:'Guardando uma <b>cópia do settings.json</b>...', call: step('backup') },
+    { id:'build',  label:'Montando',       icon:'sliders', msg:`Montando a curva <b>${MK_RA_MODES[p.mode]}</b> no arquivo de configuração...`, call: step('build') },
+    { id:'apply',  label:'Driver',         icon:'accel',   msg:'Mandando o <b>driver</b> recarregar a configuração...', call: step('apply') },
+    { id:'verify', label:'Verificando',    icon:'verify',  msg:'Conferindo arquivo e driver...', call: step('verify') },
+  ], '<b>Pronto!</b> A curva já está ativa no driver do Raw Accel.');
+  if(ok){ mkSave('fx_mk_ra', MK.raP); showToast('Curva aplicada no Raw Accel'); }
+  await mkLoadRa();
+}
+
+async function mkOverlayOn(silent){
+  mkXhSync();
+  MK.xh.enabled = true; mkSave('fx_crosshair', MK.xh);
+  safeLocalSet2('fx_crosshair_svg', mkCrosshairSvg(MK.xh));
+  const step = id => () => mkInv('overlay_step', { step: id });
+  if(silent){
+    try{ for(const id of ['create', 'position', 'clickthrough', 'show']) await step(id)(); MK.overlayOn = true; }catch(e){ MK.overlayOn = false; }
+    mkRenderAll(); return;
+  }
+  const ok = await mkRunFlow('Ligando a mira', 'Cria uma janela transparente por cima da tela', [
+    { id:'save',   label:'Salvando a mira', icon:'save',    msg:'Salvando o desenho da <b>mira</b>...', call: async () => ({ message:'Mira salva', done:1, total:1 }) },
+    { id:'create', label:'Janela',          icon:'layers',  msg:'Criando uma <b>janela transparente</b> sem borda...', call: step('create') },
+    { id:'position', label:'Centralizar',   icon:'aim',     msg:'Centralizando no <b>monitor principal</b>...', call: step('position') },
+    { id:'click',  label:'Sem clique',      icon:'pointer', msg:'Fazendo os <b>cliques atravessarem</b> a mira e deixando ela sempre no topo...', call: step('clickthrough') },
+    { id:'show',   label:'Mostrando',       icon:'eye',     msg:'Mostrando a mira na tela...', call: step('show') },
+  ], '<b>Pronto!</b> A mira está na tela. Mexa nos controles pra ver ela mudar ao vivo.');
+  MK.overlayOn = ok;
+  if(ok) showToast('Mira ligada');
+  mkRenderAll();
+}
+async function mkOverlayOff(){
+  try{ await mkInv('overlay_close'); }catch(e){ showToast(String(e), 'error'); }
+  MK.overlayOn = false; MK.xh.enabled = false; mkSave('fx_crosshair', MK.xh); safeLocalSet2('fx_crosshair_svg', '');
+  showToast('Mira desligada'); mkRenderAll();
+}
+
+async function mkApplyDisp(){
+  const d = MK.disp;
+  const a = { saturation: d.sat, brightness: d.bright, contrast: d.contrast };
+  const step = id => () => mkInv('display_step', { step: id, ...a });
+  const ok = await mkRunFlow('Aplicando as cores da tela', 'Usa o motor de cor do próprio Windows', [
+    { id:'init',   label:'Motor de cor', icon:'cpu',     msg:'Iniciando o <b>motor de cor</b> do Windows...', call: step('init') },
+    { id:'apply',  label:'Aplicando',    icon:'palette', msg:`Aplicando saturação <b>${Math.round(d.sat * 100)}%</b>, contraste <b>${Math.round(d.contrast * 100)}%</b> e brilho <b>${Math.round(d.bright * 100)}%</b>...`, call: step('apply') },
+    { id:'verify', label:'Verificando',  icon:'verify',  msg:'Lendo de volta do Windows pra <b>confirmar</b> o efeito...', call: step('verify') },
+  ], '<b>Pronto!</b> As cores da tela já mudaram.');
+  if(ok){ d.active = !(d.sat === 1 && d.bright === 0 && d.contrast === 1); mkSave('fx_display', d); showToast('Cores da tela aplicadas'); }
+  mkRenderAll();
+}
+async function mkResetDisp(){
+  const d = MK.disp;
+  const ok = await mkRunFlow('Voltando as cores ao normal', 'Desliga o efeito de cor da tela', [
+    { id:'reset', label:'Desfazendo', icon:'palette', msg:'Desligando o <b>efeito de cor</b>...', call: () => mkInv('display_step', { step:'reset', saturation:1, brightness:0, contrast:1 }) },
+  ], '<b>Pronto!</b> Cores da tela voltaram ao normal.');
+  if(ok){ MK.disp = { sat:1, bright:0, contrast:1, active:false }; mkSave('fx_display', MK.disp); }
+  mkRenderAll();
+}
+
+// ao abrir o app: devolve o que estava ligado (o efeito de cor e a mira não sobrevivem ao fechar o app)
+async function mkRestoreOnStart(){
+  if(!window.__TAURI__) return;
+  try{ MK.overlayOn = await mkInv('overlay_status'); }catch(e){}
+  if(MK.xh.enabled && !MK.overlayOn) await mkOverlayOn(true);
+  const d = MK.disp;
+  if(d.active){
+    try{ for(const id of ['init', 'apply']) await mkInv('display_step', { step:id, saturation:d.sat, brightness:d.bright, contrast:d.contrast }); }
+    catch(e){ d.active = false; mkSave('fx_display', d); }
+  }
+  mkRenderAll();
+}
+
+// ---------- eventos ----------
+function mkParse(path){ const [scope, field] = path.split('.'); return { scope, field }; }
+function mkTarget(scope){ return scope === 'ra' ? MK.raP : scope === 'xh' ? MK.xh : scope === 'disp' ? MK.disp : MK.want; }
+function mkFmtFor(path, v){
+  const f = {
+    'input.mouse': v => v + '/20', 'input.kbDelay': v => ['250 ms', '500 ms', '750 ms', '1000 ms'][v], 'input.kbSpeed': v => (2.5 + v * 27.5 / 31).toFixed(1).replace('.', ',') + ' car/s',
+    'ra.sens': v => mkNum(v, 2) + 'x', 'ra.accel': v => mkNum(v, 3), 'ra.accelNat': v => mkNum(v, 3), 'ra.cap': v => v > 0 ? mkNum(v, 1) + 'x' : 'sem limite', 'ra.limit': v => mkNum(v, 2) + 'x', 'ra.offset': v => v + '/ms', 'ra.power': v => mkNum(v, 1),
+    'xh.size': v => v + ' px', 'xh.thick': v => v + ' px', 'xh.gap': v => v + ' px', 'xh.opacity': v => v + '%', 'xh.dotSize': v => v + ' px', 'xh.x': v => (v > 0 ? '+' : '') + v, 'xh.y': v => (v > 0 ? '+' : '') + v,
+    'disp.sat': v => Math.round(v * 100) + '%', 'disp.contrast': v => Math.round(v * 100) + '%', 'disp.bright': v => (v > 0 ? '+' : '') + Math.round(v * 100) + '%',
+  }[path];
+  return f ? f(v) : String(v);
+}
+function mkSetField(path, value, rerender){
+  const { scope, field } = mkParse(path);
+  const f = field === 'accelNat' ? 'accel' : field;
+  const obj = mkTarget(scope);
+  obj[f] = value;
+  const out = document.querySelector(`[data-mk-val="${path}"]`);
+  if(out) out.textContent = mkFmtFor(path, value);
+  if(scope === 'ra'){ const c = document.getElementById('mkChart'); if(c) c.innerHTML = mkCurveSvg(MK.raP); mkSave('fx_mk_ra', MK.raP); }
+  else if(scope === 'xh'){ mkXhSync(); if(rerender) mkRenderEditor(); }
+  else if(scope === 'disp'){ mkSave('fx_display', MK.disp); const sw = document.getElementById('mkSwatches'); if(sw) sw.style.filter = `saturate(${MK.disp.sat}) contrast(${MK.disp.contrast}) brightness(${1 + MK.disp.bright})`; }
+  else { if(rerender) mkRenderEditor(); else mkRenderInputNow(); }
+}
+function mkRenderInputNow(){ const n = document.querySelector('.mk-now'); if(!n) return; const tmp = document.createElement('div'); tmp.innerHTML = mkRenderInput(); const nn = tmp.querySelector('.mk-now'); if(nn) n.innerHTML = nn.innerHTML; }
+
+async function mkOnClick(e){
+  const sel = e.target.closest('[data-mk-sel]');
+  if(sel){ MK.sel = sel.dataset.mkSel; mkRenderAll(); if(MK.sel === 'ra') mkLoadRa(); if(MK.sel === 'input') mkLoadInput(); if(MK.sel === 'xh') mkXhSync(); return; }
+  const st = e.target.closest('[data-mk-step]');
+  if(st){
+    const path = st.dataset.mkStep, [min, max, step] = MK_RANGES[path] || [0, 100, 1];
+    const { scope, field } = mkParse(path), f = field === 'accelNat' ? 'accel' : field;
+    const cur = Number(mkTarget(scope)[f]);
+    const dec = (String(step).split('.')[1] || '').length;
+    mkSetField(path, Number(Math.min(max, Math.max(min, cur + step * Number(st.dataset.dir))).toFixed(dec)), false);
+    const rg = document.querySelector(`[data-mk-field="${path}"]`); if(rg) rg.value = mkTarget(scope)[f];
+    return;
+  }
+  const b = e.target.closest('[data-mk-act]');
+  if(!b || b.disabled) return;
+  const act = b.dataset.mkAct, val = b.dataset.val;
+  if(act === 'input-comp'){ MK.want = { mouse:11, precision:false, kbDelay:0, kbSpeed:31 }; mkRenderEditor(); }
+  else if(act === 'input-win'){ MK.want = { mouse:10, precision:true, kbDelay:1, kbSpeed:31 }; mkRenderEditor(); }
+  else if(act === 'input-apply') mkApplyInput();
+  else if(act === 'ra-mode'){
+    MK.raP.mode = val;
+    if(val === 'natural' && MK.raP.accel > 1) MK.raP.accel = 0.1;
+    if(val === 'natural' && MK.raP.accel < 0.005) MK.raP.accel = 0.1;
+    if(val === 'classic' && MK.raP.accel > 0.5) MK.raP.accel = 0.05;
+    mkSave('fx_mk_ra', MK.raP); mkRenderEditor();
+  }
+  else if(act === 'ra-apply') mkApplyRa();
+  else if(act === 'ra-open'){ try{ showToast(await mkInv('rawaccel_open')); }catch(err){ showToast(String(err), 'error'); } }
+  else if(act === 'ra-download'){ try{ await mkInv('rawaccel_open_download'); }catch(err){ showToast(String(err), 'error'); } }
+  else if(act === 'ra-rescan'){ MK.ra = null; mkRenderEditor(); await mkLoadRa(); }
+  else if(act === 'ra-restore'){
+    if(b.dataset.confirm !== '1'){ b.dataset.confirm = '1'; const old = b.innerHTML; b.textContent = 'Confirmar restauração?'; setTimeout(() => { b.dataset.confirm = ''; b.innerHTML = old; }, 3500); return; }
+    try{ showToast(await mkInv('rawaccel_restore')); await mkLoadRa(); }catch(err){ showToast(String(err), 'error'); }
+  }
+  else if(act === 'xh-style'){ MK.xh.style = val; mkXhSync(); mkRenderEditor(); }
+  else if(act === 'xh-preset'){
+    const P = { green:{ style:'cross', color:'#00ff66', size:16, thick:2, gap:5, outline:true, dot:false }, dot:{ style:'dot', color:'#ff2a2a', size:8, thick:2, gap:0, outline:true, dot:false }, circle:{ style:'circle', color:'#00e5ff', size:14, thick:2, gap:0, outline:true, dot:true, dotSize:2 } }[val];
+    Object.assign(MK.xh, P, { x:0, y:0, opacity:100 }); mkXhSync(); mkRenderEditor();
+  }
+  else if(act === 'xh-pick') document.getElementById('mkXhFile')?.click();
+  else if(act === 'xh-clear'){ MK.xh.img = null; mkXhSync(); mkRenderEditor(); }
+  else if(act === 'xh-on') mkOverlayOn(false);
+  else if(act === 'xh-off') mkOverlayOff();
+  else if(act === 'disp-preset'){
+    const P = { normal:{ sat:1, contrast:1, bright:0 }, vivid:{ sat:1.35, contrast:1.05, bright:0 }, comp:{ sat:1.5, contrast:1.12, bright:0.04 } }[val];
+    Object.assign(MK.disp, P); mkSave('fx_display', MK.disp); mkRenderEditor();
+  }
+  else if(act === 'disp-apply') mkApplyDisp();
+  else if(act === 'disp-reset') mkResetDisp();
+}
+function mkOnInput(e){
+  const f = e.target.closest('[data-mk-field]');
+  if(!f || f.type === 'checkbox' || f.type === 'file') return;
+  const v = f.type === 'color' ? f.value : Number(f.value);
+  mkSetField(f.dataset.mkField, v, false);
+}
+function mkOnChange(e){
+  const f = e.target.closest('[data-mk-field]');
+  if(f && f.type === 'checkbox'){ mkSetField(f.dataset.mkField, f.checked, true); return; }
+  if(e.target.id === 'mkXhFile' && e.target.files && e.target.files[0]){
+    const file = e.target.files[0];
+    if(file.size > 4 * 1024 * 1024){ showToast('Imagem grande demais (máximo 4 MB)', 'warning'); return; }
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const max = 256, k = Math.min(1, max / Math.max(img.width, img.height));
+      const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(img.width * k)); cv.height = Math.max(1, Math.round(img.height * k));
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      MK.xh.img = cv.toDataURL('image/png'); URL.revokeObjectURL(url);
+      mkXhSync(); mkRenderEditor();
+    };
+    img.onerror = () => showToast('Não consegui abrir essa imagem', 'error');
+    img.src = url;
+  }
+}
+
+function mkInit(panel){
+  if(!panel.dataset.mkBound){
+    panel.dataset.mkBound = '1';
+    panel.addEventListener('click', mkOnClick);
+    panel.addEventListener('input', mkOnInput);
+    panel.addEventListener('change', mkOnChange);
+  }
+  MP.mount('Mouse e teclado', 'Escolha um quadro acima e aplique pra ver cada etapa acontecendo', [
+    { id:'a', label:'Entrada',    icon:'mouse' },
+    { id:'b', label:'Raw Accel',  icon:'accel' },
+    { id:'c', label:'Mira',       icon:'aim' },
+    { id:'d', label:'Cor da tela',icon:'palette' },
+  ], 'Pronto pra começar.');
+  mkRenderAll();
+  mkXhSync();
+  if(window.__TAURI__){ mkLoadInput(); mkLoadRa(); mkRestoreOnStart(); }
+}
+
 async function loadHomeHardwareInfo(){
   const el = document.getElementById('homeHwInfo');
   if (!el) return;
@@ -7506,6 +8100,15 @@ function renderPanel(catId){
     </div>`;
   }
 
+  if(cat.special === 'mouse'){
+    html += `<div class="mk-wrap">
+      <div class="mk-hub" id="mkHub"></div>
+      <section id="mkEditor"></section>
+      <div id="mkPipeRoot"></div>
+      <div id="mkChanges"></div>
+    </div>`;
+  }
+
   const items = VENDOR_SPECIALS[cat.special]
     ? cat.items.filter(it => !it.vendor || it.vendor === selectedVendor[cat.special])
     : cat.items;
@@ -7596,6 +8199,7 @@ function gameTileIcon(title, group){
 
   panel.innerHTML = html;
   if(catId === 'network') bindDnsPanel(panel);
+  if(cat.special === 'mouse') mkInit(panel);
 
   panel.querySelectorAll('.acc-toggle-open').forEach(h=>{
     h.onclick = ()=>{

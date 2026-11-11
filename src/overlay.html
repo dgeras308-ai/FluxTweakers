@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<title>FluxTweakers - Mira</title>
+<style>
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent !important;}
+  #c{position:fixed;inset:0;pointer-events:none;user-select:none;}
+  #c svg{display:block;width:100%;height:100%;}
+</style>
+</head>
+<body>
+<div id="c"></div>
+<script>
+  // A mira é desenhada pelo app principal (um único código) e chega aqui como SVG pronto,
+  // pelo localStorage compartilhado entre as janelas do FluxTweakers.
+  var KEY = 'fx_crosshair_svg', last = null, box = document.getElementById('c');
+  function draw(){
+    var s = '';
+    try{ s = localStorage.getItem(KEY) || ''; }catch(e){}
+    if(s !== last){ last = s; box.innerHTML = s; }
+  }
+  draw();
+  window.addEventListener('storage', function(e){ if(!e.key || e.key === KEY) draw(); });
+  setInterval(draw, 1000); // garantia caso o evento não chegue
+</script>
+</body>
+</html>
