@@ -277,6 +277,24 @@
   .bench-note{font-size:10px;color:var(--muted2);position:relative;z-index:1;line-height:1.4;}
   .bench-metric-title{font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.04em;margin:2px 0 0;position:relative;z-index:1;}
 
+  /* ===== Novidades da versão ===== */
+  #wnOverlay{position:fixed;inset:0;z-index:9500;background:rgba(5,6,9,.72);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;animation:wnFade .2s ease;}
+  @keyframes wnFade{from{opacity:0}to{opacity:1}}
+  .wn-card{width:min(520px,100%);max-height:min(640px,90vh);display:flex;flex-direction:column;background:var(--surface-strong);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow-lg);overflow:hidden;animation:wnUp .25s cubic-bezier(.2,.8,.2,1);}
+  @keyframes wnUp{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+  .wn-head{padding:22px 24px 14px;background:radial-gradient(360px 160px at 100% 0%,var(--accent-dim),transparent 70%);}
+  .wn-kicker{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0 0 6px;}
+  .wn-title{font-size:21px;font-weight:800;margin:0;color:var(--text);letter-spacing:-.01em;} .wn-title span{color:var(--accent);}
+  .wn-body{padding:4px 24px 8px;overflow-y:auto;display:flex;flex-direction:column;gap:16px;}
+  .wn-ver h4{margin:0 0 7px;font-size:12px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;}
+  .wn-ver h4 small{font-size:10.5px;font-weight:500;color:var(--muted2);}
+  .wn-ver ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;}
+  .wn-ver li{font-size:12.5px;color:var(--muted);line-height:1.5;padding-left:16px;position:relative;} .wn-ver li::before{content:"";position:absolute;left:3px;top:7px;width:5px;height:5px;border-radius:50%;background:var(--accent);}
+  .wn-ver li b{color:var(--text);font-weight:700;}
+  .wn-foot{padding:14px 24px 20px;display:flex;justify-content:flex-end;} 
+  .wn-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:0;border-radius:10px;padding:10px 22px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .wn-btn:hover{filter:brightness(1.08);}
+  #sidebarVersion{cursor:pointer;} #sidebarVersion:hover{color:var(--accent);}
   /* ===== Aba Debloat ===== */
   .db-root{display:flex;flex-direction:column;gap:12px;}
   .db-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 14px;position:sticky;top:0;z-index:5;}
@@ -9628,6 +9646,66 @@ document.addEventListener('mousemove', (e)=>{
   row.style.setProperty('--mx', ((e.clientX - rect.left) / rect.width * 100) + '%');
   row.style.setProperty('--my', ((e.clientY - rect.top) / rect.height * 100) + '%');
 });
+
+// ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
+// Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
+const APP_CHANGELOG = [
+  { v:'1.1.48', date:'11/11/2026', items:[
+    'Agora, quando o app atualiza, aparece uma janela com a <b>versão</b> e <b>o que foi feito</b>.',
+    'Pra rever as novidades depois, clique na versão no rodapé do menu lateral.' ] },
+  { v:'1.1.47', date:'11/11/2026', items:[
+    'Nova aba <b>Debloat</b> (grupo Windows): lista os apps que estão <b>realmente instalados</b> no seu PC, organizados em grupos, com o nome, o que cada um faz e se é seguro remover.',
+    'Dá pra marcar app por app, o grupo inteiro ou só os seguros, e acompanhar a remoção com progresso. Componentes essenciais do Windows ficam protegidos.' ] },
+  { v:'1.1.46', date:'11/11/2026', items:[
+    'Aba <b>Desempenho</b> refeita com <b>medições reais</b>: CPU, memória, GPU e disco ao vivo, com gráfico.',
+    'Novo <b>teste de desempenho</b> (CPU, RAM, disco e latência) que compara o antes e o depois dos seus ajustes.',
+    'Lista dos programas que mais pesam em CPU e memória. O estimador de FPS, que não era medição real, foi removido.' ] },
+  { v:'1.1.45', date:'', items:[
+    'Novo hub de <b>Mouse e Teclado</b>: ponteiro, precisão, atraso e repetição, Raw Accel com editor de curva, mira personalizada e ajustes de Display.' ] },
+  { v:'1.1.44', date:'', items:[
+    'Tema visual unificado: o app agora usa só o <b>Grafite</b>, e o seletor de temas foi removido.' ] },
+];
+function wnCmp(a, b){
+  const x = String(a).split('.').map(n => parseInt(n, 10) || 0), y = String(b).split('.').map(n => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(x.length, y.length); i++){ const d = (x[i] || 0) - (y[i] || 0); if (d) return d; }
+  return 0;
+}
+function wnOpen(current, entries, kicker){
+  if (document.getElementById('wnOverlay')) return;
+  const ov = document.createElement('div');
+  ov.id = 'wnOverlay';
+  ov.innerHTML = `<div class="wn-card" role="dialog" aria-modal="true">
+    <div class="wn-head"><p class="wn-kicker">${kicker}</p><h2 class="wn-title">FluxTweakers <span>v${current}</span></h2></div>
+    <div class="wn-body">${entries.map(e => `<div class="wn-ver"><h4>Versão ${e.v}${e.date ? `<small>${e.date}</small>` : ''}</h4><ul>${e.items.map(t => `<li>${t}</li>`).join('')}</ul></div>`).join('')}</div>
+    <div class="wn-foot"><button class="wn-btn" id="wnClose">Entendi</button></div></div>`;
+  document.body.appendChild(ov);
+  const close = () => ov.remove();
+  ov.querySelector('#wnClose').addEventListener('click', close);
+  ov.addEventListener('click', e => { if (e.target === ov) close(); });
+}
+async function wnCheck(){
+  let cur = null;
+  try{ cur = await window.__TAURI__.app.getVersion(); }catch(e){}
+  if (!cur) return;
+  const last = safeLocalGet('flux_last_seen_version');
+  if (last === cur) return;
+  safeLocalSet('flux_last_seen_version', cur);
+  // mostra tudo que é mais novo que a versão anterior (até 5), ou só a atual se for 1ª vez
+  let entries = APP_CHANGELOG.filter(e => wnCmp(e.v, cur) <= 0 && (last ? wnCmp(e.v, last) > 0 : wnCmp(e.v, cur) === 0)).slice(0, 5);
+  if (!entries.length) return;
+  wnOpen(cur, entries, last ? 'App atualizado' : 'Novidades desta versão');
+}
+(function wnInit(){
+  if (!window.__TAURI__?.app) return;
+  const t = setInterval(() => {
+    const ac = document.getElementById('appContent');
+    if (ac && !ac.hidden){ clearInterval(t); setTimeout(wnCheck, 900); }
+  }, 700);
+  document.getElementById('sidebarVersion')?.addEventListener('click', async () => {
+    let cur = null; try{ cur = await window.__TAURI__.app.getVersion(); }catch(e){}
+    if (cur) wnOpen(cur, APP_CHANGELOG.filter(e => wnCmp(e.v, cur) <= 0).slice(0, 5), 'Histórico de novidades');
+  });
+})();
 
 // Mostra a versão real do app (lida do Tauri) no rodapé da sidebar
 (async function showAppVersion(){
