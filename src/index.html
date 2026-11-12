@@ -7151,6 +7151,7 @@ const MK = {
   disp: mkLoad('fx_display', MK_DISP_DEFAULT),
 };
 const MP = fxPipe('mkPipeRoot');
+const DSP = fxPipe('dispPipeRoot');
 const mkSave = (key, obj) => safeLocalSet2(key, JSON.stringify(obj));
 const mkNum = (v, d) => Number(v).toFixed(d).replace('.', ',');
 
@@ -7199,36 +7200,37 @@ function mkCrosshairSvg(c, view){
 }
 
 // ---------- fluxo animado genérico (mesmo visual dos outros painéis) ----------
-async function mkRunFlow(title, sub, steps, finalMsg){
+async function mkRunFlow(title, sub, steps, finalMsg, pipe = MP, pipeRootId = 'mkPipeRoot', changesId = 'mkChanges'){
+  const MP_ = pipe;
   if(MK.running) return false;
   if(!window.__TAURI__){ showToast('Só funciona no app instalado'); return false; }
-  MK.running = true; mkRenderAll(); mkRenderChanges(null);
-  MP.mount(title, sub, steps, '');
-  MP.msg('Começando...', true);
-  document.getElementById('mkPipeRoot')?.scrollIntoView({ behavior:'smooth', block:'center' });
-  await MP.start();
+  MK.running = true; mkRenderAll(); mkRenderChanges(null, changesId);
+  MP_.mount(title, sub, steps, '');
+  MP_.msg('Começando...', true);
+  document.getElementById(pipeRootId)?.scrollIntoView({ behavior:'smooth', block:'center' });
+  await MP_.start();
   const all = [];
   let ok = true;
   for(let i = 0; i < steps.length; i++){
     const st = steps[i];
-    await MP.enter(i + 1); MP.msg(st.msg, true);
+    await MP_.enter(i + 1); MP_.msg(st.msg, true);
     const t0 = Date.now();
     let r;
     try{ r = await st.call(); }
-    catch(err){ MP.fail(i + 1, 'falhou'); MP.msg(gmEsc(String(err))); showToast(String(err), 'error'); ok = false; break; }
+    catch(err){ MP_.fail(i + 1, 'falhou'); MP_.msg(gmEsc(String(err))); showToast(String(err), 'error'); ok = false; break; }
     const wait = 850 - (Date.now() - t0); if(wait > 0) await gmSleep(wait);
-    if(r){ if(r.changes) all.push(...r.changes); MP.count(i + 1, r.total ? `${r.done}/${r.total}` : '✓'); MP.msg(gmEsc(r.message)); }
-    MP.finish(i + 1);
+    if(r){ if(r.changes) all.push(...r.changes); MP_.count(i + 1, r.total ? `${r.done}/${r.total}` : '✓'); MP_.msg(gmEsc(r.message)); }
+    MP_.finish(i + 1);
     await gmSleep(300);
   }
-  if(ok){ await MP.end(); MP.msg(finalMsg); }
-  mkRenderChanges(all, ok ? null : null);
+  if(ok){ await MP_.end(); MP_.msg(finalMsg); }
+  mkRenderChanges(all, changesId);
   MK.running = false; mkRenderAll();
   return ok;
 }
 
-function mkRenderChanges(changes){
-  const root = document.getElementById('mkChanges');
+function mkRenderChanges(changes, id = 'mkChanges'){
+  const root = document.getElementById(id);
   if(!root) return;
   if(!changes || !changes.length){ root.innerHTML = ''; return; }
   root.innerHTML = `<div class="gm-card gm-changes"><div class="gm-section-head"><div><h3>O que mudou</h3></div></div>
@@ -7253,7 +7255,6 @@ function mkRenderHub(){
       st: i ? [`${i.mouse_speed}/20 · precisão ${i.precision ? 'ligada' : 'desligada'}`, !i.precision] : ['Lendo o Windows...', false] },
     { id:'ra', k:'Aceleração de mouse', n:'Raw Accel', ico:'accel', st: ra },
     { id:'xh', k:'Mira por imagem', n:'Overlay de mira', ico:'aim', st: MK.overlayOn ? ['Ligado', true] : ['Desligado', false] },
-    { id:'disp', k:'Saturação · cor · brilho', n:'Display', ico:'palette', st: MK.disp.active ? [`Saturação ${Math.round(MK.disp.sat * 100)}%`, true] : ['Padrão', false] },
   ];
   hub.innerHTML = cards.map(c => `<button type="button" class="mk-card${MK.sel === c.id ? ' on' : ''}" data-mk-sel="${c.id}">
       <div class="mk-card-ico"><svg viewBox="0 0 24 24">${GM_PIPE_ICON[c.ico]}</svg></div>
@@ -7389,7 +7390,7 @@ function mkRenderDisp(){
   const filter = `saturate(${d.sat}) contrast(${d.contrast}) brightness(${1 + d.bright})`;
   const bars = ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#00acc1', '#1e88e5', '#8e24aa', '#ec407a'];
   return `<div class="gm-card">
-    <div class="gm-section-head"><div><h3>Display</h3><p>Saturação, contraste e brilho feitos pelo próprio FluxTweakers, usando o motor de cor do Windows — não precisa de programa extra nem do painel da placa de vídeo.</p></div>
+    <div class="gm-section-head"><div><h3>Cor da tela</h3><p>Saturação, contraste e brilho feitos pelo próprio FluxTweakers, usando o motor de cor do Windows — não precisa de programa extra nem do painel da placa de vídeo.</p></div>
       <div class="mk-presets"><button type="button" class="gm-btn sm" data-mk-act="disp-preset" data-val="normal">Padrão</button><button type="button" class="gm-btn sm" data-mk-act="disp-preset" data-val="vivid">Vibrante</button><button type="button" class="gm-btn sm" data-mk-act="disp-preset" data-val="comp">Competitivo</button></div></div>
     <div class="mk-cols">
       <div class="mk-xh-prev"><div class="mk-swatches" id="mkSwatches" style="filter:${filter}">${bars.map(c => `<i style="background:${c}"></i>`).join('')}<div class="mk-gradient"></div></div><small>Prévia aproximada das cores</small></div>
@@ -7408,9 +7409,10 @@ function mkRenderDisp(){
 function mkRenderEditor(){
   const root = document.getElementById('mkEditor');
   if(!root) return;
-  root.innerHTML = MK.sel === 'input' ? mkRenderInput() : MK.sel === 'ra' ? mkRenderRa() : MK.sel === 'xh' ? mkRenderXh() : mkRenderDisp();
+  root.innerHTML = MK.sel === 'input' ? mkRenderInput() : MK.sel === 'ra' ? mkRenderRa() : mkRenderXh();
 }
-function mkRenderAll(){ mkRenderHub(); mkRenderEditor(); }
+function dispRender(){ const r = document.getElementById('dispEditor'); if(r) r.innerHTML = mkRenderDisp(); }
+function mkRenderAll(){ mkRenderHub(); mkRenderEditor(); dispRender(); }
 
 // ---------- carregamento do estado real ----------
 async function mkLoadInput(){
@@ -7495,7 +7497,7 @@ async function mkApplyDisp(){
     { id:'init',   label:'Motor de cor', icon:'cpu',     msg:'Iniciando o <b>motor de cor</b> do Windows...', call: step('init') },
     { id:'apply',  label:'Aplicando',    icon:'palette', msg:`Aplicando saturação <b>${Math.round(d.sat * 100)}%</b>, contraste <b>${Math.round(d.contrast * 100)}%</b> e brilho <b>${Math.round(d.bright * 100)}%</b>...`, call: step('apply') },
     { id:'verify', label:'Verificando',  icon:'verify',  msg:'Lendo de volta do Windows pra <b>confirmar</b> o efeito...', call: step('verify') },
-  ], '<b>Pronto!</b> As cores da tela já mudaram.');
+  ], '<b>Pronto!</b> As cores da tela já mudaram.', DSP, 'dispPipeRoot', 'dispChanges');
   if(ok){ d.active = !(d.sat === 1 && d.bright === 0 && d.contrast === 1); mkSave('fx_display', d); showToast('Cores da tela aplicadas'); }
   mkRenderAll();
 }
@@ -7503,7 +7505,7 @@ async function mkResetDisp(){
   const d = MK.disp;
   const ok = await mkRunFlow('Voltando as cores ao normal', 'Desliga o efeito de cor da tela', [
     { id:'reset', label:'Desfazendo', icon:'palette', msg:'Desligando o <b>efeito de cor</b>...', call: () => mkInv('display_step', { step:'reset', saturation:1, brightness:0, contrast:1 }) },
-  ], '<b>Pronto!</b> Cores da tela voltaram ao normal.');
+  ], '<b>Pronto!</b> Cores da tela voltaram ao normal.', DSP, 'dispPipeRoot', 'dispChanges');
   if(ok){ MK.disp = { sat:1, bright:0, contrast:1, active:false }; mkSave('fx_display', MK.disp); }
   mkRenderAll();
 }
@@ -7592,7 +7594,7 @@ async function mkOnClick(e){
   else if(act === 'xh-off') mkOverlayOff();
   else if(act === 'disp-preset'){
     const P = { normal:{ sat:1, contrast:1, bright:0 }, vivid:{ sat:1.35, contrast:1.05, bright:0 }, comp:{ sat:1.5, contrast:1.12, bright:0.04 } }[val];
-    Object.assign(MK.disp, P); mkSave('fx_display', MK.disp); mkRenderEditor();
+    Object.assign(MK.disp, P); mkSave('fx_display', MK.disp); mkRenderAll();
   }
   else if(act === 'disp-apply') mkApplyDisp();
   else if(act === 'disp-reset') mkResetDisp();
@@ -7622,6 +7624,21 @@ function mkOnChange(e){
   }
 }
 
+function dispInit(panel){
+  if(!panel.dataset.dispBound){
+    panel.dataset.dispBound = '1';
+    panel.addEventListener('click', mkOnClick);
+    panel.addEventListener('input', mkOnInput);
+    panel.addEventListener('change', mkOnChange);
+  }
+  DSP.mount('Cor da tela', 'Aplique e veja cada etapa acontecendo', [
+    { id:'a', label:'Motor de cor', icon:'cpu' },
+    { id:'b', label:'Aplicando',    icon:'palette' },
+    { id:'c', label:'Verificando',  icon:'verify' },
+  ], 'Pronto pra começar.');
+  dispRender();
+}
+
 function mkInit(panel){
   if(!panel.dataset.mkBound){
     panel.dataset.mkBound = '1';
@@ -7633,7 +7650,6 @@ function mkInit(panel){
     { id:'a', label:'Entrada',    icon:'mouse' },
     { id:'b', label:'Raw Accel',  icon:'accel' },
     { id:'c', label:'Mira',       icon:'aim' },
-    { id:'d', label:'Cor da tela',icon:'palette' },
   ], 'Pronto pra começar.');
   mkRenderAll();
   mkXhSync();
@@ -8888,6 +8904,14 @@ function renderPanel(catId){
     </div>`;
   }
 
+  if(catId === 'monitor'){
+    html += `<div class="mk-wrap" style="margin-bottom:16px">
+      <section id="dispEditor"></section>
+      <div id="dispPipeRoot"></div>
+      <div id="dispChanges"></div>
+    </div>`;
+  }
+
   if(cat.special === 'mouse'){
     html += `<div class="mk-wrap">
       <div class="mk-hub" id="mkHub"></div>
@@ -8988,6 +9012,7 @@ function gameTileIcon(title, group){
   panel.innerHTML = html;
   if(catId === 'network') bindDnsPanel(panel);
   if(cat.special === 'mouse') mkInit(panel);
+  if(catId === 'monitor') dispInit(panel);
 
   panel.querySelectorAll('.acc-toggle-open').forEach(h=>{
     h.onclick = ()=>{
@@ -10113,6 +10138,9 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.54', date:'11/11/2026', items:[
+    'A <b>Cor da tela</b> (saturação, contraste e brilho) saiu de Mouse e Teclado e foi pra aba <b>Monitor</b>, que é o lugar dela.',
+    'Mouse e Teclado ficou só com Entrada, Raw Accel e Mira. Suas cores salvas continuam valendo.' ] },
   { v:'1.1.53', date:'11/11/2026', items:[
     'Aba <b>Perfil</b>: acabou o preset genérico. Agora o app <b>audita o seu Windows de verdade</b>: lê o registro e o plano de energia e compara com o que <b>cada ajuste do app</b> mudaria.',
     'Mostra só o que ainda <b>não está aplicado</b> no seu PC, ajuste por ajuste, com o valor de hoje e o valor que o ajuste colocaria (exemplo: <b>HwSchMode: 1 → 2</b>). Ajustes de outra marca de CPU ou GPU não aparecem.',
