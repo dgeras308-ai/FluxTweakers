@@ -1204,6 +1204,41 @@
   .setting-desc{font-size:11.8px;color:var(--item-muted);margin:0;line-height:1.5;}
   .settings-note{margin:14px 0 0;font-size:12px;color:var(--muted);background:var(--item-bg);border:1px solid var(--item-border);border-radius:9px;padding:12px 14px;}
 
+  /* ===== Grupos de ajustes redesenhados (seções abertas, com progresso) ===== */
+  .acc-section{margin-bottom:22px;}
+  .acc-header{
+    padding:14px 16px 14px 14px;border-radius:16px;gap:12px;
+    background:linear-gradient(100deg, color-mix(in srgb, var(--tab-accent) 15%, var(--item-bg)), var(--item-bg) 72%);
+    border:1px solid color-mix(in srgb, var(--tab-accent) 24%, var(--item-border));
+    box-shadow:0 10px 28px -20px rgba(0,0,0,.7);
+  }
+  .acc-header::before,.acc-header::after{display:none;}
+  .acc-header:hover{transform:none;box-shadow:0 14px 34px -18px rgba(0,0,0,.7), 0 0 0 1px var(--tab-accent-dim);}
+  .acc-section.open .acc-header{border-color:color-mix(in srgb, var(--tab-accent) 38%, var(--item-border));}
+  .acc-left{gap:14px;color:var(--text);}
+  .acc-ring{--p:0;position:relative;width:46px;height:46px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    background:conic-gradient(var(--tab-accent) calc(var(--p) * 1%), color-mix(in srgb, var(--muted) 24%, transparent) 0);transition:background .4s ease;}
+  .acc-ring::before{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--panel);}
+  .acc-ring b{position:relative;font-size:10.5px;font-family:var(--mono);font-weight:700;color:var(--text);}
+  .acc-section.has-on .acc-ring{box-shadow:0 0 14px -3px var(--tab-accent);}
+  .acc-ttl{display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .acc-name{font-size:14.5px;font-weight:800;letter-spacing:-.005em;color:var(--text);line-height:1.2;}
+  .acc-sub{font-size:11px;color:var(--muted);font-weight:500;}
+  .acc-section.has-on .acc-sub{color:var(--tab-accent);}
+  .acc-selectall{border-radius:999px;padding:7px 14px;font-size:11px;font-weight:700;background:var(--card);}
+  .acc-toggle-open.acc-chev-btn{width:30px;height:30px;justify-content:center;border-radius:50%;margin:0;padding:0;background:var(--card);border:1px solid var(--item-border);}
+  .acc-inner{padding:14px 2px 4px;gap:14px;animation:accFade .35s ease both;transform:none;}
+  @keyframes accFade{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:none;}}
+  .tw-chips{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 7px;}
+  .tw-chip{font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid transparent;}
+  .tw-chip.rec{color:var(--ok);background:color-mix(in srgb, var(--ok) 13%, transparent);}
+  .tw-chip.perf{color:var(--tab-accent);background:var(--tab-accent-dim);}
+  .tw-chip.ultra{color:#c4a5ff;background:color-mix(in srgb, #a06bff 15%, transparent);}
+  .tw-chip.manual{color:var(--muted);background:var(--card);border-color:var(--item-border);}
+  .tw-chip.risk{color:#f59e0b;background:color-mix(in srgb, #f59e0b 14%, transparent);}
+  .tw-chip.vendor{color:var(--text);background:var(--card);border-color:var(--item-border);}
+  .setting-row-top{padding-bottom:10px;}
+
   /* ===== Assistente (busca local, chat) ===== */
   .assistant-box{
     display:flex;flex-direction:column;
@@ -8936,10 +8971,10 @@ function renderPanel(catId){
 
   let itemIndex = 0;
   groups.forEach((g, gi)=>{
-    html += `<div class="acc-section${gi===0?' open':''}" data-group="${catId}-${gi}">
+    html += `<div class="acc-section open" data-group="${catId}-${gi}">
       <div class="acc-header">
         <button class="acc-toggle-open">
-          <span class="acc-left"><span class="dot"></span>${g.name}<span class="acc-badge">${g.items.length}</span></span>
+          <span class="acc-left"><span class="acc-ring" style="--p:0"><b>0%</b></span><span class="acc-ttl"><span class="acc-name">${g.name}</span><small class="acc-sub">${g.items.length} ajuste${g.items.length > 1 ? 's' : ''} · 0 ativos</small></span></span>
         </button>
         <button class="acc-selectall" data-group-id="${catId}-${gi}">marcar todos</button>
         <button class="acc-toggle-open acc-chev-btn">${CHEVRON}</button>
@@ -9000,6 +9035,7 @@ function gameTileIcon(title, group){
           </label>
         </div>
         <div class="setting-text">
+          <div class="tw-chips" data-tw="${item.id}"></div>
           <label class="setting-title" for="chk_${item.id}">${item.title}</label>
           <p class="setting-desc">${item.desc}</p>
           ${item.variants ? `<select id="var_${item.id}">${item.variants.map(v=>`<option value="${v.value}">${v.label}</option>`).join('')}</select>` : ''}
@@ -9013,6 +9049,7 @@ function gameTileIcon(title, group){
   if(catId === 'network') bindDnsPanel(panel);
   if(cat.special === 'mouse') mkInit(panel);
   if(catId === 'monitor') dispInit(panel);
+  try{ fillTierChips(panel); accRefresh(panel); }catch(e){}
 
   panel.querySelectorAll('.acc-toggle-open').forEach(h=>{
     h.onclick = ()=>{
@@ -10138,6 +10175,9 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.55', date:'11/11/2026', items:[
+    'As <b>gavetas</b> das abas de otimização foram redesenhadas: agora cada grupo é uma seção <b>já aberta</b>, com um <b>anel de progresso</b> mostrando quantos ajustes estão ativos e o botão de marcar o grupo inteiro.',
+    'Cada ajuste ganhou uma etiqueta de nível: <b>Recomendado</b>, <b>Performance</b>, <b>Ultra</b> ou <b>Manual</b> (conforme o preset em que ele entra) e <b>Cuidado</b> nos grupos arriscados.' ] },
   { v:'1.1.54', date:'11/11/2026', items:[
     'A <b>Cor da tela</b> (saturação, contraste e brilho) saiu de Mouse e Teclado e foi pra aba <b>Monitor</b>, que é o lugar dela.',
     'Mouse e Teclado ficou só com Entrada, Raw Accel e Mira. Suas cores salvas continuam valendo.' ] },
@@ -10439,6 +10479,37 @@ document.getElementById('savedProfilesSelect').addEventListener('change', (e)=>{
   if(ids) applyPreset(ids, `Perfil "${name}" aplicado`);
 });
 
+
+// ---------- gavetas: progresso por grupo e etiquetas de nível ----------
+function accRefresh(root){
+  (root || document).querySelectorAll('.acc-section').forEach(sec => {
+    const boxes = sec.querySelectorAll('input[type=checkbox][data-group-id]');
+    const n = boxes.length, on = Array.from(boxes).filter(c => c.checked).length;
+    const pct = n ? Math.round(on / n * 100) : 0;
+    const ring = sec.querySelector('.acc-ring');
+    if(ring){ ring.style.setProperty('--p', pct); const b = ring.querySelector('b'); if(b) b.textContent = pct + '%'; }
+    const sub = sec.querySelector('.acc-sub');
+    if(sub) sub.textContent = `${n} ajuste${n > 1 ? 's' : ''} · ${on} ativo${on === 1 ? '' : 's'}`;
+    sec.classList.toggle('has-on', on > 0);
+  });
+}
+function fillTierChips(root){
+  const rec = new Set(RECOMMENDED_PRESET), perf = new Set(PERFORMANCE_PRESET), ultra = new Set(ULTRA_PRESET);
+  (root || document).querySelectorAll('.tw-chips[data-tw]').forEach(el => {
+    if(el.dataset.filled) return;
+    const id = el.dataset.tw, row = el.closest('.acc-section');
+    const gname = row ? (row.querySelector('.acc-name')?.textContent || '') : '';
+    const chips = [];
+    if(rec.has(id)) chips.push(['rec', 'Recomendado']);
+    else if(perf.has(id)) chips.push(['perf', 'Performance']);
+    else if(ultra.has(id)) chips.push(['ultra', 'Ultra']);
+    else chips.push(['manual', 'Manual']);
+    if(/⚠|avan[cç]ado|cuidado/i.test(gname)) chips.push(['risk', 'Cuidado']);
+    el.innerHTML = chips.map(c => `<span class="tw-chip ${c[0]}">${c[1]}</span>`).join('');
+    el.dataset.filled = '1';
+  });
+}
+
 document.getElementById('deleteProfileBtn').addEventListener('click', ()=>{
   const sel = document.getElementById('savedProfilesSelect');
   const name = sel.value;
@@ -10479,6 +10550,7 @@ searchInput.addEventListener('input', runSearch);
 searchClear.addEventListener('click', ()=>{ searchInput.value=''; runSearch(); searchInput.focus(); });
 
 function updateCount(){
+  try{ accRefresh(document); }catch(e){}
   const el = document.getElementById('count');
   const count = document.querySelectorAll('input[type=checkbox][id^="chk_"]:checked').length;
   el.textContent = count + (count===1 ? ' tweak selecionado' : ' tweaks selecionados');
@@ -10489,6 +10561,7 @@ function updateCount(){
   renderScoreBoard();
   saveSelection();
 }
+try{ fillTierChips(document); }catch(e){}
 updateCount();
 
 function downloadStandaloneRestorePoint(){
