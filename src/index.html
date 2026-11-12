@@ -326,6 +326,31 @@
   .pp-reasons li{font-size:12px;color:var(--muted);line-height:1.55;padding-left:16px;position:relative;} .pp-reasons li::before{content:"";position:absolute;left:3px;top:7px;width:5px;height:5px;border-radius:50%;background:var(--accent);} .pp-reasons li b{color:var(--text);}
   .pp-apply{align-self:flex-start;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:0;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;} .pp-apply:hover{filter:brightness(1.08);}
   .pp-loading{font-size:12.5px;color:var(--muted);padding:34px 10px;text-align:center;line-height:1.7;}
+  /* ===== Análise em jogo ===== */
+  .ag-box{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;}
+  .ag-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .ag-title{font-size:15px;font-weight:800;margin:0;color:var(--text);} .ag-sub{font-size:11.5px;color:var(--muted);margin:4px 0 0;line-height:1.55;max-width:640px;}
+  .ag-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;} @media (max-width:760px){ .ag-steps{grid-template-columns:1fr;} }
+  .ag-step{background:var(--card);border:1px solid var(--border-soft);border-radius:10px;padding:10px 12px;font-size:11.5px;color:var(--muted);line-height:1.5;} .ag-step b{display:block;color:var(--text);font-size:12px;margin-bottom:2px;}
+  .ag-status{font-size:12px;color:var(--text);background:var(--card);border:1px solid var(--border-soft);border-radius:10px;padding:9px 12px;display:flex;align-items:center;gap:9px;}
+  .ag-dot{width:8px;height:8px;border-radius:50%;background:var(--muted2);flex-shrink:0;} .ag-dot.live{background:var(--ok);animation:pfPulse 1.2s ease-in-out infinite;} .ag-dot.rec{background:#ef4444;animation:pfPulse .9s ease-in-out infinite;}
+  .ag-cands{display:flex;flex-direction:column;gap:6px;}
+  .ag-cand{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border-soft);border-radius:9px;padding:7px 10px;font-size:11.5px;color:var(--muted);}
+  .ag-cand b{color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ag-live{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;} @media (max-width:900px){ .ag-live{grid-template-columns:repeat(2,1fr);} }
+  .ag-tile{background:var(--card);border:1px solid var(--border-soft);border-radius:10px;padding:10px 12px;min-width:0;}
+  .ag-tile span{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted2);} .ag-tile p{margin:4px 0 0;font-size:20px;font-weight:800;font-family:var(--mono);color:var(--text);} .ag-tile p small{font-size:11px;color:var(--muted);font-weight:600;}
+  .ag-tile.hot p{color:#f59e0b;} .ag-tile.crit p{color:var(--off);}
+  .ag-cores{display:flex;align-items:flex-end;gap:3px;height:54px;background:var(--card);border:1px solid var(--border-soft);border-radius:10px;padding:8px 10px;}
+  .ag-core{flex:1;min-width:3px;background:linear-gradient(180deg,var(--accent),var(--accent2));border-radius:2px 2px 0 0;opacity:.85;transition:height .5s;} .ag-core.hot{background:#f59e0b;} .ag-core.crit{background:var(--off);}
+  .ag-verdict{border-radius:12px;padding:14px 16px;border:1px solid var(--border);background:var(--card);} .ag-verdict h3{margin:0;font-size:17px;font-weight:800;color:var(--text);} .ag-verdict p{margin:5px 0 0;font-size:12px;color:var(--muted);line-height:1.6;} .ag-verdict p b{color:var(--text);}
+  .ag-verdict.gpu{border-color:color-mix(in srgb,var(--accent) 50%,var(--border));} .ag-verdict.cpu{border-color:color-mix(in srgb,#f59e0b 55%,var(--border));} .ag-verdict.free{border-color:color-mix(in srgb,var(--ok) 50%,var(--border));}
+  .ag-table{display:flex;flex-direction:column;} .ag-tr{display:grid;grid-template-columns:1.4fr 1fr 2fr;gap:10px;padding:8px 2px;border-bottom:1px solid var(--border-soft);font-size:11.5px;color:var(--muted);align-items:center;} .ag-tr:last-child{border-bottom:0;}
+  .ag-tr b{color:var(--text);font-weight:700;} .ag-tr .v{font-family:var(--mono);color:var(--text);font-weight:700;} .ag-tr.head{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted2);}
+  .ag-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+  .ag-btn{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;} .ag-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .ag-btn.main{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:transparent;color:#fff;} .ag-btn.main:hover{filter:brightness(1.08);color:#fff;} .ag-btn.stop{background:linear-gradient(135deg,#ef4444,#dc2626);border-color:transparent;color:#fff;}
+  .ag-d.up{color:#f59e0b;} .ag-d.down{color:var(--ok);}
   /* ===== Aba Debloat ===== */
   .db-root{display:flex;flex-direction:column;gap:12px;}
   .db-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 14px;position:sticky;top:0;z-index:5;}
@@ -5639,6 +5664,7 @@ profileTabPanel.innerHTML = `
     <div class="panel-head-actions"><button class="tab-selectall" id="ppReload">analisar de novo</button></div>
   </div>
   <div class="pp-root" id="ppRoot"><div class="pp-loading">Abra esta aba pra analisar o seu PC.</div></div>
+  <div class="pp-root" id="ppGame" style="margin-top:14px"></div>
 `;
 panelsEl.appendChild(profileTabPanel);
 
@@ -5908,6 +5934,203 @@ async function ppLoad(force){
   PP.loading = false; ppRender();
 }
 document.getElementById('ppReload').addEventListener('click', () => ppLoad(true));
+
+// ===== Análise em jogo: mede CPU, GPU, VRAM e RAM enquanto você joga =====
+const AG_KEY = 'flux_game_sessions_v1';
+const AG_IGNORE = ['dwm.exe','explorer.exe','chrome.exe','msedge.exe','firefox.exe','brave.exe','opera.exe','discord.exe','msedgewebview2.exe','fluxtweakers.exe','searchhost.exe','searchapp.exe','startmenuexperiencehost.exe','shellexperiencehost.exe','textinputhost.exe','widgets.exe','steamwebhelper.exe','spotify.exe','obs64.exe','nvcontainer.exe','applicationframehost.exe','lockapp.exe'];
+const AG = { phase:'idle', timer:null, target:null, samples:[], bg:{}, cands:[], streak:{ pid:0, n:0 }, dead:0, last:null, report:null, busy:false, err:null, startedAt:0 };
+const agEl = () => document.getElementById('ppGame');
+const agAvg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
+const agPct = (a, p) => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(s.length * p))]; };
+const agShare = (a, fn) => a.length ? (a.filter(fn).length / a.length) * 100 : 0;
+const agF = (v, d = 0) => Number(v).toLocaleString('pt-BR', { minimumFractionDigits:d, maximumFractionDigits:d });
+function agLoadSessions(){ try{ const a = JSON.parse(localStorage.getItem(AG_KEY) || '[]'); return Array.isArray(a) ? a : []; }catch(e){ return []; } }
+function agSaveSession(s){ try{ const a = agLoadSessions(); a.unshift(s); localStorage.setItem(AG_KEY, JSON.stringify(a.slice(0, 12))); }catch(e){} }
+
+function agSpark(vals, color){
+  if (!vals.length) return '';
+  const n = vals.length, W = 100, H = 28;
+  const pts = vals.map((v, i) => `${(n === 1 ? W : i / (n - 1) * W).toFixed(1)},${(H - Math.max(0, Math.min(100, v)) * 0.26 - 1).toFixed(1)}`).join(' ');
+  return `<svg viewBox="0 0 100 28" preserveAspectRatio="none" style="width:100%;height:28px;display:block;margin-top:4px"><polyline points="${pts}" fill="none" stroke="${color || 'var(--accent)'}" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>`;
+}
+
+async function agStart(){
+  if (AG.busy || AG.phase !== 'idle') return;
+  if (!window.__TAURI__){ AG.err = 'A análise em jogo só funciona no app instalado.'; agRender(); return; }
+  AG.busy = true; AG.err = null;
+  try{
+    await window.__TAURI__.core.invoke('game_session_start');
+    Object.assign(AG, { phase:'watching', target:null, samples:[], bg:{}, cands:[], streak:{ pid:0, n:0 }, dead:0, last:null, report:null, startedAt:Date.now() });
+    AG.timer = setInterval(agTick, 1000);
+  }catch(e){ AG.err = String(e); }
+  AG.busy = false; agRender();
+}
+function agLock(c){
+  AG.target = { pid:c.pid, name:c.name }; AG.phase = 'recording'; AG.samples = []; AG.bg = {}; AG.startedAt = Date.now(); AG.dead = 0;
+  agRender();
+}
+async function agTick(){
+  if (AG.busy || (AG.phase !== 'watching' && AG.phase !== 'recording')) return;
+  AG.busy = true;
+  try{
+    const r = await window.__TAURI__.core.invoke('game_session_sample', { targetPid: AG.target ? AG.target.pid : null });
+    AG.last = r;
+    if (AG.phase === 'watching'){
+      AG.cands = (r.gpu_procs || []).filter(p => p.name && !AG_IGNORE.includes(p.name.toLowerCase()));
+      const top = AG.cands[0];
+      if (top && top.gpu >= 15){
+        if (AG.streak.pid === top.pid) AG.streak.n++; else AG.streak = { pid:top.pid, n:1 };
+        if (AG.streak.n >= 4) agLock(top);
+      } else AG.streak = { pid:0, n:0 };
+    } else if (AG.target){
+      const t = r.target || {};
+      if (!t.alive){ if (++AG.dead >= 3){ AG.busy = false; await agFinish(true); return; } }
+      else {
+        AG.dead = 0;
+        const cores = r.cores || [];
+        AG.samples.push({ cpu:r.cpu_total, coreMax:cores.length ? Math.max(...cores) : 0, cores, gpu:(t.gpu || 0), gpu3d:(t.gpu3d || 0), gpuAll:r.gpu_overall, vram:(t.vram_mb || r.adapter_vram_mb || 0), ram:r.ram_percent, disk:r.disk_active ?? 0, procCpu:t.cpu_raw || 0 });
+        (r.bg || []).forEach(b => { const e = AG.bg[b.name] || (AG.bg[b.name] = { cpu:0, n:0, ram:0 }); e.cpu += b.cpu; e.n++; e.ram = Math.max(e.ram, b.ram_mb); });
+        AG.bgTotals = AG.bgTotals || []; AG.bgTotals.push((r.bg || []).reduce((a, b) => a + b.cpu, 0));
+      }
+    }
+  }catch(e){ AG.err = String(e); }
+  AG.busy = false; agLive();
+}
+async function agFinish(gameClosed){
+  clearInterval(AG.timer); AG.timer = null;
+  try{ await window.__TAURI__.core.invoke('game_session_stop'); }catch(e){}
+  const samples = AG.samples;
+  if (samples.length < 20){
+    AG.report = { tooShort:true, n:samples.length, gameClosed:!!gameClosed };
+  } else AG.report = agBuildReport(samples, gameClosed);
+  AG.phase = 'report'; agRender();
+}
+function agBuildReport(S, gameClosed){
+  const n = S.length;
+  const gpu = S.map(s => s.gpu), coreMax = S.map(s => s.coreMax), cpu = S.map(s => s.cpu);
+  const coreCount = S[0].cores.length || 1;
+  const coreAvg = Array.from({ length:coreCount }, (_, i) => agAvg(S.map(s => s.cores[i] || 0)));
+  const r = {
+    name:AG.target.name, ts:Date.now(), n, secs:n, gameClosed:!!gameClosed,
+    avgGpu:agAvg(gpu), p95Gpu:agPct(gpu, .95), avgCpu:agAvg(cpu), p95Cpu:agPct(cpu, .95),
+    avgCoreMax:agAvg(coreMax), p95CoreMax:agPct(coreMax, .95),
+    gpuBoundPct:agShare(S, s => s.gpu >= 95),
+    cpuBoundPct:agShare(S, s => s.coreMax >= 90 && s.gpu < 90),
+    coreSatPct:agShare(S, s => s.coreMax >= 90),
+    coresBusy:coreAvg.filter(v => v >= 50).length, coreCount, hotCoreAvg:Math.max(...coreAvg),
+    vramPeak:Math.max(...S.map(s => s.vram)), vramAvg:agAvg(S.map(s => s.vram)),
+    ramAvg:agAvg(S.map(s => s.ram)), ramPeak:Math.max(...S.map(s => s.ram)),
+    diskAvg:agAvg(S.map(s => s.disk)), diskP95:agPct(S.map(s => s.disk), .95),
+    bgTotal:agAvg(AG.bgTotals || []),
+    bg:Object.entries(AG.bg).map(([name, e]) => ({ name, cpu:e.cpu / Math.max(1, S.length), ram:e.ram })).filter(b => b.cpu >= 1.2 || b.ram >= 600).sort((a, b) => b.cpu - a.cpu).slice(0, 6),
+  };
+  const gp = (typeof PP !== 'undefined' && PP.data) ? ppArr(PP.data.gpus).map(g => g.VramGB).filter(Boolean) : [];
+  r.vramTotal = gp.length ? Math.max(...gp) * 1024 : null;
+  r.vramPct = r.vramTotal ? r.vramPeak / r.vramTotal * 100 : null;
+  r.verdict = r.gpuBoundPct >= 50 ? 'gpu' : r.cpuBoundPct >= 30 ? 'cpu' : (r.avgGpu < 65 && r.avgCoreMax < 80) ? 'free' : 'bal';
+  return r;
+}
+
+function agTiles(r){
+  const t = r.target || {}, cores = r.cores || [];
+  const cm = cores.length ? Math.max(...cores) : 0;
+  const cls = v => v >= 95 ? 'crit' : v >= 85 ? 'hot' : '';
+  const gpuNow = AG.phase === 'recording' ? (t.gpu || 0) : (AG.cands[0] ? AG.cands[0].gpu : r.gpu_overall);
+  return `<div class="ag-tile ${cls(gpuNow)}"><span>GPU do jogo</span><p>${agF(gpuNow)}<small>%</small></p>${agSpark(AG.samples.map(s => s.gpu))}</div>
+    <div class="ag-tile ${cls(cm)}"><span>Núcleo mais carregado</span><p>${agF(cm)}<small>%</small></p>${agSpark(AG.samples.map(s => s.coreMax), 'var(--accent2)')}</div>
+    <div class="ag-tile"><span>CPU total</span><p>${agF(r.cpu_total)}<small>%</small></p>${agSpark(AG.samples.map(s => s.cpu), 'var(--accent2)')}</div>
+    <div class="ag-tile"><span>VRAM</span><p>${agF(t.vram_mb || r.adapter_vram_mb || 0)}<small> MB</small></p></div>
+    <div class="ag-tile ${cls(r.ram_percent)}"><span>RAM</span><p>${agF(r.ram_percent)}<small>% (${agF(r.ram_used_gb, 1)} GB)</small></p></div>`;
+}
+function agLive(){
+  const box = document.getElementById('agLive'); if (!box || !AG.last) return;
+  const r = AG.last, cores = r.cores || [];
+  box.innerHTML = `<div class="ag-live">${agTiles(r)}</div>
+    <div class="ag-cores" title="Cada barra é um núcleo lógico">${cores.map(v => `<div class="ag-core ${v >= 95 ? 'crit' : v >= 85 ? 'hot' : ''}" style="height:${Math.max(3, v)}%"></div>`).join('')}</div>`;
+  const st = document.getElementById('agStatus');
+  if (st){
+    if (AG.phase === 'watching'){
+      const c = AG.cands[0];
+      st.innerHTML = `<span class="ag-dot live"></span><span>Aguardando você abrir o jogo... ${c ? `Detectando <b>${ppEsc(c.name)}</b> (GPU ${agF(c.gpu)}%)` : 'nenhum programa pesado usando a GPU ainda.'}</span>`;
+      const cl = document.getElementById('agCands');
+      if (cl) cl.innerHTML = AG.cands.map(p => `<div class="ag-cand"><b>${ppEsc(p.name)}</b><span>GPU ${agF(p.gpu)}% · VRAM ${agF(p.vram_mb)} MB</span><button class="ag-btn" data-ag-pick="${p.pid}">Analisar este</button></div>`).join('');
+    } else {
+      st.innerHTML = `<span class="ag-dot rec"></span><span>Gravando <b>${ppEsc(AG.target.name)}</b>: ${AG.samples.length}s de dados. Jogue normalmente (de preferência 2 a 5 minutos numa cena pesada).</span>`;
+    }
+  }
+}
+
+function agDelta(cur, prev, lowerBetter){
+  if (prev === undefined || prev === null) return '';
+  const d = cur - prev; if (Math.abs(d) < 1) return '<span class="ag-d">≈ igual</span>';
+  const better = lowerBetter ? d < 0 : d > 0;
+  return `<span class="ag-d ${d > 0 ? 'up' : 'down'}">${d > 0 ? '+' : ''}${agF(d, 1)} pontos vs sessão anterior</span>`;
+}
+function agReportHtml(r){
+  if (r.tooShort) return `<div class="ag-verdict"><h3>Dados insuficientes</h3><p>${r.gameClosed ? 'O jogo foi fechado' : 'A análise foi parada'} com só <b>${r.n}s</b> de gravação. Jogue pelo menos 30 segundos (o ideal é 2 a 5 minutos) pra ter uma leitura confiável.</p></div>`;
+  const prev = agLoadSessions().find(s => s.name === r.name && s.ts !== r.ts);
+  const tips = [];
+  const V = {
+    gpu:['Limitado pela GPU', `A GPU ficou em <b>95% ou mais em ${agF(r.gpuBoundPct)}% do tempo</b> (média ${agF(r.avgGpu)}%). A placa de vídeo é o que decide seu FPS neste jogo${r.avgCoreMax >= 85 ? `. O núcleo mais carregado da CPU também está alto (${agF(r.avgCoreMax)}% na média), então vale ficar de olho, mas a GPU chega ao limite primeiro` : `: o processador tem folga (núcleo mais carregado em ${agF(r.avgCoreMax)}% na média)`}.`],
+    cpu:['Limitado pela CPU (um núcleo no limite)', `Um núcleo chegou a <b>90% ou mais em ${agF(r.cpuBoundPct)}% do tempo</b> enquanto a GPU estava abaixo de 90% (média ${agF(r.avgGpu)}%). A placa de vídeo está esperando o processador: a CPU decide seu FPS neste jogo.`],
+    free:['Nenhum componente no limite', `GPU média de <b>${agF(r.avgGpu)}%</b> e núcleo mais carregado em <b>${agF(r.avgCoreMax)}%</b>. Nada está no talo: o FPS provavelmente está sendo limitado por V-Sync, limitador de FPS, pela engine do jogo ou por carregamento.`],
+    bal:['Uso equilibrado', `GPU média de <b>${agF(r.avgGpu)}%</b> e núcleo mais carregado em <b>${agF(r.avgCoreMax)}%</b>: o jogo usa bem os dois, sem um gargalo claro dominando.`],
+  }[r.verdict];
+  if (r.verdict === 'gpu') tips.push(['GPU no limite: o que realmente ajuda', 'Baixe resolução ou qualidade de sombras, efeitos e antisserrilhamento, ou use DLSS/FSR. Ajustes de CPU não vão dar FPS aqui.', 'gpu']);
+  if (r.verdict === 'cpu') tips.push(['CPU no limite: o que realmente ajuda', `O jogo prende <b>um núcleo</b> (${agF(r.hotCoreAvg)}% na média) enquanto só ${r.coresBusy} de ${r.coreCount} núcleos passam de 50%: mais núcleos não ajudam, frequência e cache sim. Feche programas de fundo, use plano de Alto desempenho e baixe opções pesadas pra CPU (distância de visão, multidões, física).`, 'cpu']);
+  if (r.verdict === 'free') tips.push(['Sem gargalo de hardware', 'Se você quer mais FPS, desligue o V-Sync e qualquer limitador de FPS do jogo ou do driver. Se o problema são travadas, olhe disco e RAM abaixo.', null]);
+  if (r.vramPct !== null && r.vramPct >= 92) tips.push(['VRAM quase cheia', `Pico de <b>${agF(r.vramPeak)} MB</b> de ${agF(r.vramTotal)} MB (${agF(r.vramPct)}%). Quando a VRAM enche, o jogo usa a RAM do PC e dá travadas. Baixe a qualidade de texturas.`, null]);
+  else if (r.vramPct !== null) tips.push(['VRAM com folga', `Pico de <b>${agF(r.vramPeak)} MB</b> de ${agF(r.vramTotal)} MB (${agF(r.vramPct)}%).`, null, true]);
+  if (r.ramPeak >= 90) tips.push(['RAM no limite', `A memória chegou a <b>${agF(r.ramPeak)}%</b> (média ${agF(r.ramAvg)}%). Com RAM cheia o Windows usa o disco e dá travadas: feche navegador e apps de fundo antes de jogar.`, null]);
+  if (r.diskAvg >= 60 || r.diskP95 >= 90) tips.push(['Disco muito ocupado durante o jogo', `Atividade média de <b>${agF(r.diskAvg)}%</b> (picos de ${agF(r.diskP95)}%). Isso causa travadas ao carregar o mapa e em jogos que carregam enquanto você anda. Se o jogo está num HD, mover pra SSD resolve.`, null]);
+  if (r.bg.length) tips.push(['Programas pesando em segundo plano', r.bg.map(b => `<b>${ppEsc(b.name)}</b> (${agF(b.cpu, 1)}% de CPU, ${agF(b.ram)} MB)`).join(', ') + `. No total, o resto do sistema usou em média <b>${agF(r.bgTotal, 1)}%</b> da CPU durante o jogo. Feche o que não precisa.`, null]);
+  const cmp = prev ? `<p class="pp-sec-title">Comparação com a sessão anterior de ${ppEsc(r.name)} <small>${new Date(prev.ts).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}</small></p>
+    <div class="ag-table"><div class="ag-tr head"><span>Medida</span><span>Agora</span><span>Anterior</span></div>
+      ${[['GPU média (%)', r.avgGpu, prev.avgGpu, false], ['Núcleo mais carregado (%)', r.avgCoreMax, prev.avgCoreMax, true], ['CPU total média (%)', r.avgCpu, prev.avgCpu, true], ['Resto do sistema (% CPU)', r.bgTotal, prev.bgTotal, true], ['Pico de VRAM (MB)', r.vramPeak, prev.vramPeak, true]].map(([l, a, b, lb]) => `<div class="ag-tr"><b>${l}</b><span class="v">${agF(a, 1)}</span><span>${agF(b, 1)} ${agDelta(a, b, lb)}</span></div>`).join('')}
+    </div><p class="ag-sub">Isto compara carga, não FPS: o Windows não entrega o FPS sem uma ferramenta extra. Compare na mesma cena e com as mesmas configurações do jogo.</p>` : '';
+  return `<div class="ag-verdict ${r.verdict}"><h3>${V[0]}: ${ppEsc(r.name)}</h3><p>${V[1]}</p></div>
+    <p class="pp-sec-title">Os números <small>${r.secs}s de gravação${r.gameClosed ? ' (o jogo foi fechado)' : ''}</small></p>
+    <div class="ag-table"><div class="ag-tr head"><span>Medida</span><span>Valor</span><span>Como foi calculado</span></div>
+      <div class="ag-tr"><b>GPU</b><span class="v">${agF(r.avgGpu)}% média</span><span>95% do tempo ficou abaixo de ${agF(r.p95Gpu)}% · ≥95% em ${agF(r.gpuBoundPct)}% do tempo</span></div>
+      <div class="ag-tr"><b>Núcleo mais carregado</b><span class="v">${agF(r.avgCoreMax)}% média</span><span>≥90% em ${agF(r.coreSatPct)}% do tempo · núcleo mais usado: ${agF(r.hotCoreAvg)}% na média</span></div>
+      <div class="ag-tr"><b>CPU total</b><span class="v">${agF(r.avgCpu)}% média</span><span>${r.coresBusy} de ${r.coreCount} núcleos acima de 50% · 95% do tempo abaixo de ${agF(r.p95Cpu)}%</span></div>
+      <div class="ag-tr"><b>VRAM</b><span class="v">${agF(r.vramPeak)} MB pico</span><span>${r.vramPct !== null ? agF(r.vramPct) + '% dos ' + agF(r.vramTotal) + ' MB da placa' : 'média de ' + agF(r.vramAvg) + ' MB'}</span></div>
+      <div class="ag-tr"><b>RAM</b><span class="v">${agF(r.ramAvg)}% média</span><span>pico de ${agF(r.ramPeak)}%</span></div>
+      <div class="ag-tr"><b>Disco</b><span class="v">${agF(r.diskAvg)}% ativo</span><span>95% do tempo abaixo de ${agF(r.diskP95)}%</span></div>
+    </div>
+    <p class="pp-sec-title">O que fazer</p>
+    <div class="pp-checks">${tips.map(t => `<div class="pp-check ${t[3] ? 'ok' : (t[2] || t[0].match(/cheia|limite|ocupado|pesando/) ? 'warn' : 'info')}"><span class="pp-ico">${t[3] ? '✓' : '!'}</span><div><p class="pp-check-t">${t[0]}</p><p class="pp-check-d">${t[1]}</p>${t[2] ? `<div class="ag-actions"><button class="ag-btn main" data-ag-mark="${t[2]}">Marcar ajustes de ${t[2] === 'gpu' ? 'GPU' : 'CPU'} do preset Ultra</button></div>` : ''}</div></div>`).join('')}</div>
+    ${cmp}
+    <p class="ag-sub">Dica: depois de aplicar ajustes, jogue de novo a mesma cena e rode a análise outra vez. O app compara com esta sessão.</p>`;
+}
+function agMarkCategory(cat){
+  const ids = new Set((DATA[cat] ? DATA[cat].items : []).map(i => i.id));
+  const pick = ULTRA_PRESET.filter(id => ids.has(id));
+  if (!pick.length){ showToast('Nenhum ajuste dessa categoria no preset'); return; }
+  pick.forEach(id => { const c = document.getElementById('chk_' + id); if (c){ c.checked = true; const row = document.getElementById('row_' + id); if (row) row.classList.add('on'); } });
+  updateCount(); saveSelection();
+  showToast(`${pick.length} ajustes de ${cat === 'gpu' ? 'GPU' : 'CPU'} marcados. Clique em Aplicar otimizações.`);
+}
+function agRender(){
+  const box = agEl(); if (!box) return;
+  let body = '';
+  const steps = `<div class="ag-steps"><div class="ag-step"><b>1. Inicie a análise</b>O app passa a ler CPU, GPU, VRAM e RAM do Windows a cada segundo.</div><div class="ag-step"><b>2. Abra e jogue</b>O app acha o jogo sozinho (o programa que mais usa a GPU) e grava de 2 a 5 minutos.</div><div class="ag-step"><b>3. Veja o relatório</b>Onde está o gargalo, com os cálculos e o que fazer de verdade.</div></div>`;
+  if (AG.phase === 'idle') body = `${steps}${AG.err ? `<div class="pp-check warn" style="border-radius:10px"><span class="pp-ico">!</span><div><p class="pp-check-d">${ppEsc(AG.err)}</p></div></div>` : ''}<div class="ag-actions"><button class="ag-btn main" id="agStart">Iniciar análise em jogo</button></div>`;
+  else if (AG.phase === 'watching' || AG.phase === 'recording') body = `<div class="ag-status" id="agStatus"><span class="ag-dot live"></span><span>Iniciando...</span></div><div id="agLive"></div>${AG.phase === 'watching' ? '<div class="ag-cands" id="agCands"></div>' : ''}<div class="ag-actions"><button class="ag-btn stop" id="agStop">${AG.phase === 'recording' ? 'Parar e ver relatório' : 'Cancelar'}</button></div>`;
+  else body = `${agReportHtml(AG.report)}<div class="ag-actions"><button class="ag-btn main" id="agAgain">Nova análise</button></div>`;
+  box.innerHTML = `<div class="ag-box"><div class="ag-head"><div><p class="ag-title">Análise em jogo</p><p class="ag-sub">O que o seu PC faz de verdade enquanto você joga: uso da CPU (por núcleo), da GPU do jogo, VRAM, RAM e disco, medidos segundo a segundo. Daí sai o gargalo real e o que otimizar.</p></div></div>${body}</div>`;
+  const q = id => document.getElementById(id);
+  if (q('agStart')) q('agStart').onclick = agStart;
+  if (q('agAgain')) q('agAgain').onclick = () => { AG.phase = 'idle'; AG.report = null; AG.bgTotals = []; agRender(); };
+  if (q('agStop')) q('agStop').onclick = () => { if (AG.phase === 'recording') agFinish(false); else { clearInterval(AG.timer); AG.timer = null; window.__TAURI__.core.invoke('game_session_stop').catch(() => {}); AG.phase = 'idle'; agRender(); } };
+  box.querySelectorAll('[data-ag-mark]').forEach(b => b.onclick = () => agMarkCategory(b.dataset.agMark));
+  box.querySelectorAll('[data-ag-pick]').forEach(b => b.onclick = () => { const c = AG.cands.find(x => String(x.pid) === b.dataset.agPick); if (c) agLock(c); });
+  if (AG.phase === 'report' && AG.report && !AG.report.tooShort && !AG.report.saved){ AG.report.saved = true; agSaveSession(AG.report); }
+  agLive();
+}
+agEl().addEventListener('click', e => { const b = e.target.closest('[data-ag-pick]'); if (b && AG.phase === 'watching'){ const c = AG.cands.find(x => String(x.pid) === b.dataset.agPick); if (c) agLock(c); } });
+agRender();
+
 
 // ===== Aba Configurações: iniciar com o Windows + minimizar pra bandeja ao fechar =====
 const settingsTabBtn = document.createElement('button');
@@ -9768,6 +9991,10 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.52', date:'11/11/2026', items:[
+    'Nova <b>Análise em jogo</b> na aba Perfil: o app mede <b>CPU por núcleo, GPU do jogo, VRAM, RAM e disco segundo a segundo enquanto você joga</b>.',
+    'Detecta o jogo sozinho (o programa que mais usa a GPU) e, no fim, mostra o relatório com os cálculos: quanto tempo a GPU ficou no limite, se um núcleo da CPU travou o jogo, VRAM e RAM no pico e quais programas pesaram em segundo plano.',
+    'Diz se o seu gargalo é <b>GPU</b> ou <b>CPU</b> e o que realmente ajuda em cada caso, com botão pra marcar os ajustes certos. Compara com a sessão anterior do mesmo jogo.' ] },
   { v:'1.1.51', date:'11/11/2026', items:[
     'Aba <b>Perfil</b> refeita: em vez de perguntas, o app <b>lê o seu PC de verdade</b> (CPU, placa de vídeo, RAM, disco, tela, plano de energia, BIOS) e mostra o que está errado.',
     'Verificações reais: RAM abaixo da velocidade nominal (XMP/EXPO desligado), single channel, driver de vídeo velho, Windows em HD, disco cheio, Modo de Jogo desligado, tela em 60 Hz e possível gargalo entre CPU e GPU.',

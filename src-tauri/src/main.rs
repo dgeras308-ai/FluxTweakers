@@ -5535,6 +5535,301 @@ async fn profile_scan() -> Result<serde_json::Value, String> {
 }
 
 
+// ===== Análise em jogo: CPU, GPU, VRAM e RAM medidos ENQUANTO você joga =====
+// Abre uma consulta PDH própria (contadores do Windows por processo) e um
+// sysinfo próprio, e devolve uma amostra por chamada. A análise (gargalo,
+// médias, recomendações) é feita no front em cima dessas amostras reais.
+
+#[cfg(target_os = "windows")]
+struct GameSession {
+    query: isize,
+    engine: isize,
+    proc_mem: Option<isize>,
+    adapter_mem: Option<isize>,
+    disk_idle: Option<isize>,
+    sys: System,
+}
+#[cfg(target_os = "windows")]
+unsafe impl Send for GameSession {}
+#[cfg(target_os = "windows")]
+static GAME_SESSION: Mutex<Option<GameSession>> = Mutex::new(None);
+
+#[cfg(target_os = "windows")]
+#[link(name = "pdh")]
+extern "system" {
+    fn PdhCloseQuery(query: isize) -> u32;
+}
+
+/// Lê todas as instâncias (nome, valor) de um contador com curinga, tipo "GPU Engine(*)".
+#[cfg(target_os = "windows")]
+fn read_pdh_array(counter: isize) -> Vec<(String, f64)> {
+    unsafe {
+        let mut buffer_size: u32 = 0;
+        let mut buffer_count: u32 = 0;
+        let _ = PdhGetFormattedCounterArrayW(counter, PDH_FMT_DOUBLE, &mut buffer_size, &mut buffer_count, std::ptr::null_mut());
+        if buffer_size == 0 || buffer_count == 0 {
+            return Vec::new();
+        }
+        let mut raw: Vec<u8> = vec![0u8; buffer_size as usize];
+        let st = PdhGetFormattedCounterArrayW(
+            counter,
+            PDH_FMT_DOUBLE,
+            &mut buffer_size,
+            &mut buffer_count,
+            raw.as_mut_ptr() as *mut PdhFmtCounterValueItemW,
+        );
+        if st != 0 {
+            return Vec::new();
+        }
+        let items = raw.as_ptr() as *const PdhFmtCounterValueItemW;
+        let mut out: Vec<(String, f64)> = Vec::with_capacity(buffer_count as usize);
+        for i in 0..(buffer_count as isize) {
+            let item = &*items.offset(i);
+            if item.fmt_value.c_status != 0 || item.sz_name.is_null() {
+                continue;
+            }
+            let mut len = 0usize;
+            while *item.sz_name.add(len) != 0 && len < 512 {
+                len += 1;
+            }
+            let name = String::from_utf16_lossy(std::slice::from_raw_parts(item.sz_name, len));
+            out.push((name, item.fmt_value.value));
+        }
+        out
+    }
+}
+
+/// "pid_1234_luid_..." -> 1234
+fn pdh_pid(name: &str) -> Option<u32> {
+    let rest = name.strip_prefix("pid_")?;
+    let end = rest.find('_').unwrap_or(rest.len());
+    rest[..end].parse().ok()
+}
+
+#[tauri::command]
+async fn game_session_start() -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(|| -> Result<(), String> {
+        #[cfg(target_os = "windows")]
+        {
+            let mut guard = GAME_SESSION.lock().unwrap();
+            if let Some(old) = guard.take() {
+                unsafe {
+                    PdhCloseQuery(old.query);
+                }
+            }
+            unsafe {
+                let mut query: isize = 0;
+                if PdhOpenQueryW(std::ptr::null(), 0, &mut query) != 0 {
+                    return Err("Não consegui abrir o monitor de desempenho do Windows".to_string());
+                }
+                let add = |path: &str| -> Option<isize> {
+                    let wide: Vec<u16> = path.encode_utf16().chain(std::iter::once(0)).collect();
+                    let mut counter: isize = 0;
+                    if PdhAddEnglishCounterW(query, wide.as_ptr(), 0, &mut counter) == 0 {
+                        Some(counter)
+                    } else {
+                        None
+                    }
+                };
+                let engine = match add(r"\GPU Engine(*)\Utilization Percentage") {
+                    Some(c) => c,
+                    None => {
+                        PdhCloseQuery(query);
+                        return Err("Este PC não expõe o uso da GPU ao Windows (driver ou Windows antigo demais)".to_string());
+                    }
+                };
+                let proc_mem = add(r"\GPU Process Memory(*)\Dedicated Usage");
+                let adapter_mem = add(r"\GPU Adapter Memory(*)\Dedicated Usage");
+                let disk_idle = add(r"\PhysicalDisk(_Total)\% Idle Time");
+                let mut sys = System::new();
+                sys.refresh_cpu_usage();
+                sys.refresh_memory();
+                sys.refresh_processes(ProcessesToUpdate::All, true);
+                PdhCollectQueryData(query);
+                *guard = Some(GameSession { query, engine, proc_mem, adapter_mem, disk_idle, sys });
+            }
+            Ok(())
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+#[tauri::command]
+async fn game_session_stop() -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(|| -> Result<(), String> {
+        #[cfg(target_os = "windows")]
+        {
+            let mut guard = GAME_SESSION.lock().unwrap();
+            if let Some(old) = guard.take() {
+                unsafe {
+                    PdhCloseQuery(old.query);
+                }
+            }
+        }
+        Ok(())
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+/// Uma amostra (chamar a cada ~1 s). Com target_pid, devolve também os números só daquele processo.
+#[tauri::command]
+async fn game_session_sample(target_pid: Option<u32>) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<serde_json::Value, String> {
+        #[cfg(target_os = "windows")]
+        {
+            use std::collections::HashMap;
+            let mut guard = GAME_SESSION.lock().unwrap();
+            let s = guard.as_mut().ok_or_else(|| "A análise não está em andamento".to_string())?;
+            unsafe {
+                if PdhCollectQueryData(s.query) != 0 {
+                    return Err("Falha ao coletar os contadores do Windows".to_string());
+                }
+            }
+            s.sys.refresh_cpu_usage();
+            s.sys.refresh_memory();
+            s.sys.refresh_processes(ProcessesToUpdate::All, true);
+
+            // ---- GPU por processo e geral ----
+            let mut overall: HashMap<String, f64> = HashMap::new();
+            let mut per_pid_eng: HashMap<(u32, String), f64> = HashMap::new();
+            for (name, val) in read_pdh_array(s.engine) {
+                let engtype = match name.find("engtype_") {
+                    Some(pos) => name[pos + "engtype_".len()..].to_string(),
+                    None => continue,
+                };
+                *overall.entry(engtype.clone()).or_insert(0.0) += val;
+                if let Some(pid) = pdh_pid(&name) {
+                    *per_pid_eng.entry((pid, engtype)).or_insert(0.0) += val;
+                }
+            }
+            let mut pid_gpu: HashMap<u32, (f64, f64)> = HashMap::new();
+            for ((pid, eng), v) in per_pid_eng.iter() {
+                let e = pid_gpu.entry(*pid).or_insert((0.0, 0.0));
+                if eng == "3D" {
+                    e.0 += *v;
+                }
+                if *v > e.1 {
+                    e.1 = *v;
+                }
+            }
+            let gpu_overall = overall.values().cloned().fold(0.0f64, f64::max).min(100.0);
+            let gpu_3d = overall.get("3D").cloned().unwrap_or(0.0).min(100.0);
+
+            // ---- VRAM ----
+            let mut pid_vram: HashMap<u32, f64> = HashMap::new();
+            if let Some(c) = s.proc_mem {
+                for (name, val) in read_pdh_array(c) {
+                    if let Some(pid) = pdh_pid(&name) {
+                        *pid_vram.entry(pid).or_insert(0.0) += val;
+                    }
+                }
+            }
+            let adapter_vram_mb: Option<f64> = s
+                .adapter_mem
+                .map(|c| read_pdh_array(c).into_iter().map(|(_, v)| v).fold(0.0f64, f64::max) / 1_048_576.0);
+            let disk_active: Option<f64> = s.disk_idle.and_then(read_pdh_single).map(|idle| (100.0 - idle).clamp(0.0, 100.0));
+
+            // ---- CPU / RAM ----
+            let threads = s.sys.cpus().len().max(1) as f64;
+            let cores: Vec<f64> = s.sys.cpus().iter().map(|c| perf_round(c.cpu_usage() as f64, 1)).collect();
+            let cpu_total = perf_round(s.sys.global_cpu_usage() as f64, 1);
+            let ram_total = s.sys.total_memory() as f64;
+            let ram_used = s.sys.used_memory() as f64;
+            let ram_percent = if ram_total > 0.0 { perf_round(ram_used / ram_total * 100.0, 1) } else { 0.0 };
+
+            // ---- processos que mais usam a GPU ----
+            let mut gp: Vec<(u32, f64, f64)> = pid_gpu
+                .iter()
+                .map(|(p, (g3, gm))| (*p, *g3, *gm))
+                .filter(|(p, _, gm)| *p != 0 && *gm > 0.5)
+                .collect();
+            gp.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal));
+            gp.truncate(6);
+            let gpu_procs: Vec<serde_json::Value> = gp
+                .iter()
+                .map(|(pid, g3, gm)| {
+                    let p = s.sys.process(sysinfo::Pid::from_u32(*pid));
+                    serde_json::json!({
+                        "pid": pid,
+                        "name": p.map(|x| x.name().to_string_lossy().to_string()).unwrap_or_default(),
+                        "gpu3d": perf_round(*g3, 1),
+                        "gpu": perf_round(*gm, 1),
+                        "vram_mb": perf_round(pid_vram.get(pid).cloned().unwrap_or(0.0) / 1_048_576.0, 0),
+                        "cpu": perf_round(p.map(|x| x.cpu_usage() as f64).unwrap_or(0.0) / threads, 1)
+                    })
+                })
+                .collect();
+
+            // ---- processo alvo ----
+            let target_name: Option<String> = target_pid
+                .and_then(|pid| s.sys.process(sysinfo::Pid::from_u32(pid)).map(|p| p.name().to_string_lossy().to_string()));
+            let target = target_pid.map(|pid| {
+                let p = s.sys.process(sysinfo::Pid::from_u32(pid));
+                let g = pid_gpu.get(&pid).cloned().unwrap_or((0.0, 0.0));
+                serde_json::json!({
+                    "pid": pid,
+                    "alive": p.is_some(),
+                    "cpu_raw": perf_round(p.map(|x| x.cpu_usage() as f64).unwrap_or(0.0), 1),
+                    "ram_mb": perf_round(p.map(|x| x.memory() as f64).unwrap_or(0.0) / 1_048_576.0, 0),
+                    "gpu3d": perf_round(g.0, 1),
+                    "gpu": perf_round(g.1, 1),
+                    "vram_mb": perf_round(pid_vram.get(&pid).cloned().unwrap_or(0.0) / 1_048_576.0, 0)
+                })
+            });
+
+            // ---- o que mais pesa em segundo plano (sem contar o jogo) ----
+            let mut agg: HashMap<String, (f64, f64)> = HashMap::new();
+            for (pid, p) in s.sys.processes() {
+                if pid.as_u32() == 0 {
+                    continue;
+                }
+                let name = p.name().to_string_lossy().to_string();
+                if Some(&name) == target_name.as_ref() {
+                    continue;
+                }
+                let e = agg.entry(name).or_insert((0.0, 0.0));
+                e.0 += p.cpu_usage() as f64 / threads;
+                e.1 += p.memory() as f64 / 1_048_576.0;
+            }
+            let mut bg: Vec<(String, f64, f64)> = agg.into_iter().map(|(n, (c, r))| (n, c, r)).collect();
+            bg.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+            bg.truncate(8);
+            let bg_json: Vec<serde_json::Value> = bg
+                .iter()
+                .map(|(n, c, r)| serde_json::json!({ "name": n, "cpu": perf_round(*c, 1), "ram_mb": perf_round(*r, 0) }))
+                .collect();
+
+            Ok(serde_json::json!({
+                "cpu_total": cpu_total,
+                "cores": cores,
+                "ram_percent": ram_percent,
+                "ram_used_gb": perf_round(ram_used / 1_073_741_824.0, 1),
+                "gpu_overall": perf_round(gpu_overall, 1),
+                "gpu_3d": perf_round(gpu_3d, 1),
+                "adapter_vram_mb": adapter_vram_mb.map(|v| perf_round(v, 0)),
+                "disk_active": disk_active.map(|v| perf_round(v, 1)),
+                "gpu_procs": gpu_procs,
+                "target": target,
+                "bg": bg_json
+            }))
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = target_pid;
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+
 fn main() {
     #[cfg(target_os = "windows")]
     {
@@ -5550,7 +5845,7 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
         .manage(PdhState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes, debloat_list, debloat_remove, profile_scan])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes, debloat_list, debloat_remove, profile_scan, game_session_start, game_session_stop, game_session_sample])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));
