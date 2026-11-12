@@ -1204,40 +1204,74 @@
   .setting-desc{font-size:11.8px;color:var(--item-muted);margin:0;line-height:1.5;}
   .settings-note{margin:14px 0 0;font-size:12px;color:var(--muted);background:var(--item-bg);border:1px solid var(--item-border);border-radius:9px;padding:12px 14px;}
 
-  /* ===== Grupos de ajustes redesenhados (seções abertas, com progresso) ===== */
-  .acc-section{margin-bottom:22px;}
-  .acc-header{
-    padding:14px 16px 14px 14px;border-radius:16px;gap:12px;
-    background:linear-gradient(100deg, color-mix(in srgb, var(--tab-accent) 15%, var(--item-bg)), var(--item-bg) 72%);
-    border:1px solid color-mix(in srgb, var(--tab-accent) 24%, var(--item-border));
-    box-shadow:0 10px 28px -20px rgba(0,0,0,.7);
-  }
-  .acc-header::before,.acc-header::after{display:none;}
-  .acc-header:hover{transform:none;box-shadow:0 14px 34px -18px rgba(0,0,0,.7), 0 0 0 1px var(--tab-accent-dim);}
-  .acc-section.open .acc-header{border-color:color-mix(in srgb, var(--tab-accent) 38%, var(--item-border));}
-  .acc-left{gap:14px;color:var(--text);}
-  .acc-ring{--p:0;position:relative;width:46px;height:46px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  /* ===== Ajustes: lista limpa + faixa de resumo + grupos leves ===== */
+  .tw-bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:var(--item-bg);border:1px solid var(--item-border);border-radius:16px;padding:12px 16px;margin-bottom:18px;}
+  .tw-sum{display:flex;align-items:center;gap:12px;flex-shrink:0;}
+  .tw-sum .acc-ring{width:46px;height:46px;}
+  .tw-sum-t{display:flex;flex-direction:column;gap:2px;} .tw-sum-t b{font-size:15px;font-weight:800;color:var(--text);line-height:1.2;} .tw-sum-t small{font-size:11px;color:var(--muted);}
+  .tw-jumps{flex:1;min-width:200px;display:flex;gap:6px;overflow-x:auto;padding:2px 0;scrollbar-width:none;} .tw-jumps::-webkit-scrollbar{display:none;}
+  .tw-jump{flex-shrink:0;display:flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--item-border);color:var(--muted);border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:var(--sans);transition:.15s;white-space:nowrap;}
+  .tw-jump:hover{color:var(--text);border-color:var(--tab-accent-dim);}
+  .tw-jump b{font-family:var(--mono);font-size:10.5px;color:var(--muted2);font-weight:700;} .tw-jump.has b{color:var(--tab-accent);}
+  .tw-acts{display:flex;gap:8px;flex-shrink:0;}
+  .tw-btn{background:var(--panel);border:1px solid var(--item-border);color:var(--text);border-radius:10px;padding:8px 13px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:var(--sans);transition:.15s;}
+  .tw-btn:hover{border-color:var(--tab-accent);color:var(--tab-accent);}
+  .tw-btn.main{background:var(--tab-accent-dim);border-color:transparent;color:var(--tab-accent);} .tw-btn.main:hover{filter:brightness(1.15);}
+  .acc-ring{--p:0;position:relative;width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
     background:conic-gradient(var(--tab-accent) calc(var(--p) * 1%), color-mix(in srgb, var(--muted) 24%, transparent) 0);transition:background .4s ease;}
   .acc-ring::before{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--panel);}
-  .acc-ring b{position:relative;font-size:10.5px;font-family:var(--mono);font-weight:700;color:var(--text);}
-  .acc-section.has-on .acc-ring{box-shadow:0 0 14px -3px var(--tab-accent);}
-  .acc-ttl{display:flex;flex-direction:column;gap:3px;min-width:0;}
-  .acc-name{font-size:14.5px;font-weight:800;letter-spacing:-.005em;color:var(--text);line-height:1.2;}
-  .acc-sub{font-size:11px;color:var(--muted);font-weight:500;}
-  .acc-section.has-on .acc-sub{color:var(--tab-accent);}
-  .acc-selectall{border-radius:999px;padding:7px 14px;font-size:11px;font-weight:700;background:var(--card);}
-  .acc-toggle-open.acc-chev-btn{width:30px;height:30px;justify-content:center;border-radius:50%;margin:0;padding:0;background:var(--card);border:1px solid var(--item-border);}
-  .acc-inner{padding:14px 2px 4px;gap:14px;animation:accFade .35s ease both;transform:none;}
-  @keyframes accFade{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:none;}}
-  .tw-chips{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 7px;}
-  .tw-chip{font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid transparent;}
+  .acc-ring b{position:relative;font-size:9px;font-family:var(--mono);font-weight:700;color:var(--text);}
+  .tw-sum .acc-ring b{font-size:11px;}
+  .acc-section{margin-bottom:26px;scroll-margin-top:60px;} .acc-section.flash .acc-header{animation:twFlash .9s ease;}
+  @keyframes twFlash{0%,100%{background:transparent;}30%{background:var(--tab-accent-dim);}}
+  .acc-header{padding:4px 2px 10px;border-radius:0;gap:12px;background:none;border:0;border-bottom:1px solid var(--item-border);box-shadow:none;}
+  .acc-header::before,.acc-header::after{display:none;}
+  .acc-header:hover{transform:none;box-shadow:none;}
+  .acc-section.open .acc-header{border-color:var(--item-border);}
+  .acc-left{gap:11px;color:var(--text);}
+  .acc-ttl{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .acc-name{font-size:14px;font-weight:800;letter-spacing:-.005em;color:var(--text);line-height:1.2;}
+  .acc-sub{font-size:11px;color:var(--muted);font-weight:500;} .acc-section.has-on .acc-sub{color:var(--tab-accent);}
+  .acc-selectall{border:0;background:transparent;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:var(--muted);} .acc-selectall:hover{color:var(--tab-accent);background:var(--tab-accent-dim);}
+  .acc-toggle-open.acc-chev-btn{width:28px;height:28px;justify-content:center;border-radius:8px;margin:0;padding:0;background:transparent;border:0;}
+  .acc-inner{padding:12px 0 2px;gap:12px;animation:accFade .3s ease both;transform:none;}
+  @keyframes accFade{from{opacity:0;}to{opacity:1;}}
+  /* lista estilo Configurações do Windows 11 */
+  .acc-inner.tw-list{display:grid;grid-template-columns:1fr;gap:0;padding:0;margin-top:12px;background:var(--item-bg);border:1px solid var(--item-border);border-radius:14px;overflow:hidden;}
+  @media (min-width:1240px){ .acc-inner.tw-list{grid-template-columns:1fr 1fr;} }
+  .tw-list .setting-row{display:grid;grid-template-columns:38px 1fr auto;column-gap:14px;align-items:center;background:transparent;border:0;border-bottom:1px solid var(--item-border);border-radius:0;box-shadow:none;padding:14px 18px;transform:none !important;animation:none;perspective:none;}
+  .tw-list .setting-row-top{display:contents;}
+  .tw-list .setting-icon{grid-column:1;grid-row:1;width:38px;height:38px;border-radius:11px;padding:7px;margin:0;opacity:1;}
+  .tw-list .setting-text{grid-column:2;grid-row:1;min-width:0;}
+  .tw-list .switch{grid-column:3;grid-row:1;margin:0;align-self:center;}
+  .tw-list .setting-row:last-child{border-bottom:0;}
+  @media (min-width:1240px){
+    .tw-list .setting-row:nth-child(odd){border-right:1px solid var(--item-border);}
+    .tw-list .setting-row:last-child:nth-child(odd){border-right:0;}
+    .tw-list .setting-row:nth-last-child(2):nth-child(odd){border-bottom:0;}
+  }
+  .tw-list .setting-row::after{display:none;}
+  .tw-list .setting-row:hover{background:var(--item-bg-hover);transform:none !important;box-shadow:none;border-color:var(--item-border);}
+  .tw-list .setting-row:hover .setting-icon{transform:none;}
+  .tw-list .setting-row:has(input:checked){background:color-mix(in srgb, var(--tab-accent) 7%, transparent);box-shadow:inset 3px 0 0 var(--tab-accent);}
+  .tw-list .setting-row.just-toggled{animation:none;}
+  .tw-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px;}
+  .tw-list .setting-title{margin:0;font-size:13.5px;}
+  .tw-list .setting-desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:11.8px;}
+  .tw-chips{display:inline-flex;gap:5px;}
+  .tw-chip{font-size:8.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:999px;line-height:1.4;}
   .tw-chip.rec{color:var(--ok);background:color-mix(in srgb, var(--ok) 13%, transparent);}
   .tw-chip.perf{color:var(--tab-accent);background:var(--tab-accent-dim);}
   .tw-chip.ultra{color:#c4a5ff;background:color-mix(in srgb, #a06bff 15%, transparent);}
-  .tw-chip.manual{color:var(--muted);background:var(--card);border-color:var(--item-border);}
+  .tw-chip.manual{color:var(--muted2);background:var(--card);}
   .tw-chip.risk{color:#f59e0b;background:color-mix(in srgb, #f59e0b 14%, transparent);}
-  .tw-chip.vendor{color:var(--text);background:var(--card);border-color:var(--item-border);}
-  .setting-row-top{padding-bottom:10px;}
+  /* toggle fino (vale pro app inteiro) */
+  body .switch{width:44px;height:25px;}
+  body .switch .track{background:color-mix(in srgb, var(--muted) 34%, var(--item-bg));border:0;}
+  body .switch .track::after{display:none;}
+  body .switch input:checked ~ .track{background:var(--tab-accent, var(--accent));}
+  body .switch .thumb{width:19px;height:19px;left:3px;top:3px;}
+  body .switch input:checked ~ .thumb{transform:translateX(19px);}
 
   /* ===== Assistente (busca local, chat) ===== */
   .assistant-box{
@@ -8969,6 +9003,11 @@ function renderPanel(catId){
     bucket.items.push(item);
   });
 
+  html += `<div class="tw-bar" id="twBar_${catId}">
+    <div class="tw-sum"><span class="acc-ring" style="--p:0"><b>0%</b></span><div class="tw-sum-t"><b class="tw-sum-n">0 de 0 ativos</b><small>marque abaixo e clique em Aplicar otimizações</small></div></div>
+    <div class="tw-jumps">${groups.map((g, gi) => `<button type="button" class="tw-jump" data-jump="${catId}-${gi}">${g.name}<b>0/${g.items.length}</b></button>`).join('')}</div>
+    ${catId === 'games' ? '' : '<div class="tw-acts"><button type="button" class="tw-btn main" data-tw-act="rec">Marcar recomendados</button><button type="button" class="tw-btn" data-tw-act="clear">Limpar</button></div>'}
+  </div>`;
   let itemIndex = 0;
   groups.forEach((g, gi)=>{
     html += `<div class="acc-section open" data-group="${catId}-${gi}">
@@ -8979,7 +9018,7 @@ function renderPanel(catId){
         <button class="acc-selectall" data-group-id="${catId}-${gi}">marcar todos</button>
         <button class="acc-toggle-open acc-chev-btn">${CHEVRON}</button>
       </div>
-      <div class="acc-body"><div class="acc-inner">`;
+      <div class="acc-body"><div class="acc-inner${catId === 'games' ? '' : ' tw-list'}">`;
 const GAME_TILE_PAIRS = [
   ['#9b7bff','#5a3fd6'], ['#86efac','#16a34a'], ['#fca5a5','#b91c1c'], ['#7dd3fc','#0284c7'],
   ['#fcd34d','#d97706'], ['#f9a8d4','#db2777'], ['#5eead4','#0d9488'], ['#c4b1ff','#7c3aed'],
@@ -9035,8 +9074,7 @@ function gameTileIcon(title, group){
           </label>
         </div>
         <div class="setting-text">
-          <div class="tw-chips" data-tw="${item.id}"></div>
-          <label class="setting-title" for="chk_${item.id}">${item.title}</label>
+          <div class="tw-head"><label class="setting-title" for="chk_${item.id}">${item.title}</label><span class="tw-chips" data-tw="${item.id}"></span></div>
           <p class="setting-desc">${item.desc}</p>
           ${item.variants ? `<select id="var_${item.id}">${item.variants.map(v=>`<option value="${v.value}">${v.label}</option>`).join('')}</select>` : ''}
         </div>
@@ -9049,7 +9087,7 @@ function gameTileIcon(title, group){
   if(catId === 'network') bindDnsPanel(panel);
   if(cat.special === 'mouse') mkInit(panel);
   if(catId === 'monitor') dispInit(panel);
-  try{ fillTierChips(panel); accRefresh(panel); }catch(e){}
+  try{ twBarBind(panel); accRefresh(panel); fillTierChips(panel); }catch(e){}
 
   panel.querySelectorAll('.acc-toggle-open').forEach(h=>{
     h.onclick = ()=>{
@@ -10175,6 +10213,10 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.56', date:'11/11/2026', items:[
+    'Visual dos ajustes refeito do zero: agora é uma <b>lista limpa</b> (estilo Configurações do Windows 11), com linhas compactas e um toggle mais fino, em vez dos cartões pesados.',
+    'Faixa de resumo no topo de cada aba: <b>quantos ajustes estão ativos</b>, atalhos que pulam direto pra cada grupo e o botão <b>Marcar recomendados</b>.',
+    'Os grupos ficam sempre abertos, com o progresso de cada um ao lado do nome.' ] },
   { v:'1.1.55', date:'11/11/2026', items:[
     'As <b>gavetas</b> das abas de otimização foram redesenhadas: agora cada grupo é uma seção <b>já aberta</b>, com um <b>anel de progresso</b> mostrando quantos ajustes estão ativos e o botão de marcar o grupo inteiro.',
     'Cada ajuste ganhou uma etiqueta de nível: <b>Recomendado</b>, <b>Performance</b>, <b>Ultra</b> ou <b>Manual</b> (conforme o preset em que ele entra) e <b>Cuidado</b> nos grupos arriscados.' ] },
@@ -10491,6 +10533,37 @@ function accRefresh(root){
     const sub = sec.querySelector('.acc-sub');
     if(sub) sub.textContent = `${n} ajuste${n > 1 ? 's' : ''} · ${on} ativo${on === 1 ? '' : 's'}`;
     sec.classList.toggle('has-on', on > 0);
+  });
+  (root || document).querySelectorAll('.tw-bar').forEach(bar => {
+    const panel = bar.closest('.panel') || document;
+    const all = panel.querySelectorAll('input[type=checkbox][id^="chk_"]');
+    const n = all.length, on = Array.from(all).filter(c => c.checked).length, pct = n ? Math.round(on / n * 100) : 0;
+    const ring = bar.querySelector('.tw-sum .acc-ring'); if(ring){ ring.style.setProperty('--p', pct); ring.querySelector('b').textContent = pct + '%'; }
+    const tn = bar.querySelector('.tw-sum-n'); if(tn) tn.textContent = `${on} de ${n} ativos`;
+    bar.querySelectorAll('.tw-jump').forEach(j => {
+      const boxes = panel.querySelectorAll(`input[type=checkbox][data-group-id="${j.dataset.jump}"]`);
+      const o = Array.from(boxes).filter(c => c.checked).length;
+      j.querySelector('b').textContent = `${o}/${boxes.length}`; j.classList.toggle('has', o > 0);
+    });
+  });
+}
+function twBarBind(panel){
+  const bar = panel.querySelector('.tw-bar'); if(!bar) return;
+  bar.querySelectorAll('.tw-jump').forEach(j => j.onclick = () => {
+    const sec = panel.querySelector(`.acc-section[data-group="${j.dataset.jump}"]`); if(!sec) return;
+    sec.classList.add('open'); sec.scrollIntoView({ behavior:'smooth', block:'start' });
+    sec.classList.remove('flash'); void sec.offsetWidth; sec.classList.add('flash');
+  });
+  bar.querySelectorAll('[data-tw-act]').forEach(b => b.onclick = () => {
+    const boxes = panel.querySelectorAll('input[type=checkbox][id^="chk_"]');
+    if(b.dataset.twAct === 'rec'){
+      const rec = new Set(RECOMMENDED_PRESET); let n = 0;
+      boxes.forEach(c => { if(rec.has(c.id.slice(4))){ c.checked = true; n++; const r = document.getElementById('row_' + c.id.slice(4)); if(r) r.classList.add('on'); } });
+      showToast(n ? `${n} ajuste(s) recomendado(s) marcado(s)` : 'Nenhum ajuste recomendado nesta aba');
+    } else {
+      boxes.forEach(c => { c.checked = false; const r = document.getElementById('row_' + c.id.slice(4)); if(r) r.classList.remove('on'); });
+    }
+    updateCount();
   });
 }
 function fillTierChips(root){
