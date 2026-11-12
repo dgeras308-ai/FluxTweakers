@@ -5830,6 +5830,215 @@ async fn game_session_sample(target_pid: Option<u32>) -> Result<serde_json::Valu
 }
 
 
+// ===== Auditoria do Windows: lê o registro e o plano de energia de verdade =====
+// O front extrai, do comando de cada ajuste, quais valores ele escreveria (reg add,
+// reg delete, powercfg) e pergunta aqui o que está valendo AGORA no PC.
+
+#[derive(serde::Deserialize)]
+struct AuditEntry {
+    id: String,
+    key: String,
+    name: String,
+}
+
+#[derive(Serialize)]
+struct AuditValue {
+    id: String,
+    exists: bool,
+    kind: String,
+    num: Option<f64>,
+    text: Option<String>,
+}
+
+#[cfg(target_os = "windows")]
+fn audit_read_one(e: &AuditEntry) -> AuditValue {
+    let mut v = AuditValue { id: e.id.clone(), exists: false, kind: "none".to_string(), num: None, text: None };
+    let key = e.key.replace('/', "\\");
+    let (hive, sub) = match key.split_once('\\') {
+        Some((h, s)) => (h.to_uppercase(), s.to_string()),
+        None => return v,
+    };
+    let hkey: isize = match hive.as_str() {
+        "HKCU" | "HKEY_CURRENT_USER" => 0x80000001u32 as i32 as isize,
+        "HKLM" | "HKEY_LOCAL_MACHINE" => 0x80000002u32 as i32 as isize,
+        _ => {
+            v.kind = "unsupported".to_string();
+            return v;
+        }
+    };
+    let sub_w: Vec<u16> = sub.encode_utf16().chain(std::iter::once(0)).collect();
+    let name_w: Vec<u16> = e.name.encode_utf16().chain(std::iter::once(0)).collect();
+    unsafe {
+        let mut ty: u32 = 0;
+        let mut size: u32 = 0;
+        // RRF_RT_ANY | RRF_NOEXPAND
+        const FLAGS: u32 = 0x1000ffff;
+        let st = RegGetValueW(hkey, sub_w.as_ptr(), name_w.as_ptr(), FLAGS, &mut ty, std::ptr::null_mut(), &mut size);
+        if st != 0 && st != 234 {
+            return v;
+        }
+        let mut buf: Vec<u8> = vec![0u8; (size as usize).max(8)];
+        let mut size2 = buf.len() as u32;
+        let st2 = RegGetValueW(
+            hkey,
+            sub_w.as_ptr(),
+            name_w.as_ptr(),
+            FLAGS,
+            &mut ty,
+            buf.as_mut_ptr() as *mut core::ffi::c_void,
+            &mut size2,
+        );
+        if st2 != 0 {
+            return v;
+        }
+        v.exists = true;
+        match ty {
+            4 if size2 >= 4 => {
+                v.kind = "dword".to_string();
+                v.num = Some(u32::from_le_bytes([buf[0], buf[1], buf[2], buf[3]]) as f64);
+            }
+            11 if size2 >= 8 => {
+                v.kind = "qword".to_string();
+                let arr: [u8; 8] = [buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7]];
+                v.num = Some(u64::from_le_bytes(arr) as f64);
+            }
+            1 | 2 => {
+                v.kind = "sz".to_string();
+                let n = (size2 as usize) / 2;
+                let w: Vec<u16> = (0..n).map(|i| u16::from_le_bytes([buf[i * 2], buf[i * 2 + 1]])).collect();
+                v.text = Some(String::from_utf16_lossy(&w).trim_end_matches('\0').to_string());
+            }
+            _ => {
+                v.kind = "other".to_string();
+            }
+        }
+    }
+    v
+}
+
+/// Lê o valor ATUAL de cada entrada do registro pedida (HKCU e HKLM).
+#[tauri::command]
+async fn audit_registry(entries: Vec<AuditEntry>) -> Result<Vec<AuditValue>, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<Vec<AuditValue>, String> {
+        #[cfg(target_os = "windows")]
+        {
+            Ok(entries.iter().map(audit_read_one).collect())
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = entries;
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+#[derive(serde::Deserialize)]
+struct PcfgPair {
+    sub: String,
+    setting: String,
+}
+
+#[derive(Serialize)]
+struct PcfgValue {
+    sub: String,
+    setting: String,
+    ac: Option<u32>,
+    dc: Option<u32>,
+}
+
+/// Lê (bateria/tomada) de cada configuração do plano de energia ATIVO via powercfg /q.
+#[tauri::command]
+async fn audit_powercfg(pairs: Vec<PcfgPair>) -> Result<Vec<PcfgValue>, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<Vec<PcfgValue>, String> {
+        #[cfg(target_os = "windows")]
+        {
+            let ok = |s: &str| !s.is_empty() && s.len() < 60 && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
+            let mut out: Vec<PcfgValue> = Vec::new();
+            for p in pairs {
+                let mut item = PcfgValue { sub: p.sub.clone(), setting: p.setting.clone(), ac: None, dc: None };
+                if ok(&p.sub) && ok(&p.setting) {
+                    if let Ok(o) = Command::new("powercfg")
+                        .args(["/q", "SCHEME_CURRENT", &p.sub, &p.setting])
+                        .creation_flags(CREATE_NO_WINDOW)
+                        .output()
+                    {
+                        let text = String::from_utf8_lossy(&o.stdout).to_string();
+                        let vals: Vec<u32> = text
+                            .split_whitespace()
+                            .filter(|t| t.len() == 10 && t.starts_with("0x"))
+                            .filter_map(|t| u32::from_str_radix(&t[2..], 16).ok())
+                            .collect();
+                        if vals.len() >= 2 {
+                            item.ac = Some(vals[vals.len() - 2]);
+                            item.dc = Some(vals[vals.len() - 1]);
+                        }
+                    }
+                }
+                out.push(item);
+            }
+            Ok(out)
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = pairs;
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+#[cfg(target_os = "windows")]
+#[repr(C)]
+struct SystemPowerStatus {
+    ac_line_status: u8,
+    battery_flag: u8,
+    battery_life_percent: u8,
+    system_status_flag: u8,
+    battery_life_time: u32,
+    battery_full_life_time: u32,
+}
+
+#[cfg(target_os = "windows")]
+#[link(name = "kernel32")]
+extern "system" {
+    fn GetSystemPowerStatus(status: *mut SystemPowerStatus) -> i32;
+}
+
+/// Tomada/bateria e se a Economia de Bateria do Windows está ligada agora.
+#[tauri::command]
+async fn power_status() -> Result<serde_json::Value, String> {
+    #[cfg(target_os = "windows")]
+    {
+        let mut st = SystemPowerStatus {
+            ac_line_status: 255,
+            battery_flag: 255,
+            battery_life_percent: 255,
+            system_status_flag: 0,
+            battery_life_time: 0,
+            battery_full_life_time: 0,
+        };
+        let ok = unsafe { GetSystemPowerStatus(&mut st) } != 0;
+        if !ok {
+            return Err("Não consegui ler o estado de energia".to_string());
+        }
+        let pct: Option<u8> = if st.battery_life_percent == 255 { None } else { Some(st.battery_life_percent) };
+        Ok(serde_json::json!({
+            "ac": st.ac_line_status,
+            "saver": st.system_status_flag == 1,
+            "percent": pct,
+            "has_battery": st.battery_flag != 128 && st.battery_flag != 255
+        }))
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Err("Disponível apenas no Windows".to_string())
+    }
+}
+
+
 fn main() {
     #[cfg(target_os = "windows")]
     {
@@ -5845,7 +6054,7 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
         .manage(PdhState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes, debloat_list, debloat_remove, profile_scan, game_session_start, game_session_stop, game_session_sample])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes, debloat_list, debloat_remove, profile_scan, game_session_start, game_session_stop, game_session_sample, audit_registry, audit_powercfg, power_status])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));

@@ -351,6 +351,22 @@
   .ag-btn{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;} .ag-btn:hover{border-color:var(--accent);color:var(--accent);}
   .ag-btn.main{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:transparent;color:#fff;} .ag-btn.main:hover{filter:brightness(1.08);color:#fff;} .ag-btn.stop{background:linear-gradient(135deg,#ef4444,#dc2626);border-color:transparent;color:#fff;}
   .ag-d.up{color:#f59e0b;} .ag-d.down{color:var(--ok);}
+  /* ===== Auditoria do Windows (recomendações ajuste a ajuste) ===== */
+  .au-box{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;}
+  .au-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;} @media (max-width:760px){ .au-sum{grid-template-columns:repeat(2,1fr);} }
+  .au-stat{background:var(--card);border:1px solid var(--border-soft);border-radius:10px;padding:10px 12px;} .au-stat b{display:block;font-size:20px;font-family:var(--mono);color:var(--text);} .au-stat span{font-size:10.5px;color:var(--muted);}
+  .au-stat.warn b{color:#f59e0b;} .au-stat.ok b{color:var(--ok);}
+  .au-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;}
+  .au-bar p{margin:0;font-size:11.5px;color:var(--muted);line-height:1.5;max-width:560px;}
+  .au-cat{border:1px solid var(--border-soft);border-radius:12px;overflow:hidden;background:var(--card);}
+  .au-cat>summary{list-style:none;cursor:pointer;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:12.5px;font-weight:700;color:var(--text);}
+  .au-cat>summary::-webkit-details-marker{display:none;} .au-cat>summary::before{content:"▸";color:var(--muted2);font-size:10px;transition:transform .15s;} .au-cat[open]>summary::before{transform:rotate(90deg);}
+  .au-cat>summary span{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted);font-weight:600;}
+  .au-row{display:grid;grid-template-columns:auto 1fr;gap:11px;padding:10px 14px;border-top:1px solid var(--border-soft);cursor:pointer;} .au-row:hover{background:var(--item-bg);}
+  .au-row input{margin-top:3px;accent-color:var(--accent);width:15px;height:15px;cursor:pointer;}
+  .au-t{font-size:12.5px;font-weight:700;color:var(--text);margin:0;} .au-d{font-size:11.5px;color:var(--muted);margin:3px 0 0;line-height:1.5;}
+  .au-now{font-size:10.5px;font-family:var(--mono);color:#f59e0b;margin:5px 0 0;line-height:1.5;word-break:break-all;}
+  .au-row.done{cursor:default;} .au-row.done .au-t{color:var(--muted);font-weight:600;} .au-ok{font-size:10.5px;color:var(--ok);margin:3px 0 0;}
   /* ===== Aba Debloat ===== */
   .db-root{display:flex;flex-direction:column;gap:12px;}
   .db-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 14px;position:sticky;top:0;z-index:5;}
@@ -5668,7 +5684,7 @@ profileTabPanel.innerHTML = `
 `;
 panelsEl.appendChild(profileTabPanel);
 
-const PP = { data:null, loading:false, err:null, use:'gaming' };
+const PP = { data:null, power:null, loading:false, err:null };
 const PP_DDR = { 20:'DDR', 21:'DDR2', 24:'DDR3', 26:'DDR4', 27:'LPDDR', 28:'LPDDR2', 29:'LPDDR3', 30:'LPDDR4', 34:'DDR5', 35:'LPDDR5' };
 const PP_PLANS = { '381b4222-f694-41f0-9685-ff5bb260df2e':['Equilibrado','bal'], '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c':['Alto desempenho','high'], 'a1841308-3541-4fab-bc81-f71556f20b4a':['Economia de energia','save'], 'e9a42b02-d5df-448d-aa00-03f14749eb61':['Desempenho máximo','ultra'] };
 const PP_TIER_N = { entry:0, mid:1, high:2 };
@@ -5843,6 +5859,13 @@ function ppAnalyze(d){
   if (d.hags === 2) add('info', 'Agendamento de GPU acelerado por hardware: ligado', `Costuma ajudar em placas recentes, mas pode causar travadas em algumas combinações de driver. Se notar problema, teste desligando em <b>Configurações > Sistema > Tela > Elementos gráficos</b>.`);
   else if (d.hags === 1) add('info', 'Agendamento de GPU acelerado por hardware: desligado', `Em placas recentes (RTX 30 em diante, RX 6000 em diante) vale testar ligar em <b>Configurações > Sistema > Tela > Elementos gráficos</b>.`);
 
+  // Economia de bateria / tomada (lido agora)
+  const pw = PP.power;
+  if (pw){
+    if (pw.saver) add('warn', 'Economia de Bateria do Windows ligada', `O Windows está em <b>modo de economia</b>: ele reduz o clock da CPU, a atividade em segundo plano e o brilho. Desligue em <b>Configurações > Sistema > Energia e bateria</b>${pw.ac === 1 ? '' : ' (ou ligue o notebook na tomada)'}.`);
+    else if (laptop && pw.ac === 0) add('info', 'Notebook rodando na bateria', `Com o notebook na bateria o Windows limita o desempenho${pw.percent !== null ? ` (<b>${pw.percent}%</b> de carga)` : ''}. Pra jogar ou testar desempenho, ligue na tomada.`);
+  }
+
   // Sistema
   const os = d.os || {};
   const build = Number(os.BuildNumber) || 0;
@@ -5859,40 +5882,155 @@ function ppAnalyze(d){
   return out;
 }
 
-function ppRecommend(a, use){
-  const f = a.facts, reasons = [];
-  const gTier = f.gpu && !f.gpu.integrated ? f.gpu.tier : 'entry';
-  const cTier = f.cpu && f.cpu.known ? f.cpu.tier : 'mid';
-  const score = PP_TIER_N[gTier] + PP_TIER_N[cTier];
-  let preset = use === 'work' ? 'rec' : use === 'balanced' ? 'perf' : 'perf';
-  if (use === 'gaming' && score >= 3 && f.hasDiscrete && !f.laptop && (f.ramGB || 0) >= 16) preset = 'ultra';
-  const uso = { gaming:'jogos', balanced:'uso geral e jogos', work:'trabalho' }[use];
-  reasons.push(`Uso principal escolhido: <b>${uso}</b>.`);
-  if (preset === 'ultra') reasons.push(`Hardware forte (<b>${TIER_LABEL[cTier]}</b> + <b>${TIER_LABEL[gTier]}</b>), desktop e <b>${f.ramGB} GB</b> de RAM: dá folga pro preset mais agressivo.`);
-  if (use === 'gaming' && preset !== 'ultra'){
-    if (f.laptop) reasons.push('É um <b>notebook</b>: limitei a Performance, porque o Ultra esquenta e derruba a bateria.');
-    else if (!f.hasDiscrete) reasons.push('Sem placa de vídeo dedicada: o Ultra traria pouco ganho e mais risco, então fiquei no <b>Performance</b>.');
-    else if ((f.ramGB || 0) < 16) reasons.push(`Com <b>${f.ramGB} GB</b> de RAM o Ultra não compensa: fiquei no <b>Performance</b>.`);
-    else reasons.push(`CPU/GPU de nível <b>${TIER_LABEL[cTier]}</b>/<b>${TIER_LABEL[gTier]}</b>: o Ultra traria pouco ganho a mais pelo risco, então fiquei no <b>Performance</b>.`);
-  }
-  if (use === 'work') reasons.push('Para trabalho, o preset <b>Recomendado</b> equilibra desempenho e estabilidade.');
-  if (f.gpu && f.gpu.vendor !== 'other') reasons.push(`Ajustes de GPU configurados para <b>${{ nvidia:'NVIDIA', amd:'AMD', intel:'Intel' }[f.gpu.vendor]}</b> (a que o seu PC realmente usa).`);
-  if (f.storage === 'hdd') reasons.push('Windows em <b>HD</b>: os ajustes de disco e cache entram com mais peso, porque carregamento pesa mais que FPS.');
-  if ((f.ramGB || 0) && f.ramGB <= 8) reasons.push(`Só <b>${f.ramGB} GB</b> de RAM: vale ligar a limpeza automática na aba RAM.`);
-  const warns = a.checks.filter(c => c.s === 'warn').length;
-  if (warns) reasons.push(`Encontrei <b>${warns} ponto${warns > 1 ? 's' : ''} de atenção</b> acima que nenhum ajuste de software resolve (BIOS, hardware, drivers): vale resolver.`);
-  return { preset, reasons };
+// ---------- Auditoria do Windows: o que está valendo no PC x o que cada ajuste mudaria ----------
+const AUD = { running:false, res:null, err:null, sel:new Set() };
+function audTokens(line){ const t = []; const re = /"([^"]*)"|(\S+)/g; let m; while ((m = re.exec(line))) t.push(m[1] !== undefined ? { v:m[1] } : { v:m[2] }); return t; }
+function audNum(s){ const x = String(s).trim(); const n = /^0x/i.test(x) ? parseInt(x, 16) : parseInt(x, 10); return Number.isNaN(n) ? NaN : n; }
+function audParse(cmd){
+  const checks = []; let other = 0, skipped = 0;
+  String(cmd).split('\n').forEach(raw => {
+    const line = raw.trim();
+    if (!line || /^(echo|rem|::|chcp|cls|pause)\b/i.test(line) || /^powercfg\s+[-/]setactive\b/i.test(line)) return;
+    const tk = audTokens(line), h = tk.map(x => x.v.toLowerCase());
+    if (h[0] === 'reg' && (h[1] === 'add' || h[1] === 'delete') && tk[2]){
+      let name = null, type = '', data = null, ve = false;
+      for (let i = 3; i < tk.length; i++){
+        if (h[i] === '/v') name = tk[++i] ? tk[i].v : null;
+        else if (h[i] === '/t') type = tk[++i] ? tk[i].v.toUpperCase() : '';
+        else if (h[i] === '/d') data = tk[++i] ? tk[i].v : null;
+        else if (h[i] === '/ve') ve = true;
+      }
+      if (ve || !name){ other++; return; }
+      if (h[1] === 'delete'){ checks.push({ kind:'reg', key:tk[2].v, name, del:true }); return; }
+      if (data === null || /\{\{|%/.test(data) || /\{\{|%/.test(name)){ skipped++; return; }
+      checks.push({ kind:'reg', key:tk[2].v, name, type, data });
+    } else if (h[0] === 'powercfg' && /^[-/]set(ac|dc)valueindex$/.test(h[1] || '') && tk.length >= 6){
+      const want = audNum(tk[5].v);
+      if (Number.isNaN(want) || /\{\{/.test(tk[5].v)){ skipped++; return; }
+      checks.push({ kind:'pcfg', which:h[1].includes('ac') ? 'ac' : 'dc', sub:tk[3].v, setting:tk[4].v, want });
+    } else other++;
+  });
+  return { checks, other, skipped };
 }
-const PP_PRESETS = { rec:['Recomendado', () => RECOMMENDED_PRESET], perf:['Performance', () => PERFORMANCE_PRESET], ultra:['Ultra Performance', () => ULTRA_PRESET] };
-
+function audCur(r){ return !r.exists ? 'não definido' : r.kind === 'sz' ? `"${r.text}"` : r.kind === 'dword' || r.kind === 'qword' ? String(r.num) : '(binário)'; }
+function audEval(parsed, regMap, pcMap){
+  let verified = 0; const fails = [];
+  parsed.checks.forEach(c => {
+    if (c.kind === 'reg'){
+      const r = regMap.get(c.id); if (!r || r.kind === 'unsupported') return;
+      if (c.del){ verified++; if (r.exists) fails.push(`${c.name}: ${audCur(r)} → removido`); return; }
+      if (c.type === 'REG_DWORD' || c.type === 'REG_QWORD'){
+        const want = audNum(c.data); if (Number.isNaN(want)) return;
+        verified++; if (!(r.exists && r.num === want)) fails.push(`${c.name}: ${audCur(r)} → ${want}`);
+      } else if (c.type === 'REG_SZ' || c.type === 'REG_EXPAND_SZ'){
+        verified++; if (!(r.exists && r.kind === 'sz' && String(r.text).toLowerCase() === String(c.data).toLowerCase())) fails.push(`${c.name}: ${audCur(r)} → "${c.data}"`);
+      }
+    } else {
+      const r = pcMap.get(c.id); if (!r || r[c.which] === null || r[c.which] === undefined) return;
+      verified++; if (r[c.which] !== c.want) fails.push(`plano de energia ${c.setting.toUpperCase()} (${c.which === 'ac' ? 'tomada' : 'bateria'}): ${r[c.which]} → ${c.want}`);
+    }
+  });
+  const status = verified === 0 ? 'unknown' : fails.length ? 'pending' : 'done';
+  return { status, fails, verified };
+}
+async function audRun(force){
+  if (!window.__TAURI__ || AUD.running) return;
+  if (AUD.res && !force){ audRender(); return; }
+  AUD.running = true; AUD.err = null; audRender();
+  try{
+    const rows = [];
+    catIds.forEach(catId => DATA[catId].items.forEach(it => { if (it.cmd) rows.push({ it, catId, parsed:audParse(it.cmd) }); }));
+    const regE = new Map(), pcE = new Map();
+    rows.forEach(r => r.parsed.checks.forEach(c => {
+      if (c.kind === 'reg'){ c.id = (c.key + '|' + c.name).toLowerCase(); regE.set(c.id, { id:c.id, key:c.key, name:c.name }); }
+      else { c.id = (c.sub + '|' + c.setting).toLowerCase(); pcE.set(c.id, { sub:c.sub, setting:c.setting }); }
+    }));
+    const inv = window.__TAURI__.core.invoke;
+    const [regRes, pcRes] = await Promise.all([ inv('audit_registry', { entries:[...regE.values()] }), inv('audit_powercfg', { pairs:[...pcE.values()] }) ]);
+    const regMap = new Map(regRes.map(r => [r.id, r]));
+    const pcMap = new Map(pcRes.map(r => [(r.sub + '|' + r.setting).toLowerCase(), r]));
+    const f = PP.analysis ? PP.analysis.facts : null;
+    const want = { gpu:f && f.gpu && f.gpu.vendor !== 'other' ? f.gpu.vendor : null, cpu:f && f.cpu && f.cpu.vendor !== 'other' ? f.cpu.vendor : null, storage:f && f.storage ? (f.storage === 'hdd' ? 'hd' : 'ssd') : null };
+    const out = rows.map(r => {
+      const ev = audEval(r.parsed, regMap, pcMap);
+      const vendorOk = !r.it.vendor || !(r.catId in want) || !want[r.catId] || want[r.catId] === r.it.vendor;
+      const risky = /⚠|avan[cç]ado|cuidado/i.test(r.it.group || '') || (!!(f && f.laptop) && /notebook|bateria/i.test(r.it.desc || ''));
+      return { it:r.it, catId:r.catId, ...ev, vendorOk, risky, partial:r.parsed.other > 0 || r.parsed.skipped > 0 };
+    });
+    const nonCmd = catIds.reduce((a, c) => a + DATA[c].items.filter(i => !i.cmd).length, 0);
+    AUD.res = { rows:out, unknown:out.filter(r => r.status === 'unknown' && r.vendorOk).length + nonCmd, ts:Date.now() };
+    AUD.sel = new Set(out.filter(r => r.status === 'pending' && r.vendorOk && !r.risky).map(r => r.it.id));
+  }catch(e){ AUD.err = String(e); AUD.res = null; }
+  AUD.running = false; audRender();
+}
+function audRowHtml(r, mode){
+  const cnt = new Map(); r.fails.forEach(f => cnt.set(f, (cnt.get(f) || 0) + 1));
+  const uniq = [...cnt.entries()].map(([t, n]) => n > 1 ? `${t} (em ${n} chaves)` : t);
+  const now = uniq.slice(0, 2).join(' · ') + (uniq.length > 2 ? ` · +${uniq.length - 2}` : '');
+  if (mode === 'done') return `<div class="au-row done"><span></span><div><p class="au-t">${ppEsc(r.it.title)}</p><p class="au-ok">✓ já está aplicado${r.partial ? ' (parte verificável)' : ''}</p></div></div>`;
+  return `<label class="au-row" data-au="${ppEsc(r.it.id)}"><input type="checkbox" ${AUD.sel.has(r.it.id) ? 'checked' : ''}><div><p class="au-t">${ppEsc(r.it.title)}</p><p class="au-d">${ppEsc(r.it.desc || '')}</p><p class="au-now" title="valor atual → valor do ajuste">hoje: ${ppEsc(now)}</p></div></label>`;
+}
+function audRender(){
+  const box = document.getElementById('audBox'); if (!box) return;
+  if (!window.__TAURI__){ box.innerHTML = '<div class="pp-loading">A auditoria só funciona no app instalado.</div>'; return; }
+  if (AUD.running){ box.innerHTML = '<div class="pp-loading">Verificando o registro e o plano de energia, ajuste por ajuste...</div>'; return; }
+  if (AUD.err){ box.innerHTML = `<div class="pp-loading">Não consegui auditar: ${ppEsc(AUD.err)}<br><br><button class="pp-apply" id="audRetry" style="align-self:center">Tentar de novo</button></div>`; document.getElementById('audRetry').onclick = () => audRun(true); return; }
+  if (!AUD.res){ box.innerHTML = ''; return; }
+  const rows = AUD.res.rows;
+  const rec = rows.filter(r => r.status === 'pending' && r.vendorOk && !r.risky);
+  const adv = rows.filter(r => r.status === 'pending' && r.vendorOk && r.risky);
+  const done = rows.filter(r => r.status === 'done' && r.vendorOk);
+  const verified = rec.length + adv.length + done.length;
+  const byCat = new Map();
+  rec.forEach(r => { if (!byCat.has(r.catId)) byCat.set(r.catId, []); byCat.get(r.catId).push(r); });
+  const catHtml = [...byCat.entries()].map(([cid, list]) => `<details class="au-cat" open><summary>${ppEsc(DATA[cid].label)}<span>${list.length}</span></summary>${list.map(r => audRowHtml(r, 'pend')).join('')}</details>`).join('');
+  const advHtml = adv.length ? `<details class="au-cat"><summary>Avançados, por sua conta e risco (não marcados)<span>${adv.length}</span></summary>${adv.map(r => audRowHtml(r, 'pend')).join('')}</details>` : '';
+  const doneHtml = done.length ? `<details class="au-cat"><summary>Já aplicados no seu PC<span>${done.length}</span></summary>${done.map(r => audRowHtml(r, 'done')).join('')}</details>` : '';
+  box.innerHTML = `
+    <div class="au-sum">
+      <div class="au-stat"><b>${verified}</b><span>ajustes verificados no seu PC</span></div>
+      <div class="au-stat warn"><b>${rec.length}</b><span>recomendados e ainda não aplicados</span></div>
+      <div class="au-stat ok"><b>${done.length}</b><span>já estão aplicados</span></div>
+      <div class="au-stat"><b>${AUD.res.unknown}</b><span>não dá pra verificar sozinho</span></div>
+    </div>
+    <div class="au-bar"><p>Cada item abaixo foi comparado com o que está valendo agora no registro e no plano de energia. A linha "hoje" mostra o valor atual e o que o ajuste colocaria. Desmarque o que não quiser.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="pp-apply" id="audMark" style="padding:9px 16px">Marcar ${AUD.sel.size} para aplicar</button><button class="ag-btn" id="audAll">Todos</button><button class="ag-btn" id="audNone">Nenhum</button><button class="ag-btn" id="audAgain">Auditar de novo</button></div></div>
+    ${catHtml || '<div class="pp-check ok" style="border-radius:12px"><span class="pp-ico">✓</span><div><p class="pp-check-t">Nada pendente</p><p class="pp-check-d">Todos os ajustes verificáveis e recomendados já estão aplicados no seu PC.</p></div></div>'}
+    ${advHtml}${doneHtml}`;
+  box.querySelectorAll('.au-row[data-au]').forEach(row => row.onclick = e => {
+    if (e.target.tagName !== 'INPUT') e.preventDefault();
+    const id = row.dataset.au, on = !AUD.sel.has(id);
+    on ? AUD.sel.add(id) : AUD.sel.delete(id);
+    row.querySelector('input').checked = on;
+    const b = document.getElementById('audMark'); if (b) b.textContent = `Marcar ${AUD.sel.size} para aplicar`;
+  });
+  const q = id => document.getElementById(id);
+  q('audMark').onclick = audMark;
+  q('audAll').onclick = () => { rec.forEach(r => AUD.sel.add(r.it.id)); audRender(); };
+  q('audNone').onclick = () => { AUD.sel.clear(); audRender(); };
+  q('audAgain').onclick = () => audRun(true);
+}
+function audMark(){
+  const ids = [...AUD.sel]; if (!ids.length){ showToast('Selecione pelo menos um ajuste'); return; }
+  const f = PP.analysis ? PP.analysis.facts : null;
+  const before = [...document.querySelectorAll('input[type=checkbox][id^="chk_"]:checked')].map(c => c.id.slice(4));
+  if (f){
+    if (f.gpu && ['nvidia','amd','intel'].includes(f.gpu.vendor)) selectedVendor.gpu = f.gpu.vendor;
+    if (f.cpu && ['intel','amd'].includes(f.cpu.vendor)) selectedVendor.cpu = f.cpu.vendor;
+    if (f.storage) selectedVendor.storage = f.storage === 'hdd' ? 'hd' : 'ssd';
+    ['gpu','cpu','storage'].forEach(cat => { if (DATA[cat]) renderPanel(cat); });
+  }
+  let n = 0;
+  [...before, ...ids].forEach(id => { const c = document.getElementById('chk_' + id); if (c){ c.checked = true; const row = document.getElementById('row_' + id); if (row) row.classList.add('on'); if (ids.includes(id)) n++; } });
+  updateCount(); saveSelection();
+  showToast(`${n} ajuste(s) marcado(s). Clique em Aplicar otimizações pra aplicar.`);
+}
 function ppRender(){
   const root = document.getElementById('ppRoot'); if (!root) return;
   if (PP.loading){ root.innerHTML = '<div class="pp-loading">Lendo o seu hardware e o estado do Windows...<br>Leva alguns segundos.</div>'; return; }
   if (PP.err){ root.innerHTML = `<div class="pp-loading">Não consegui ler o seu PC: ${ppEsc(PP.err)}<br><br><button class="pp-apply" id="ppRetry" style="align-self:center">Tentar de novo</button></div>`; document.getElementById('ppRetry').onclick = () => ppLoad(true); return; }
   if (!PP.data){ root.innerHTML = '<div class="pp-loading">Abra esta aba pra analisar o seu PC.</div>'; return; }
   const a = PP.analysis = ppAnalyze(PP.data);
-  const rec = ppRecommend(a, PP.use), pr = PP_PRESETS[rec.preset];
-  const n = pr[1]().length;
   const warns = a.checks.filter(c => c.s === 'warn').length;
   const ico = { ok:'✓', warn:'!', info:'i' };
   root.innerHTML = `
@@ -5900,38 +6038,22 @@ function ppRender(){
     <div class="pp-cards">${a.cards.map(c => `<div class="pp-card"><div class="pp-card-top"><span class="pp-card-label">${c.label}</span>${c.chip ? `<span class="pp-chip">${ppEsc(c.chip)}</span>` : ''}</div><p class="pp-card-val">${ppEsc(c.val)}</p><p class="pp-card-sub">${ppEsc(c.sub || '')}</p></div>`).join('')}</div>
     <p class="pp-sec-title">Verificações <small>${warns ? warns + ' ponto' + (warns > 1 ? 's' : '') + ' de atenção' : 'nenhum problema grave'}</small></p>
     <div class="pp-checks">${a.checks.map(c => `<div class="pp-check ${c.s}"><span class="pp-ico">${ico[c.s]}</span><div><p class="pp-check-t">${ppEsc(c.t)}</p><p class="pp-check-d">${c.d}</p></div></div>`).join('') || '<div class="pp-check info"><span class="pp-ico">i</span><div><p class="pp-check-t">Nada a reportar</p></div></div>'}</div>
-    <p class="pp-sec-title">Perfil recomendado</p>
-    <div class="pp-rec">
-      <div class="pp-use">${[['gaming','Jogos'],['balanced','Uso geral + jogos'],['work','Trabalho']].map(([k, l]) => `<button data-use="${k}" class="${PP.use === k ? 'on' : ''}">${l}</button>`).join('')}</div>
-      <p class="pp-rec-name">${pr[0]}<small>${n} ajustes</small></p>
-      <ul class="pp-reasons">${rec.reasons.map(r => `<li>${r}</li>`).join('')}</ul>
-      <button class="pp-apply" id="ppApply">Aplicar este perfil</button>
-    </div>`;
-  root.querySelectorAll('.pp-use button').forEach(b => b.onclick = () => { PP.use = b.dataset.use; ppRender(); });
-  document.getElementById('ppApply').onclick = () => ppApply(rec.preset);
+    <p class="pp-sec-title">Otimizações recomendadas pro seu PC <small>comparadas com o registro e o plano de energia de agora</small></p>
+    <div class="au-box" id="audBox"></div>`;
+  audRender();
 }
-function ppApply(key){
-  const a = PP.analysis; if (!a) return;
-  const f = a.facts;
-  if (f.gpu && ['nvidia','amd','intel'].includes(f.gpu.vendor)) selectedVendor.gpu = f.gpu.vendor;
-  if (f.cpu && ['intel','amd'].includes(f.cpu.vendor)) selectedVendor.cpu = f.cpu.vendor;
-  if (f.storage) selectedVendor.storage = f.storage;
-  ['gpu','cpu','storage'].forEach(cat => { if (DATA[cat]) renderPanel(cat); });
-  if (f.ramGB){
-    ramGB = Math.round(f.ramGB);
-    const inp = document.getElementById('ramGB'); if (inp) inp.value = ramGB;
-    if (typeof renderPanel === 'function') renderPanel('ram');
-  }
-  const pr = PP_PRESETS[key];
-  applyPreset(pr[1](), `Perfil ${pr[0]} aplicado: ${pr[1]().length} ajustes marcados. Revise e clique em Aplicar otimizações.`);
-}
+
 async function ppLoad(force){
   if (!window.__TAURI__){ PP.err = 'a leitura do hardware só funciona no app instalado.'; ppRender(); return; }
   if (PP.loading || (PP.data && !force)) return;
   PP.loading = true; PP.err = null; ppRender();
-  try{ PP.data = await window.__TAURI__.core.invoke('profile_scan'); }
+  try{
+    PP.data = await window.__TAURI__.core.invoke('profile_scan');
+    try{ PP.power = await window.__TAURI__.core.invoke('power_status'); }catch(e){ PP.power = null; }
+  }
   catch(e){ PP.err = String(e); PP.data = null; }
   PP.loading = false; ppRender();
+  if (PP.data) audRun(force);
 }
 document.getElementById('ppReload').addEventListener('click', () => ppLoad(true));
 
@@ -9991,6 +10113,11 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.53', date:'11/11/2026', items:[
+    'Aba <b>Perfil</b>: acabou o preset genérico. Agora o app <b>audita o seu Windows de verdade</b>: lê o registro e o plano de energia e compara com o que <b>cada ajuste do app</b> mudaria.',
+    'Mostra só o que ainda <b>não está aplicado</b> no seu PC, ajuste por ajuste, com o valor de hoje e o valor que o ajuste colocaria (exemplo: <b>HwSchMode: 1 → 2</b>). Ajustes de outra marca de CPU ou GPU não aparecem.',
+    'Itens arriscados ficam separados, sem marcar. Você escolhe quais marcar e aplica pelo botão de sempre.',
+    'Novo alerta quando a <b>Economia de Bateria</b> do Windows está ligada ou o notebook está na bateria.' ] },
   { v:'1.1.52', date:'11/11/2026', items:[
     'Nova <b>Análise em jogo</b> na aba Perfil: o app mede <b>CPU por núcleo, GPU do jogo, VRAM, RAM e disco segundo a segundo enquanto você joga</b>.',
     'Detecta o jogo sozinho (o programa que mais usa a GPU) e, no fim, mostra o relatório com os cálculos: quanto tempo a GPU ficou no limite, se um núcleo da CPU travou o jogo, VRAM e RAM no pico e quais programas pesaram em segundo plano.',
