@@ -367,6 +367,12 @@
   .au-t{font-size:12.5px;font-weight:700;color:var(--text);margin:0;} .au-d{font-size:11.5px;color:var(--muted);margin:3px 0 0;line-height:1.5;}
   .au-now{font-size:10.5px;font-family:var(--mono);color:#f59e0b;margin:5px 0 0;line-height:1.5;word-break:break-all;}
   .au-row.done{cursor:default;} .au-row.done .au-t{color:var(--muted);font-weight:600;} .au-ok{font-size:10.5px;color:var(--ok);margin:3px 0 0;}
+  /* ===== Assistente 2 ===== */
+  .assistant-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px;}
+  .assistant-bubble ul{margin:7px 0 0;padding-left:17px;} .assistant-bubble li{margin:5px 0;line-height:1.55;}
+  .assistant-bubble code{font-family:var(--mono);font-size:10.5px;background:var(--card);border:1px solid var(--border-soft);border-radius:5px;padding:1px 5px;word-break:break-all;}
+  .assistant-bubble small{color:var(--muted2);}
+  .assistant-typing i{font-style:normal;animation:pfPulse 1s ease-in-out infinite;} .assistant-typing i:nth-child(2){animation-delay:.2s;} .assistant-typing i:nth-child(3){animation-delay:.4s;}
   /* ===== Aba Debloat ===== */
   .db-root{display:flex;flex-direction:column;gap:12px;}
   .db-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 14px;position:sticky;top:0;z-index:5;}
@@ -5391,7 +5397,7 @@ panelsEl.appendChild(fpsPanel);
   }
   window.perfOnStats = function(stats){
     if(!stats) return;
-    lastStats = stats;
+    lastStats = stats; window.__fluxStats = stats;
     if(stats.slow_read){
       last.gpu = stats.gpu_percent ?? null;
       last.disk = stats.disk_active_pct ?? null;
@@ -6368,7 +6374,10 @@ const ASSISTANT_FAQ = [
   { q:"analisar sistema botão o que faz diagnóstico checagem verificação problema saude", a:"Roda uma checagem real da sua máquina: espaço em disco, saúde física dos discos, dispositivos com erro de driver, erros críticos recentes do Windows, e uso atual de CPU/RAM. Tem também uma opção de 'Verificação Profissional' que roda o SFC/DISM de verdade pra achar arquivo de sistema corrompido." },
   { q:"sfc dism scannow arquivo corrompido verificação profissional demora trava", a:"A Verificação Profissional roda o comando real <b>sfc /scannow</b> + <b>DISM</b> do Windows pra achar arquivo de sistema corrompido. Ela pede permissão de administrador (UAC) e demora de 5 a 15 minutos DE VERDADE — o Windows checa arquivo por arquivo. Não é bug ficar 'Verificando...' por vários minutos, é o esperado. Não feche o app durante." },
   { q:"meus jogos detecção como funciona presets desempenho qualidade steam epic ubisoft rockstar jogo instalado", a:"O app procura jogos instalados de verdade (Steam, Epic, Ubisoft Connect, Rockstar) e deixa aplicar um preset por jogo: <b>Desempenho</b> (prioridade alta de CPU + GPU dedicada), <b>Equilibrado</b> (padrão do Windows), ou <b>Qualidade</b> (GPU mais eficiente/econômica). Pra jogos Unreal Engine, também ajusta o gráfico interno do jogo." },
-  { q:"tema cor mudar aparência visual claro escuro branco laranja azul personalizar trocar", a:"Na aba de <b>Configurações</b> (ou no seletor de cor da tela inicial) dá pra trocar entre vários temas, incluindo um tema claro (Branco & Laranja)." },
+  { q:"tema cor mudar aparência visual claro escuro branco laranja azul personalizar trocar", a:"O app usa um único tema visual, o <b>Grafite</b>. O seletor de temas foi removido." },
+  { q:"desempenho teste benchmark medir cpu ram disco latência comparar antes depois", a:"A aba <b>Desempenho</b> mede de verdade: CPU, RAM, disco e latência, e compara um teste com o outro pra você ver o efeito dos ajustes. Tem também o monitor ao vivo e os programas que mais pesam." },
+  { q:"perfil auditoria analisar pc hardware gargalo análise em jogo medir jogando", a:"A aba <b>Perfil</b> lê o seu hardware e audita o seu Windows (registro e plano de energia) pra mostrar o que falta aplicar. A <b>Análise em jogo</b> mede CPU por núcleo, GPU e VRAM enquanto você joga e diz onde está o gargalo." },
+  { q:"cor da tela saturação contraste brilho vibrância monitor", a:"A <b>Cor da tela</b> (saturação, contraste e brilho) fica na aba <b>Monitor</b>." },
   { q:"iniciar com windows abrir sozinho ligar pc bandeja fundo segundo plano minimizar fechar x", a:"Na aba <b>Configurações</b> tem dois interruptores: 'Abrir com o Windows' (inicia sozinho ao ligar o PC) e 'Manter em segundo plano ao fechar' (o X minimiza pra bandeja em vez de fechar)." },
   { q:"limpar ram limpeza memória cache liberar cheia lotada travada", a:"Tem um botão <b>'Limpar RAM agora'</b> na tela inicial (Início) que libera memória em cache do Windows na hora. Também dá pra deixar isso automático — procure por 'limpeza automática' na aba RAM." },
   { q:"aplicar otimizações botão como usar marcar tweaks ligar funciona ativar", a:"Marca (liga) os ajustes que quer usar em qualquer aba — ou escolhe um preset pronto (Recomendado/Performance/Ultra Performance) — e clica no botão roxo 'Aplicar otimizações' lá embaixo. O Windows vai pedir permissão de administrador (UAC), é normal." },
@@ -6503,17 +6512,17 @@ assistantTabPanel.innerHTML = `
   <div class="panel-head">
     <div class="panel-head-left">
       <div class="panel-icon-badge">${lineIcon('<path d="M8 10h.01M12 10h.01M16 10h.01"/><path d="M21 12c0 4.4-4 8-9 8-1.2 0-2.4-.2-3.4-.6L3 21l1.8-4.4A7.9 7.9 0 0 1 3 12c0-4.4 4-8 9-8s9 3.6 9 8Z"/>')}</div>
-      <div><h2>Assistente</h2><p class="panel-desc">Tire dúvidas sobre o painel e os ajustes. Busca local nos textos do app — não é uma IA generativa, então pode não entender tudo.</p></div>
+      <div><h2>Assistente</h2><p class="panel-desc">Pergunte sobre o seu PC, um ajuste ou o app. Eu leio o seu hardware e o seu Windows de verdade pra responder, e posso abrir abas e marcar ajustes por você.</p></div>
     </div>
   </div>
 
   <div class="assistant-box">
     <div class="assistant-messages" id="assistantMessages"></div>
     <div class="assistant-suggestions" id="assistantSuggestions">
-      <button class="assistant-chip" data-q="Qual preset devo usar?">Qual preset devo usar?</button>
-      <button class="assistant-chip" data-q="Isso é seguro?">Isso é seguro?</button>
-      <button class="assistant-chip" data-q="O que é ponto de restauração?">O que é ponto de restauração?</button>
-      <button class="assistant-chip" data-q="Como funciona Meus Jogos?">Como funciona Meus Jogos?</button>
+      <button class="assistant-chip" data-q="Meu PC está lento, o que fazer?">Meu PC está lento, o que fazer?</button>
+      <button class="assistant-chip" data-q="O que você recomenda pro meu PC?">O que você recomenda pro meu PC?</button>
+      <button class="assistant-chip" data-q="O que faz o Core Parking?">O que faz o Core Parking?</button>
+      <button class="assistant-chip" data-q="Meu jogo está travando, por quê?">Meu jogo está travando, por quê?</button>
     </div>
     <div class="assistant-input-row">
       <input type="text" id="assistantInput" placeholder="Pergunte algo sobre o painel ou um ajuste..." autocomplete="off">
@@ -6523,30 +6532,241 @@ assistantTabPanel.innerHTML = `
 `;
 panelsEl.appendChild(assistantTabPanel);
 
-function assistantAddMessage(role, html, tweak){
+
+// ===== Assistente 2: lê o seu PC de verdade, diagnostica, explica e age =====
+const AS = { lastTweak:null, busy:false };
+const asN = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+const asSleep = ms => new Promise(r => setTimeout(r, ms));
+const asTabs = () => [...catIds.map(id => ({ id, n:asN(DATA[id].label), label:DATA[id].label })),
+  { id:'profile', n:'perfil', label:'Perfil' }, { id:'fps', n:'desempenho', label:'Desempenho' }, { id:'home', n:'inicio', label:'Início' }, { id:'settings', n:'configuracoes', label:'Configurações' }];
+const asItem = id => { for (const c of catIds){ const it = DATA[c].items.find(i => i.id === id); if (it) return { it, catId:c }; } return null; };
+const asTier = id => RECOMMENDED_PRESET.includes(id) ? 'Recomendado' : PERFORMANCE_PRESET.includes(id) ? 'Performance' : ULTRA_PRESET.includes(id) ? 'Ultra Performance' : 'nenhum preset (manual)';
+const asFmt = (v, d = 0) => Number(v).toLocaleString('pt-BR', { minimumFractionDigits:d, maximumFractionDigits:d });
+
+async function asScan(){
+  if (!window.__TAURI__) return null;
+  if (!PP.data && !PP.loading) ppLoad();
+  for (let i = 0; i < 60 && (PP.loading || !PP.data) && !PP.err; i++) await asSleep(500);
+  return PP.analysis || null;
+}
+async function asAudit(){
+  if (!window.__TAURI__) return null;
+  for (let i = 0; i < 40 && !AUD.res && !AUD.err; i++){ if (!AUD.running && PP.analysis) audRun(); await asSleep(500); }
+  return AUD.res;
+}
+async function asProcs(){
+  if (!window.__TAURI__) return null;
+  try{ await window.__TAURI__.core.invoke('perf_top_processes'); await asSleep(1200); return await window.__TAURI__.core.invoke('perf_top_processes'); }catch(e){ return null; }
+}
+function asMarkIds(ids){
+  const a = PP.analysis, f = a ? a.facts : null;
+  const before = [...document.querySelectorAll('input[type=checkbox][id^="chk_"]:checked')].map(c => c.id.slice(4));
+  if (f){
+    if (f.gpu && ['nvidia','amd','intel'].includes(f.gpu.vendor)) selectedVendor.gpu = f.gpu.vendor;
+    if (f.cpu && ['intel','amd'].includes(f.cpu.vendor)) selectedVendor.cpu = f.cpu.vendor;
+    if (f.storage) selectedVendor.storage = f.storage === 'hdd' ? 'hd' : 'ssd';
+    ['gpu','cpu','storage'].forEach(cat => { if (DATA[cat]) renderPanel(cat); });
+  }
+  let n = 0;
+  [...before, ...ids].forEach(id => { const c = document.getElementById('chk_' + id); if (c){ c.checked = true; const row = document.getElementById('row_' + id); if (row) row.classList.add('on'); if (ids.includes(id)) n++; } });
+  updateCount(); saveSelection();
+  return n;
+}
+const asGo = tabId => ({ label:'Abrir aba ' + (asTabs().find(t => t.id === tabId) || {}).label, run:() => switchTab(tabId) });
+function asRecActions(){
+  const rows = AUD.res ? AUD.res.rows.filter(r => r.status === 'pending' && r.vendorOk && !r.risky) : [];
+  const out = [];
+  if (rows.length) out.push({ label:`Marcar os ${rows.length} recomendados`, run:() => { const n = asMarkIds(rows.map(r => r.it.id)); showToast(`${n} ajuste(s) marcado(s). Clique em Aplicar otimizações.`); } });
+  return out;
+}
+
+// ---- diagnóstico com dados reais ----
+async function asDiag(kind){
+  const a = await asScan();
+  const st = window.__fluxStats || null;
+  const procs = (kind === 'boot' || kind === 'temp') ? null : await asProcs();
+  const au = await asAudit();
+  const html = [], actions = [];
+  const live = st ? `CPU <b>${asFmt(st.cpu_percent)}%</b> · RAM <b>${asFmt(st.ram_percent)}%</b>${st.gpu_percent != null ? ` · GPU <b>${asFmt(st.gpu_percent)}%</b>` : ''}` : '';
+  html.push(`Olhei o seu PC agora${live ? ': ' + live : ''}.`);
+  const probs = [];
+  if (st){
+    if (st.cpu_percent >= 60 && procs && procs.by_cpu.length) probs.push(`<b>CPU alta agora (${asFmt(st.cpu_percent)}%).</b> Quem mais pesa: ${procs.by_cpu.slice(0, 3).map(p => `<b>${p.name}</b> (${asFmt(p.cpu_percent, 1)}%)`).join(', ')}.`);
+    if (st.ram_percent >= 80 && procs && procs.by_ram.length){ probs.push(`<b>RAM em ${asFmt(st.ram_percent)}%.</b> Quem mais ocupa: ${procs.by_ram.slice(0, 3).map(p => `<b>${p.name}</b> (${p.ram_mb >= 1024 ? asFmt(p.ram_mb / 1024, 1) + ' GB' : asFmt(p.ram_mb) + ' MB'})`).join(', ')}.`); actions.push({ label:'Limpar RAM agora', run:() => document.getElementById('homeActRamClean')?.click() }); }
+    if (st.uptime_secs > 7 * 86400) probs.push(`<b>PC ligado há ${Math.floor(st.uptime_secs / 86400)} dias.</b> Com a inicialização rápida do Windows, reiniciar de verdade limpa memória e processos acumulados.`);
+  }
+  if (a){
+    const want = kind === 'ram' ? /mem[oó]ria|ram/i : kind === 'disk' ? /disco|ssd|hd|espa[cç]o/i : kind === 'temp' ? /energia|notebook|bateria|economia/i : null;
+    const warns = a.checks.filter(c => c.s === 'warn');
+    const ordered = want ? [...warns.filter(c => want.test(c.t)), ...warns.filter(c => !want.test(c.t))] : warns;
+    ordered.slice(0, 4).forEach(c => probs.push(`<b>${c.t}.</b> ${c.d}`));
+  }
+  if (probs.length) html.push('<ul>' + probs.map(p => `<li>${p}</li>`).join('') + '</ul>');
+  else html.push('Nada grave apareceu: o uso está baixo e a leitura do hardware e do Windows não achou problema sério.');
+  if (au){
+    const pend = au.rows.filter(r => r.status === 'pending' && r.vendorOk && !r.risky);
+    if (pend.length){
+      html.push(`Além disso, <b>${pend.length} ajustes recomendados</b> ainda não estão aplicados no seu Windows (ex.: ${pend.slice(0, 3).map(r => r.it.title).join('; ')}).`);
+      actions.push(...asRecActions());
+    }
+  }
+  if (kind === 'temp') html.push('Detalhe: o FluxTweakers <b>não lê sensores de temperatura</b>. Causas comuns de calor: poeira nos coolers, pasta térmica velha, plano de energia em Alto desempenho no notebook e fluxo de ar ruim no gabinete.');
+  if (kind === 'game' || kind === 'slow') html.push('Se o problema aparece só <b>dentro do jogo</b>, rode a <b>Análise em jogo</b> (aba Perfil): ela mede CPU por núcleo, GPU e VRAM enquanto você joga e diz se o gargalo é CPU ou GPU.');
+  actions.push({ label:'Abrir aba Perfil', run:() => switchTab('profile') });
+  return { html:html.join('<br>'), actions };
+}
+
+// ---- explicação profunda de um ajuste (o que muda de verdade) ----
+function asExplain(item){
+  const found = asItem(item.id); if (!found) return { html:`<b>${item.title}</b><br>${item.desc}` };
+  const it = found.it;
+  const p = audParse(it.cmd || '');
+  const lines = [];
+  p.checks.slice(0, 6).forEach(c => {
+    if (c.kind === 'reg') lines.push(`<code>${c.key.replace(/^HKEY_LOCAL_MACHINE/i, 'HKLM').replace(/^HKEY_CURRENT_USER/i, 'HKCU')}\\${c.name}</code> ${c.del ? 'é removido' : '= <b>' + c.data + '</b>'}`);
+    else lines.push(`Plano de energia: <code>${c.setting}</code> (${c.which === 'ac' ? 'tomada' : 'bateria'}) = <b>${c.want}</b>`);
+  });
+  if (p.checks.length > 6) lines.push(`... e mais ${p.checks.length - 6} valores`);
+  if (p.other) lines.push(`${p.other} comando(s) do sistema (serviços, agendador, bcdedit ou similares)`);
+  const row = AUD.res ? AUD.res.rows.find(r => r.it.id === it.id) : null;
+  const state = !row ? '' : row.status === 'done' ? '<br><b>No seu PC hoje:</b> ✓ já está aplicado.' : row.status === 'pending' ? `<br><b>No seu PC hoje:</b> ainda não aplicado (${row.fails.slice(0, 2).join(' · ')}).` : '<br><b>No seu PC hoje:</b> esse ajuste não dá pra verificar automaticamente.';
+  const risky = /⚠|avan[cç]ado|cuidado/i.test(it.group || '');
+  return { html:`<b>${it.title}</b> <small>(aba ${DATA[found.catId].label} · ${it.group || 'Ajustes'})</small><br>${it.desc}`
+    + (lines.length ? `<br><br><b>O que ele muda de verdade:</b><ul>${lines.map(l => `<li>${l}</li>`).join('')}</ul>` : '')
+    + state + `<br><b>Entra no preset:</b> ${asTier(it.id)}.` + (risky ? '<br>⚠ Está num grupo <b>avançado</b>: mexe em algo sensível, aplique por sua conta e crie um ponto de restauração antes.' : '<br>Dá pra desfazer desmarcando e aplicando de novo, ou voltando pelo ponto de restauração.') };
+}
+function asSafety(item){
+  const found = asItem(item.id), it = found ? found.it : item;
+  const risky = /⚠|avan[cç]ado|cuidado/i.test(it.group || '');
+  const txt = asN((it.title || '') + ' ' + (it.desc || '') + ' ' + (it.cmd || ''));
+  const sec = /(spectre|meltdown|mitig|defender|firewall|smartscreen|\buac\b|antiviru|seguranca|\bvbs\b|hvci|integridade)/.test(txt);
+  const laptop = PP.analysis && PP.analysis.facts && PP.analysis.facts.laptop;
+  const bat = /notebook|bateria/i.test(it.desc || '');
+  const level = risky ? '<b>alto</b>: está num grupo avançado' : sec ? '<b>médio</b>: mexe em alguma proteção do Windows' : '<b>baixo</b>';
+  const notes = [];
+  if (risky) notes.push('Crie um <b>ponto de restauração</b> antes e aplique só se souber o motivo.');
+  if (sec) notes.push('Reduzir proteções melhora desempenho, mas deixa o PC mais exposto. Só vale se você sabe o que está fazendo.');
+  if (bat && laptop) notes.push('Você está num <b>notebook</b>: esse ajuste pode esquentar mais e gastar bateria.');
+  if (!notes.length) notes.push('É o tipo de ajuste que mexe em configuração normal do Windows, sem tirar proteção nem apagar arquivos.');
+  notes.push('É <b>reversível</b>: desmarque e aplique de novo, ou volte pelo ponto de restauração.');
+  return `<b>${it.title}</b><br>Risco: ${level}.<ul>${notes.map(n => `<li>${n}</li>`).join('')}</ul>`;
+}
+const asTweakActions = item => [
+  { label:'Ir para esse ajuste', run:() => window.goToSetting(item) },
+  { label:'Marcar esse ajuste', run:() => { const n = asMarkIds([item.id]); showToast(n ? 'Ajuste marcado. Clique em Aplicar otimizações.' : 'Não consegui marcar esse ajuste agora'); } },
+];
+function asFindTweaks(question, n = 3){
+  const qw = applySynonyms(normalizeText(question));
+  if (!qw.length) return [];
+  const out = [];
+  SEARCH_INDEX.forEach(item => {
+    const t = scoreWords(qw, item.title), d = scoreWords(qw, item.desc), g = scoreWords(qw, item.group);
+    const s = t.ratio * 1.6 + d.ratio * 0.7 + g.ratio * 0.3;
+    if (s >= 0.5 && (t.hits >= 2 || t.ratio >= 0.9 || (t.hits >= 1 && d.ratio >= 0.5))) out.push({ item, s });
+  });
+  return out.sort((a, b) => b.s - a.s).slice(0, n).map(x => x.item);
+}
+
+// ---- roteador de intenção ----
+async function asAnswer(question){
+  const q = asN(question);
+  const has = re => re.test(q);
+  const last = AS.lastTweak;
+  // conversa
+  if (/^(oi|ola|e ai|eae|opa|salve|bom dia|boa tarde|boa noite)\b/.test(q) && q.split(' ').length <= 4)
+    return { html:'Oi! Eu leio o seu PC de verdade. Pode perguntar <b>por que o PC está lento</b>, <b>o que eu devo aplicar</b>, <b>o que faz</b> um ajuste ou pedir pra <b>abrir uma aba</b>.', actions:[] };
+  if (has(/\b(obrigad|valeu|vlw|brigad)/)) return { html:'De nada! Qualquer coisa é só chamar.', actions:[] };
+  // follow-ups sobre o último ajuste
+  if (last && has(/\b(marca|marque|ativa|liga|aplica|coloca)\b.*\b(ele|esse|isso|ajuste)\b/)){ const n = asMarkIds([last.id]); return { html: n ? `Marquei <b>${last.title}</b>. Clique em <b>Aplicar otimizações</b> pra valer.` : 'Não consegui marcar agora. Abre a aba dele e marca por lá.', actions:[{ label:'Ir para esse ajuste', run:() => window.goToSetting(last) }] }; }
+  if (last && has(/\b(onde fica|me leva|mostra ele|ir pra ele|ir para ele|onde esta)\b/)) return { html:`Te levo até <b>${last.title}</b>.`, actions:[{ label:'Ir para esse ajuste', run:() => window.goToSetting(last) }], auto:() => window.goToSetting(last) };
+  if (last && has(/\b(seguro|perigos|risco|posso aplicar|vale a pena|quebra)/) && !has(/\b(preset|app|painel)\b/)) return { html:asSafety(last), actions:asTweakActions(last), tweak:last };
+  // navegação
+  if (has(/\b(abr[ae]|abrir|ir pra|ir para|va pra|va para|me leva|leva pra|mostra|quero ver)\b/)){
+    const tab = asTabs().find(t => new RegExp('\\b' + t.n.replace(/ /g, '\\s') + '\\b').test(q));
+    if (tab) return { html:`Abrindo a aba <b>${tab.label}</b>.`, actions:[asGo(tab.id)], auto:() => switchTab(tab.id) };
+  }
+  // ações diretas
+  if (has(/ponto de restauracao|restore point/) && has(/\b(cri|faz|fazer|gera)/)) return { html:'Criar um ponto de restauração antes de aplicar ajustes é a melhor garantia. Clique abaixo.', actions:[{ label:'Criar ponto de restauração', run:() => document.getElementById('restoreWidgetBtn')?.click() }] };
+  if (has(/\b(limp|liber|esvazi)\w*.*\b(ram|memoria)\b|\b(ram|memoria)\b.*\b(cheia|lotada|alta|liber\w*|limp\w*)/)){
+    const st = window.__fluxStats;
+    return { html:`${st ? `A RAM está em <b>${asFmt(st.ram_percent)}%</b> (${asFmt(st.ram_used_gb, 1)} GB de ${asFmt(st.ram_total_gb, 1)} GB). ` : ''}O botão abaixo libera a memória em cache do Windows na hora. Se ela volta a encher rápido, o problema é algum programa: eu posso olhar o que mais ocupa.`, actions:[{ label:'Limpar RAM agora', run:() => document.getElementById('homeActRamClean')?.click() }, { label:'Ver o que ocupa a RAM', run:() => asAsk('o que está pesando a ram no meu pc') }] };
+  }
+  if (has(/\b(marc[ae]|marcar|aplica|aplicar)\b.*\brecomendad/)){
+    await asScan(); await asAudit();
+    const acts = asRecActions();
+    return { html: acts.length ? 'Tenho os ajustes recomendados que ainda não estão aplicados no seu PC. Marco pra você:' : 'Todos os ajustes recomendados que dá pra verificar já estão aplicados no seu Windows.', actions:acts };
+  }
+  // análise em jogo / gargalo
+  if (has(/\b(gargalo|bottleneck)\b|cpu ou gpu|meu jogo|no jogo|dentro do jogo|analise em jogo/)){
+    const s = agLoadSessions()[0];
+    if (s && !s.tooShort){
+      const v = { gpu:'limitado pela <b>GPU</b>', cpu:'limitado pela <b>CPU</b> (um núcleo no limite)', free:'sem nenhum componente no limite', bal:'com uso equilibrado' }[s.verdict];
+      return { html:`Na sua última análise (<b>${s.name}</b>, ${s.secs}s) o jogo estava ${v}: GPU média <b>${asFmt(s.avgGpu)}%</b>, núcleo mais carregado <b>${asFmt(s.avgCoreMax)}%</b>, pico de VRAM <b>${asFmt(s.vramPeak)} MB</b>.`, actions:[{ label:'Abrir Análise em jogo', run:() => switchTab('profile') }] };
+    }
+    return { html:'Pra saber se o seu gargalo é CPU ou GPU eu preciso medir <b>enquanto você joga</b>. Inicie a análise, abra o jogo e jogue 2 a 5 minutos.', actions:[{ label:'Ir para a Análise em jogo', run:() => switchTab('profile') }] };
+  }
+  // diagnóstico
+  const kind = has(/\b(ram|memoria)\b/) ? 'ram' : has(/\b(disco|ssd|hd|espaco|armazenamento)\b/) ? 'disk' : has(/\b(boot|inicializ|ligar|ligando|abrir o windows)/) ? 'boot' : has(/\b(esquent|quent|calor|temperat|ventoinha|cooler)/) ? 'temp' : has(/\b(jogo|jogos|game|fps)\b/) ? 'game' : 'slow';
+  if (has(/\b(lent|trav|gagu|engasg|pesad|devagar|demor|congel|ruim|fps baix|baixo fps|poucos fps|caindo)|\blag\b/) || has(/\b(esquent|quent|calor|temperat|ventoinha|cooler)/) || has(/o que (esta|ta) (pesando|ocupando|consumindo)/) || has(/\b(analis|escane|verific|diagnostic|checa)\w*.*\b(pc|computador|maquina|meu)\b/))
+    return await asDiag(kind);
+  // recomendação
+  if (has(/\b(recomend|suger|sugest|por onde (eu )?comec|o que (eu )?(devo|posso) (aplicar|marcar|fazer|otimizar)|melhor (ajuste|config|otimizacao)|o que (voce )?acha)/)){
+    const a = await asScan(), au = await asAudit();
+    if (!au) return { html:'Preciso ler o seu PC pra recomendar. Abra a aba Perfil.', actions:[asGo('profile')] };
+    const pend = au.rows.filter(r => r.status === 'pending' && r.vendorOk && !r.risky);
+    if (!pend.length) return { html:'Olhei o seu Windows: todos os ajustes recomendados que dá pra verificar <b>já estão aplicados</b>. O que sobra é de hardware/BIOS, e a aba Perfil lista.', actions:[asGo('profile')] };
+    const by = {}; pend.forEach(r => by[r.catId] = (by[r.catId] || 0) + 1);
+    const top = Object.entries(by).sort((x, y) => y[1] - x[1]).slice(0, 4).map(([c, n]) => `<b>${DATA[c].label}</b> (${n})`).join(', ');
+    const warns = a ? a.checks.filter(c => c.s === 'warn') : [];
+    return { html:`Comparei os ajustes do app com o registro e o plano de energia do seu PC: <b>${pend.length} recomendados ainda não estão aplicados</b>, principalmente em ${top}.` + (warns.length ? `<br>E ${warns.length} ponto(s) de atenção que ajuste não resolve (ex.: <b>${warns[0].t}</b>).` : ''), actions:[...asRecActions(), asGo('profile')] };
+  }
+  // ajuste específico
+  const tw = asFindTweaks(question, 3);
+  const explainAsk = has(/\b(o que (e|faz|significa)|pra que serve|explica|como funciona|serve pra|para que serve)\b/);
+  if (tw.length && (explainAsk || tw.length)){
+    AS.lastTweak = tw[0];
+    const e = asExplain(tw[0]);
+    const more = tw.length > 1 ? `<br><br>Também pode ser: ${tw.slice(1).map(t => `<b>${t.title}</b>`).join(' ou ')}.` : '';
+    return { html:e.html + more, actions:asTweakActions(tw[0]), tweak:tw[0] };
+  }
+  // FAQ do painel (motor antigo)
+  const old = answerAssistantQuestion(question);
+  if (!/^N[aã]o achei nada/i.test(old.text)) return { html:old.text, actions:old.tweak ? asTweakActions(old.tweak) : [] };
+  return { html:'Não entendi bem, mas olha o que eu sei fazer: <ul><li><b>Diagnosticar</b> o seu PC (lento, travando, RAM, disco, calor)</li><li><b>Recomendar</b> o que aplicar, comparando com o seu Windows de verdade</li><li><b>Explicar</b> qualquer ajuste: o que ele muda e se é seguro</li><li><b>Abrir abas</b> e <b>marcar ajustes</b> por você</li></ul>Tenta algo como "meu PC está travando" ou "o que faz o Core Parking".', actions:[{ label:'Diagnosticar meu PC', run:() => asAsk('meu pc está lento') }, { label:'O que você recomenda?', run:() => asAsk('o que você recomenda pro meu pc') }] };
+}
+
+function assistantAddMessage(role, html, tweak, actions){
   const list = document.getElementById('assistantMessages');
-  if(!list) return;
+  if(!list) return null;
   const msg = document.createElement('div');
   msg.className = `assistant-msg ${role}`;
-  msg.innerHTML = `<div class="assistant-bubble">${html}${tweak ? `<button class="assistant-goto-btn" data-goto-id="${tweak.id}">Ir para esse ajuste →</button>` : ''}</div>`;
+  msg.innerHTML = `<div class="assistant-bubble">${html}${actions && actions.length ? '<div class="assistant-actions"></div>' : ''}</div>`;
   list.appendChild(msg);
+  const box = msg.querySelector('.assistant-actions');
+  if (box) actions.forEach(a => { const b = document.createElement('button'); b.className = 'assistant-goto-btn'; b.textContent = a.label; b.onclick = a.run; box.appendChild(b); });
   list.scrollTop = list.scrollHeight;
-  const gotoBtn = msg.querySelector('.assistant-goto-btn');
-  if(gotoBtn){
-    gotoBtn.addEventListener('click', ()=> window.goToSetting(tweak));
+  return msg;
+}
+async function asAsk(question){
+  question = (question || '').trim();
+  if (!question || AS.busy) return;
+  AS.busy = true;
+  assistantAddMessage('user', question.replace(/</g, '&lt;'));
+  const sg = document.getElementById('assistantSuggestions'); if (sg) sg.hidden = true;
+  const typing = assistantAddMessage('bot', '<span class="assistant-typing">Lendo o seu PC<i>.</i><i>.</i><i>.</i></span>');
+  try{
+    const r = await asAnswer(question);
+    if (typing) typing.remove();
+    assistantAddMessage('bot', r.html, r.tweak, r.actions);
+    if (r.auto) r.auto();
+  }catch(e){
+    if (typing) typing.remove();
+    assistantAddMessage('bot', 'Deu algum erro ao ler o seu PC. Tenta de novo em alguns segundos.', null, []);
   }
+  AS.busy = false;
 }
-function assistantAsk(question){
-  question = question.trim();
-  if(!question) return;
-  assistantAddMessage('user', question.replace(/</g,'&lt;'));
-  const suggestions = document.getElementById('assistantSuggestions');
-  if(suggestions) suggestions.hidden = true;
-  setTimeout(()=>{
-    const { text, tweak } = answerAssistantQuestion(question);
-    assistantAddMessage('bot', text, tweak);
-  }, 260);
-}
+function assistantAsk(q){ return asAsk(q); }
+
 document.getElementById('assistantSendBtn')?.addEventListener('click', ()=>{
   const input = document.getElementById('assistantInput');
   assistantAsk(input.value);
@@ -6561,7 +6781,7 @@ document.getElementById('assistantInput')?.addEventListener('keydown', (e)=>{
 document.querySelectorAll('.assistant-chip').forEach(chip=>{
   chip.addEventListener('click', ()=> assistantAsk(chip.dataset.q));
 });
-assistantAddMessage('bot', 'Oi! Pode perguntar sobre qualquer ajuste do painel (ex: "o que faz o Turbo Boost") ou sobre como o app funciona (ex: "qual preset devo usar"). Lembrando: eu busco nos textos do app, não sou uma IA generativa — se eu não souber, é melhor usar a busca (Ctrl+K).');
+assistantAddMessage('bot', 'Oi! Eu <b>leio o seu PC de verdade</b> (hardware, Windows, o que está pesando agora) antes de responder. Pergunte, por exemplo: <i>"meu PC está travando"</i>, <i>"o que você recomenda?"</i> ou <i>"o que faz o Turbo Boost?"</i>.');
 
 // preenche os atalhos de navegação rápida reaproveitando os ícones das categorias
 (function buildHomeNav(){
@@ -10138,6 +10358,11 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.58', date:'11/11/2026', items:[
+    '<b>Assistente refeito.</b> Antes ele só procurava palavras num FAQ. Agora ele <b>lê o seu PC de verdade</b> antes de responder: hardware, estado do Windows, o que está pesando agora e a auditoria dos ajustes.',
+    'Pergunte <i>"meu PC está travando"</i>, <i>"por que a RAM está alta"</i> ou <i>"o que você recomenda"</i> e ele diagnostica com números reais, aponta quem está pesando e oferece botões pra agir (marcar ajustes, limpar RAM, abrir a aba certa).',
+    'Pergunte <i>"o que faz o Core Parking"</i> e ele mostra <b>o que o ajuste muda de verdade no registro</b>, se já está aplicado no seu PC, em qual preset entra e se é seguro.',
+    'Lembra do assunto: depois de falar de um ajuste, dá pra dizer "marca ele" ou "me leva até ele". Também abre abas quando você pede.' ] },
   { v:'1.1.57', date:'11/11/2026', items:[
     'Voltou o <b>visual anterior</b> das abas de ajustes, incluindo a aba <b>Energia</b> exatamente como era. O redesign das versões 1.1.55 e 1.1.56 foi desfeito.' ] },
   { v:'1.1.54', date:'11/11/2026', items:[
