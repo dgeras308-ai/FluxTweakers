@@ -6039,6 +6039,206 @@ async fn power_status() -> Result<serde_json::Value, String> {
 }
 
 
+// ===== Aba CPU: clock por núcleo em tempo real, teste de estresse e abrir links =====
+#[cfg(target_os = "windows")]
+struct CpuLive {
+    query: isize,
+    perf: isize,
+    util: Option<isize>,
+    temp: Option<isize>,
+    base_mhz: f64,
+}
+#[cfg(target_os = "windows")]
+unsafe impl Send for CpuLive {}
+#[cfg(target_os = "windows")]
+static CPU_LIVE: Mutex<Option<CpuLive>> = Mutex::new(None);
+
+static STRESS_RUN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static STRESS_STOP: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+#[tauri::command]
+async fn cpu_live_start() -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(|| -> Result<(), String> {
+        #[cfg(target_os = "windows")]
+        {
+            let mut guard = CPU_LIVE.lock().unwrap();
+            if let Some(old) = guard.take() {
+                unsafe {
+                    PdhCloseQuery(old.query);
+                }
+            }
+            unsafe {
+                let mut query: isize = 0;
+                if PdhOpenQueryW(std::ptr::null(), 0, &mut query) != 0 {
+                    return Err("Não consegui abrir o monitor de desempenho do Windows".to_string());
+                }
+                let add = |path: &str| -> Option<isize> {
+                    let wide: Vec<u16> = path.encode_utf16().chain(std::iter::once(0)).collect();
+                    let mut counter: isize = 0;
+                    if PdhAddEnglishCounterW(query, wide.as_ptr(), 0, &mut counter) == 0 {
+                        Some(counter)
+                    } else {
+                        None
+                    }
+                };
+                let perf = match add(r"\Processor Information(*)\% Processor Performance") {
+                    Some(c) => c,
+                    None => {
+                        PdhCloseQuery(query);
+                        return Err("Este Windows não expõe o clock da CPU por núcleo".to_string());
+                    }
+                };
+                let util = add(r"\Processor Information(*)\% Processor Time");
+                let temp = add(r"\Thermal Zone Information(*)\Temperature");
+                PdhCollectQueryData(query);
+                *guard = Some(CpuLive { query, perf, util, temp, base_mhz: read_base_cpu_mhz().unwrap_or(0.0) });
+            }
+            Ok(())
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+#[tauri::command]
+async fn cpu_live_stop() -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(|| -> Result<(), String> {
+        #[cfg(target_os = "windows")]
+        {
+            let mut guard = CPU_LIVE.lock().unwrap();
+            if let Some(old) = guard.take() {
+                unsafe {
+                    PdhCloseQuery(old.query);
+                }
+            }
+        }
+        Ok(())
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+/// Uma amostra: clock e uso de cada núcleo lógico (clock = base x desempenho%), total e temperatura ACPI (se existir).
+#[tauri::command]
+async fn cpu_live_sample() -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(|| -> Result<serde_json::Value, String> {
+        #[cfg(target_os = "windows")]
+        {
+            let mut guard = CPU_LIVE.lock().unwrap();
+            let s = guard.as_mut().ok_or_else(|| "A leitura da CPU não está ativa".to_string())?;
+            unsafe {
+                if PdhCollectQueryData(s.query) != 0 {
+                    return Err("Falha ao coletar os contadores da CPU".to_string());
+                }
+            }
+            let parse_id = |name: &str| -> Option<(u32, u32)> {
+                let mut it = name.split(',');
+                let a = it.next()?.trim().parse::<u32>().ok()?;
+                let b = it.next()?.trim().parse::<u32>().ok()?;
+                Some((a, b))
+            };
+            let perf_all = read_pdh_array(s.perf);
+            let util_all: Vec<(String, f64)> = s.util.map(read_pdh_array).unwrap_or_default();
+            let mut cores: Vec<((u32, u32), f64, f64)> = Vec::new();
+            let mut total_perf = 0.0f64;
+            for (name, v) in perf_all.iter() {
+                if name == "_Total" {
+                    total_perf = *v;
+                } else if let Some(id) = parse_id(name) {
+                    let u = util_all.iter().find(|(n, _)| n == name).map(|(_, x)| *x).unwrap_or(0.0);
+                    cores.push((id, *v, u));
+                }
+            }
+            cores.sort_by(|a, b| a.0.cmp(&b.0));
+            let total_util = util_all.iter().find(|(n, _)| n == "_Total").map(|(_, x)| *x).unwrap_or(0.0);
+            let base = s.base_mhz;
+            let core_json: Vec<serde_json::Value> = cores
+                .iter()
+                .map(|(_, p, u)| serde_json::json!({ "freq": perf_round(base * p / 100.0, 0), "util": perf_round(u.min(100.0), 0) }))
+                .collect();
+            let temp_c: Option<f64> = s.temp.and_then(|c| {
+                let v = read_pdh_array(c).into_iter().map(|(_, k)| k).fold(0.0f64, f64::max);
+                if v > 200.0 && v < 450.0 { Some(perf_round(v - 273.15, 0)) } else { None }
+            });
+            Ok(serde_json::json!({
+                "base_mhz": base,
+                "freq_mhz": perf_round(base * total_perf / 100.0, 0),
+                "perf_pct": perf_round(total_perf, 0),
+                "util": perf_round(total_util.min(100.0), 0),
+                "cores": core_json,
+                "temp_c": temp_c
+            }))
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+/// Carga de 100% em todos os núcleos por no máximo 90 s (para testar boost sustentado e throttling).
+#[tauri::command]
+async fn cpu_stress_start(seconds: u32) -> Result<u32, String> {
+    use std::sync::atomic::Ordering;
+    if STRESS_RUN.swap(true, Ordering::SeqCst) {
+        return Err("Já existe um teste de estresse rodando".to_string());
+    }
+    STRESS_STOP.store(false, Ordering::SeqCst);
+    let secs = seconds.clamp(5, 90) as u64;
+    let n = std::thread::available_parallelism().map(|v| v.get()).unwrap_or(1);
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(secs);
+    let handles: Vec<_> = (0..n)
+        .map(|_| {
+            std::thread::spawn(move || {
+                while std::time::Instant::now() < deadline && !STRESS_STOP.load(Ordering::Relaxed) {
+                    let _ = perf_cpu_kernel(std::time::Instant::now() + std::time::Duration::from_millis(150));
+                }
+            })
+        })
+        .collect();
+    std::thread::spawn(move || {
+        for h in handles {
+            let _ = h.join();
+        }
+        STRESS_RUN.store(false, Ordering::SeqCst);
+    });
+    Ok(n as u32)
+}
+
+#[tauri::command]
+async fn cpu_stress_stop() -> Result<(), String> {
+    STRESS_STOP.store(true, std::sync::atomic::Ordering::SeqCst);
+    Ok(())
+}
+
+/// Abre um link https no navegador padrão.
+#[tauri::command]
+fn open_url(url: String) -> Result<(), String> {
+    if !url.starts_with("https://") || url.len() > 300 || url.chars().any(|c| c.is_whitespace() || c == '"' || c == '<' || c == '>' || c == '^' || c == '|') {
+        return Err("Link inválido".to_string());
+    }
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("explorer")
+            .arg(&url)
+            .creation_flags(CREATE_NO_WINDOW)
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| format!("Não consegui abrir o link: {e}"))
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Err("Disponível apenas no Windows".to_string())
+    }
+}
+
+
 fn main() {
     #[cfg(target_os = "windows")]
     {
@@ -6054,7 +6254,7 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
         .manage(PdhState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes, debloat_list, debloat_remove, profile_scan, game_session_start, game_session_stop, game_session_sample, audit_registry, audit_powercfg, power_status])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes, debloat_list, debloat_remove, profile_scan, game_session_start, game_session_stop, game_session_sample, audit_registry, audit_powercfg, power_status, cpu_live_start, cpu_live_stop, cpu_live_sample, cpu_stress_start, cpu_stress_stop, open_url])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));
