@@ -6585,7 +6585,7 @@ panelsEl.appendChild(assistantTabPanel);
 // ===== CPU: central de comando (clock por núcleo ao vivo, Boost com reversão real, teste de estresse, guia de OC) =====
 const CPH = { live:false, starting:false, base:0, peak:0, last:null, name:'', tick:0,
   test:{ running:false, secs:0, series:[], t0:0, abort:false }, res:null };
-const CPH_KEY = 'flux_cpu_tests_v1', CPH_SNAP = 'flux_cpu_boost_snapshot_v1';
+const CPH_KEY = 'flux_cpu_tests_v1', CPH_SNAP = 'flux_cpu_boost_snapshot_v1', CPH_REF = 'flux_cpu_oc_ref_v1';
 const CPH_BOOST_IDS = ['cpu_maxstate','cpu_boostmode','cpu_syscoolpol','cpu_corepark','cpu_idlescaling','cpu_throttle'];
 const CPH_BOOST_OPT = 'cpu_procmin';
 const cphF = (v, d = 0) => Number(v).toLocaleString('pt-BR', { minimumFractionDigits:d, maximumFractionDigits:d });
@@ -6796,6 +6796,7 @@ function cphRenderTest(){
   document.getElementById('cphT30').onclick = () => cphStartTest(30);
   document.getElementById('cphT60').onclick = () => cphStartTest(60);
   document.getElementById('cphTStop').onclick = () => { CPH.test.abort = true; window.__TAURI__.core.invoke('cpu_stress_stop').catch(() => {}); };
+  const rb = document.getElementById('cphSetRef'); if (rb) rb.onclick = () => { cphSave(CPH_REF, Number(rb.dataset.ts)); cphRenderTest(); cphRenderOc(); showToast('Referência definida'); };
   cphPaintTestLive();
 }
 async function cphStartTest(secs){
@@ -6836,7 +6837,25 @@ function cphResultHtml(r, hist){
     : r.drop >= 12 ? `<div class="cph-verdict bad"><b>Throttling detectado:</b> o clock caiu <b>${cphF(r.drop, 1)}%</b> do pico até o fim do teste. Pode ser calor (limpe o cooler, melhore o fluxo de ar), limite de energia da placa-mãe ou plano de energia. Boost mais agressivo vai piorar isso.</div>`
     : `<div class="cph-verdict ok"><b>Clock sustentado:</b> a CPU manteve <b>${cphGHz(r.sustained)} GHz</b> sob carga total (queda de só ${cphF(Math.max(0, r.drop), 1)}% do pico). Há folga térmica e de energia.</div>`;
   const cmp = prev && !r.aborted && !prev.aborted ? `<p class="cph-p">Comparado ao teste anterior (${new Date(prev.ts).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}): clock sustentado <b>${r.sustained >= prev.sustained ? '+' : ''}${cphF(r.sustained - prev.sustained)} MHz</b> (${cphGHz(prev.sustained)} → ${cphGHz(r.sustained)} GHz).</p>` : '';
-  return `<div class="cph-res"><div><span>Pico</span><b>${cphGHz(r.peak)} GHz</b></div><div><span>Sustentado</span><b>${cphGHz(r.sustained)} GHz</b></div><div><span>Queda</span><b>${cphF(Math.max(0, r.drop), 1)}%</b></div><div><span>Zona térmica máx</span><b>${r.tempMax != null ? r.tempMax + '°C' : 'n/d'}</b></div></div>${verdict}${cmp}`;
+  const refBtn = !r.aborted ? `<div class="cph-row"><button class="cph-btn" id="cphSetRef" data-ts="${r.ts}">${cphLoad(CPH_REF) === r.ts ? '✓ Este teste é a referência (stock)' : 'Usar este teste como referência (stock)'}</button></div>` : '';
+  return `<div class="cph-res"><div><span>Pico</span><b>${cphGHz(r.peak)} GHz</b></div><div><span>Sustentado</span><b>${cphGHz(r.sustained)} GHz</b></div><div><span>Queda</span><b>${cphF(Math.max(0, r.drop), 1)}%</b></div><div><span>Zona térmica máx</span><b>${r.tempMax != null ? r.tempMax + '°C' : 'n/d'}</b></div></div>${verdict}${cmp}${refBtn}`;
+}
+
+// ---- Plano de overclock guiado pelas medições ----
+function cphPlanHtml(){
+  const hist = cphLoad(CPH_KEY) || [], refTs = cphLoad(CPH_REF);
+  if (!hist.length) return '<div class="cph-state"><b>Plano de overclock:</b> rode o <b>teste de estabilidade</b> ao lado primeiro, com o PC no padrão. Ele vira a referência (clock stock) pra medir cada passo.</div>';
+  const ref = hist.find(h => h.ts === refTs), last = hist[0];
+  if (!ref) return '<div class="cph-state"><b>Defina a referência:</b> depois de um teste com o PC <b>sem overclock</b>, clique em "Usar este teste como referência (stock)".</div>';
+  const gain = last.sustained - ref.sustained;
+  const bad = last.aborted || last.drop >= 12 || (last.tempMax != null && last.tempMax >= 90);
+  const T = h => `${cphGHz(h.sustained)} GHz sustentado · queda ${cphF(Math.max(0, h.drop), 1)}%${h.tempMax != null ? ' · ' + h.tempMax + '°C' : ''}`;
+  let next;
+  if (last.ts === ref.ts) next = `<b>Passo 1:</b> suba <b>+100 MHz</b> (alvo ≈ <b>${cphGHz(ref.sustained + 100)} GHz</b>). Intel K: +1 no multiplicador. AMD: +100 MHz no Boost Override do PBO ou Curve Optimizer em -5. Aplique na BIOS ou na ferramenta do fabricante, reinicie e rode o teste de novo.`;
+  else if (bad) next = `<b>O último teste mostrou problema</b> (${last.aborted ? 'interrompido' : last.drop >= 12 ? 'throttling' : 'temperatura alta'}). Volte um passo: alvo ≈ <b>${cphGHz(Math.max(ref.sustained, last.sustained - 100))} GHz</b>. Se já está no padrão e ainda dá problema, o limite é a refrigeração.`;
+  else if (gain >= 80) next = `<b>Passo aprovado:</b> ganho de <b>${cphF(gain)} MHz</b> sustentados sem throttling. Antes do próximo (alvo ≈ <b>${cphGHz(last.sustained + 100)} GHz</b>), confirme com um estresse longo (10 minutos ou mais) e um jogo.`;
+  else next = `<b>Ganho pequeno (${cphF(gain)} MHz):</b> o limite provavelmente é energia ou temperatura, não o multiplicador. Mais passos tendem a não render.`;
+  return `<div class="cph-state"><b>Plano de overclock (guiado pelas suas medições)</b><br>Referência: ${T(ref)}<br>${last.ts === ref.ts ? '' : 'Último teste: ' + T(last) + '<br>'}${next}</div>`;
 }
 
 // ---- Overclock real: guia seguro + ferramentas oficiais ----
@@ -6850,8 +6869,9 @@ function cphRenderOc(){
     : amd ? '<li><b>AMD Ryzen:</b> o caminho mais seguro é o <b>PBO</b> (Precision Boost Overdrive) com <b>Curve Optimizer</b> em valores negativos pequenos, na BIOS ou no Ryzen Master. Ele respeita limites de temperatura e corrente, ao contrário de fixar um multiplicador.</li>' : '';
   box.innerHTML = `
     <h4>Overclock de multiplicador e voltagem <span class="cph-tag risk">risco real</span></h4>
-    <div class="cph-warnbox"><b>O FluxTweakers não altera multiplicador nem voltagem, de propósito.</b> Isso exige um driver de kernel com acesso direto ao hardware (o que o XTU e o Ryzen Master instalam). Embarcar um driver desses num app de otimização é inseguro: drivers assim são alvo de malware e o Windows costuma bloqueá-los. O jeito correto é usar a <b>ferramenta oficial do fabricante</b> ou a <b>BIOS</b>, e usar este app pra <b>medir</b> o resultado com o teste ao lado.</div>
+    <div class="cph-warnbox"><b>O app mede e planeja; o multiplicador e a voltagem são aplicados na BIOS ou na ferramenta oficial do fabricante.</b> Aplicar direto pelo app exigiria um driver de acesso ao hardware, que ainda não está incluído. Overclock é por sua conta e risco: pode anular a garantia, causar instabilidade e encurtar a vida do chip.</div>
     <div class="cph-row"><span class="cph-chip ${un.ok === true ? 'ok' : un.ok === false ? 'warn' : ''}">${ppEsc(un.t)}</span>${tool ? `<button class="cph-btn main" id="cphOpenTool">Abrir ${tool.name} (site oficial)</button>` : ''}</div>
+    ${cphPlanHtml()}
     ${un.ok === false ? '<p class="cph-p">O seu processador parece ser <b>bloqueado</b>: overclock de CPU provavelmente não é possível. O <b>Boost Máximo</b> ao lado continua valendo.</p>' : ''}
     <details class="cph-details"><summary>Guia de overclock com cuidado</summary>
       <ul class="cph-list">
@@ -10697,6 +10717,9 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.60', date:'11/11/2026', items:[
+    '<b>Plano de overclock</b> na aba CPU, guiado pelas suas medições: você define um teste como referência (stock) e o app sugere o próximo passo (+100 MHz), diz se o passo foi aprovado, se houve throttling ou temperatura alta, e quando voltar um passo.',
+    'Texto do card de overclock mais direto: o app mede e planeja, e o multiplicador e a voltagem são aplicados na BIOS ou na ferramenta oficial do fabricante.' ] },
   { v:'1.1.59', date:'11/11/2026', items:[
     'Aba <b>CPU</b> com uma central de comando nova: <b>clock ao vivo</b> em um medidor, clock de <b>cada núcleo</b>, base, pico, uso e zona térmica (quando o Windows informa).',
     '<b>Boost Máximo</b>: deixa a CPU sustentar o turbo pela política de energia, <b>sem risco de dano</b>. O app guarda os valores originais antes e tem o botão <b>Reverter</b> de verdade.',
