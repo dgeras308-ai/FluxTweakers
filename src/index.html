@@ -6639,8 +6639,9 @@ function cphHubInit(panel){
       <section class="cph-card accent" id="cphBoost"></section>
       <section class="cph-card" id="cphTest"></section>
     </div>
+    <section class="cph-card accent" id="cphPio"></section>
     <section class="cph-card" id="cphOc"></section>`;
-  cphRenderBoost(); cphRenderTest(); cphRenderOc();
+  cphRenderBoost(); cphRenderTest(); cphRenderPio(); cphRenderOc();
   cphIdentify();
   if (!CPH.timer) CPH.timer = setInterval(cphTick, 1000);
 }
@@ -6663,7 +6664,7 @@ function cphPaintHeader(){
   const thr = CPH.last ? CPH.last.cores.length : null;
   if (CPH.cores) chips.push(`<span class="cph-chip">${CPH.cores} núcleos${thr ? ' / ' + thr + ' threads' : ''}</span>`);
   chips.push(`<span class="cph-chip ${un.ok === true ? 'ok' : un.ok === false ? 'warn' : ''}">${ppEsc(un.t)}</span>`);
-  if (CPH.last && CPH.last.temp_c != null) chips.push(`<span class="cph-chip">zona térmica ${CPH.last.temp_c}°C</span>`);
+  if (CPH.last && CPH.last.temp_c != null) chips.push(`<span class="cph-chip">${CPH.pio && CPH.pio.ok ? 'pacote' : 'zona térmica'} ${CPH.last.temp_c}°C</span>`);
   document.getElementById('cphChips').innerHTML = chips.join('');
 }
 
@@ -6682,6 +6683,7 @@ async function cphTick(){
   }
   try{
     const r = await window.__TAURI__.core.invoke('cpu_live_sample');
+    if (CPH.pio && CPH.pio.ok){ try{ const t = await window.__TAURI__.core.invoke('oc_telemetry'); if (t && t.ok){ CPH.pio = { ...CPH.pio, ...t, offsets:CPH.pio.offsets }; if (t.temp_c != null) r.temp_c = t.temp_c; cphPioLive(); } }catch(e){} }
     CPH.last = r; CPH.base = r.base_mhz || CPH.base; CPH.peak = Math.max(CPH.peak, r.freq_mhz || 0, ...(r.cores || []).map(c => c.freq));
     cphPaintLive(r);
     if (CPH.test.running){
@@ -6701,7 +6703,7 @@ function cphPaintLive(r){
   if (q('cphPeak')) q('cphPeak').innerHTML = `${cphGHz(CPH.peak)}<small>GHz</small>`;
   if (q('cphThr')) q('cphThr').textContent = (r.cores || []).length;
   const tu = q('cphTUse'); if (tu){ tu.querySelector('p').innerHTML = `${cphF(r.util)}<small>%</small>`; tu.classList.toggle('hot', r.util >= 80); }
-  const tt = q('cphTTemp'); if (tt){ tt.querySelector('p').innerHTML = r.temp_c != null ? `${r.temp_c}<small>°C</small>` : '<small>indisponível</small>'; tt.classList.toggle('crit', r.temp_c >= 90); tt.classList.toggle('hot', r.temp_c >= 80 && r.temp_c < 90); }
+  const tt = q('cphTTemp'); if (tt){ tt.querySelector('span').textContent = CPH.pio && CPH.pio.ok ? 'Temperatura do pacote' : 'Temperatura (zona ACPI)'; tt.querySelector('p').innerHTML = r.temp_c != null ? `${r.temp_c}<small>°C</small>` : '<small>indisponível</small>'; tt.classList.toggle('crit', r.temp_c >= 90); tt.classList.toggle('hot', r.temp_c >= 80 && r.temp_c < 90); }
   const bars = q('cphBars');
   if (bars){
     const cs = r.cores || [], top = Math.max(CPH.peak, 1);
@@ -6858,6 +6860,76 @@ function cphPlanHtml(){
   return `<div class="cph-state"><b>Plano de overclock (guiado pelas suas medições)</b><br>Referência: ${T(ref)}<br>${last.ts === ref.ts ? '' : 'Último teste: ' + T(last) + '<br>'}${next}</div>`;
 }
 
+
+// ---- Ajuste fino real da Intel (PawnIO): temperatura do pacote, PL1/PL2 e undervolt ----
+const CPH_PIO_ORIG = 'flux_pio_orig_v1';
+async function cphPioRead(){
+  if (!window.__TAURI__){ showToast('Disponível só no app instalado'); return; }
+  CPH.pioBusy = true; cphRenderPio();
+  try{
+    const r = await window.__TAURI__.core.invoke('oc_status');
+    CPH.pio = r;
+    if (r.ok && !cphLoad(CPH_PIO_ORIG)) cphSave(CPH_PIO_ORIG, { pl_raw:r.pl_raw, pl1:r.pl1_w, pl2:r.pl2_w, ts:Date.now() });
+  }catch(e){ CPH.pio = { ok:false, installed:true, error:String(e) }; }
+  CPH.pioBusy = false; cphRenderPio(); cphRenderOc();
+}
+function cphPioLive(){
+  const p = CPH.pio; if (!p || !p.ok) return;
+  const q = id => document.getElementById(id);
+  if (q('pioTemp')) q('pioTemp').textContent = p.temp_c != null ? p.temp_c + '°C' : 'n/d';
+  if (q('pioRatio')) q('pioRatio').textContent = p.ratio_now ? 'x' + p.ratio_now + ' (' + cphGHz(p.ratio_now * 100) + ' GHz)' : 'n/d';
+  if (q('pioPl')) q('pioPl').textContent = `${cphF(p.pl1_w, 0)} W / ${cphF(p.pl2_w, 0)} W`;
+}
+function cphRenderPio(){
+  const box = document.getElementById('cphPio'); if (!box) return;
+  const p = CPH.pio, orig = cphLoad(CPH_PIO_ORIG);
+  const head = '<h4>Ajuste fino real (Intel) <span class="cph-tag risk">via PawnIO</span></h4>';
+  const how = '<p class="cph-p">Lê o <b>sensor real de temperatura do processador</b> e permite mudar o <b>limite de potência (PL1/PL2)</b> e aplicar <b>undervolt</b>, usando o <b>PawnIO</b>: um driver assinado, o mesmo que o FanControl e o LibreHardwareMonitor usam. <b>Não precisa desativar o antivírus.</b> Tudo é temporário: <b>reiniciar o PC volta ao padrão</b>.</p>';
+  if (CPH.pioBusy){ box.innerHTML = head + '<p class="cph-p">Lendo o processador...</p>'; return; }
+  if (!p){ box.innerHTML = head + how + '<div class="cph-row"><button class="cph-btn main" id="pioRead">Ler o meu processador</button><button class="cph-btn" id="pioSite">Baixar o PawnIO (site oficial)</button></div>'; document.getElementById('pioRead').onclick = cphPioRead; document.getElementById('pioSite').onclick = () => window.__TAURI__ && window.__TAURI__.core.invoke('open_url', { url:'https://pawnio.eu' }).catch(e => showToast(String(e))); return; }
+  if (!p.ok){
+    const nome = !p.installed;
+    box.innerHTML = head + how + `<div class="cph-warnbox">${ppEsc(p.error || 'Não foi possível ler o processador')}</div>` + (nome ? '<p class="cph-p">Instale o PawnIO (instalador oficial), depois volte aqui e leia de novo.</p>' : '<p class="cph-p">Este recurso funciona só em <b>processadores Intel</b>. Em AMD Ryzen use o <b>PBO e o Curve Optimizer</b> na BIOS ou no Ryzen Master (veja o guia abaixo).</p>') + '<div class="cph-row"><button class="cph-btn" id="pioSite">Baixar o PawnIO (site oficial)</button><button class="cph-btn main" id="pioRead">Ler de novo</button></div>';
+    document.getElementById('pioRead').onclick = cphPioRead;
+    document.getElementById('pioSite').onclick = () => window.__TAURI__ && window.__TAURI__.core.invoke('open_url', { url:'https://pawnio.eu' }).catch(e => showToast(String(e)));
+    return;
+  }
+  const tdp = p.tdp_w || p.pl1_w || 65;
+  const pl1Max = Math.min(300, Math.round(tdp * 2)), pl1Min = Math.max(5, Math.round(tdp * 0.5)), pl2Max = Math.min(400, Math.round(tdp * 3));
+  const uv0 = p.offsets && p.offsets.core != null ? p.offsets.core : 0;
+  box.innerHTML = head + how + `
+    <div class="cph-res"><div><span>Temperatura do pacote</span><b id="pioTemp">${p.temp_c != null ? p.temp_c + '°C' : 'n/d'}</b></div><div><span>Multiplicador agora</span><b id="pioRatio">x${p.ratio_now}</b></div><div><span>PL1 / PL2 agora</span><b id="pioPl">${cphF(p.pl1_w, 0)} W / ${cphF(p.pl2_w, 0)} W</b></div><div><span>TDP de referência</span><b>${cphF(tdp, 0)} W</b></div></div>
+    <div class="cph-row"><span class="cph-chip ${p.ratio_prog ? 'ok' : 'warn'}">${p.ratio_prog ? 'Turbo programável' : 'Turbo bloqueado'}</span><span class="cph-chip ${p.locked ? 'warn' : 'ok'}">${p.locked ? 'Limite de potência travado pela BIOS' : 'Limite de potência editável'}</span></div>
+    ${p.locked ? '' : `<div class="cph-state"><b>Limite de potência</b><br>PL1 (sustentado): <b id="pioPl1V">${Math.round(p.pl1_w)}</b> W<input type="range" id="pioPl1" min="${pl1Min}" max="${pl1Max}" step="1" value="${Math.round(p.pl1_w)}" style="width:100%"><br>PL2 (pico): <b id="pioPl2V">${Math.round(p.pl2_w)}</b> W<input type="range" id="pioPl2" min="${pl1Min}" max="${pl2Max}" step="1" value="${Math.round(p.pl2_w)}" style="width:100%"><p class="cph-p">Subir o PL1 deixa a CPU sustentar mais clock sob carga (se o cooler e a placa-mãe aguentarem). Mais watts = mais calor.</p></div>`}
+    <div class="cph-state"><b>Undervolt</b> (reduz voltagem: menos calor, boost mais estável)<br>Offset: <b id="pioUvV">${Math.round(uv0)}</b> mV<input type="range" id="pioUv" min="-100" max="0" step="5" value="${Math.round(uv0)}" style="width:100%"><p class="cph-p">Só valores <b>negativos</b>. Muito undervolt causa travamento ou tela azul (reiniciar corrige). Alguns PCs bloqueiam undervolt na BIOS: o app avisa se for ignorado.</p></div>
+    <label class="cph-check"><input type="checkbox" class="pioAck"><span>Salvei meu trabalho. Sei que o PC pode <b>travar ou reiniciar</b>.</span></label>
+    <label class="cph-check"><input type="checkbox" class="pioAck"><span>Sei que isso pode <b>anular a garantia</b> e que mais potência gera mais calor. O risco é meu.</span></label>
+    <div class="cph-row"><button class="cph-btn main" id="pioApply" disabled>Aplicar</button><button class="cph-btn" id="pioTest">Testar 30 s</button><button class="cph-btn stop" id="pioReset">Voltar ao original</button><button class="cph-btn" id="pioReread">Reler</button></div>
+    <p class="cph-p">${orig ? `Valores originais guardados (PL1 ${cphF(orig.pl1, 0)} W / PL2 ${cphF(orig.pl2, 0)} W, undervolt 0).` : ''} Mudou algo e o PC ficou instável? <b>Reinicie</b>: tudo volta ao padrão.</p>`;
+  const q = id => document.getElementById(id);
+  const upd = () => { const ok = [...document.querySelectorAll('.pioAck')].every(c => c.checked); q('pioApply').disabled = !ok; };
+  document.querySelectorAll('.pioAck').forEach(c => c.onchange = upd);
+  if (q('pioPl1')){ q('pioPl1').oninput = () => { q('pioPl1V').textContent = q('pioPl1').value; if (+q('pioPl2').value < +q('pioPl1').value){ q('pioPl2').value = q('pioPl1').value; q('pioPl2V').textContent = q('pioPl2').value; } }; q('pioPl2').oninput = () => { if (+q('pioPl2').value < +q('pioPl1').value) q('pioPl2').value = q('pioPl1').value; q('pioPl2V').textContent = q('pioPl2').value; }; }
+  q('pioUv').oninput = () => q('pioUvV').textContent = q('pioUv').value;
+  q('pioReread').onclick = cphPioRead;
+  q('pioTest').onclick = () => cphStartTest(30);
+  q('pioApply').onclick = async () => {
+    const inv = window.__TAURI__.core.invoke; let msg = [];
+    try{
+      if (q('pioPl1')){ const r = await inv('oc_set_power', { pl1W:+q('pioPl1').value, pl2W:+q('pioPl2').value }); CPH.pio = { ...CPH.pio, ...r }; msg.push(`PL1 ${cphF(r.pl1_w, 0)} W / PL2 ${cphF(r.pl2_w, 0)} W`); }
+      const want = +q('pioUv').value;
+      if (want !== Math.round(uv0)){ const r = await inv('oc_set_undervolt', { mv:want }); CPH.pio = { ...CPH.pio, ...r }; const got = r.offsets && r.offsets.core; msg.push(got === want || (got != null && Math.abs(got - want) <= 2) ? `undervolt ${want} mV` : `undervolt IGNORADO pelo firmware (lido: ${got} mV)`); }
+      showToast('Aplicado: ' + msg.join(' · '));
+    }catch(e){ showToast(String(e)); }
+    cphRenderPio();
+  };
+  q('pioReset').onclick = async () => {
+    if (!orig){ showToast('Sem valores originais guardados'); return; }
+    try{ const r = await window.__TAURI__.core.invoke('oc_restore', { plRawHex:orig.pl_raw }); CPH.pio = r; showToast('Valores originais restaurados'); }catch(e){ showToast(String(e)); }
+    cphRenderPio();
+  };
+}
+
 // ---- Overclock real: guia seguro + ferramentas oficiais ----
 function cphRenderOc(){
   const box = document.getElementById('cphOc'); if (!box) return;
@@ -6869,7 +6941,7 @@ function cphRenderOc(){
     : amd ? '<li><b>AMD Ryzen:</b> o caminho mais seguro é o <b>PBO</b> (Precision Boost Overdrive) com <b>Curve Optimizer</b> em valores negativos pequenos, na BIOS ou no Ryzen Master. Ele respeita limites de temperatura e corrente, ao contrário de fixar um multiplicador.</li>' : '';
   box.innerHTML = `
     <h4>Overclock de multiplicador e voltagem <span class="cph-tag risk">risco real</span></h4>
-    <div class="cph-warnbox"><b>O app mede e planeja; o multiplicador e a voltagem são aplicados na BIOS ou na ferramenta oficial do fabricante.</b> Aplicar direto pelo app exigiria um driver de acesso ao hardware, que ainda não está incluído. Overclock é por sua conta e risco: pode anular a garantia, causar instabilidade e encurtar a vida do chip.</div>
+    <div class="cph-warnbox"><b>Multiplicador e voltagem positiva:</b> o módulo assinado do PawnIO <b>não permite</b> escrever o multiplicador direto, de propósito. Pra isso use a <b>BIOS</b> ou a ferramenta oficial do fabricante. O cartão acima (Intel) faz o que o driver permite: <b>potência e undervolt</b>. Overclock é por sua conta e risco: pode anular a garantia, causar instabilidade e encurtar a vida do chip.</div>
     <div class="cph-row"><span class="cph-chip ${un.ok === true ? 'ok' : un.ok === false ? 'warn' : ''}">${ppEsc(un.t)}</span>${tool ? `<button class="cph-btn main" id="cphOpenTool">Abrir ${tool.name} (site oficial)</button>` : ''}</div>
     ${cphPlanHtml()}
     ${un.ok === false ? '<p class="cph-p">O seu processador parece ser <b>bloqueado</b>: overclock de CPU provavelmente não é possível. O <b>Boost Máximo</b> ao lado continua valendo.</p>' : ''}
@@ -10717,6 +10789,11 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.61', date:'11/11/2026', items:[
+    'Aba <b>CPU</b>: <b>ajuste fino real para processadores Intel</b>, via PawnIO (driver assinado, o mesmo do FanControl e do LibreHardwareMonitor, <b>sem precisar desativar o antivírus</b>).',
+    '<b>Temperatura real do pacote</b> da CPU (sensor do processador), que passa a alimentar o medidor e o teste de estresse.',
+    '<b>Limite de potência (PL1/PL2)</b> e <b>undervolt</b> (só negativo) com confirmações, teste de 30 s e <b>Voltar ao original</b>. Tudo é temporário: reiniciar o PC volta ao padrão.',
+    'O módulo assinado não permite escrever o multiplicador direto nem voltagem positiva, de propósito. Pra isso o guia indica BIOS, XTU ou Ryzen Master.' ] },
   { v:'1.1.60', date:'11/11/2026', items:[
     '<b>Plano de overclock</b> na aba CPU, guiado pelas suas medições: você define um teste como referência (stock) e o app sugere o próximo passo (+100 MHz), diz se o passo foi aprovado, se houve throttling ou temperatura alta, e quando voltar um passo.',
     'Texto do card de overclock mais direto: o app mede e planeja, e o multiplicador e a voltagem são aplicados na BIOS ou na ferramenta oficial do fabricante.' ] },

@@ -6239,6 +6239,339 @@ fn open_url(url: String) -> Result<(), String> {
 }
 
 
+// ===== Ajuste fino da Intel via PawnIO (driver assinado e sancionado) =====
+// Fala com o driver PawnIO pelo mesmo protocolo do LibreHardwareMonitor: abre
+// \\?\GLOBALROOT\Device\PawnIO, carrega o módulo oficial assinado IntelMSR.bin e
+// chama ioctl_read_msr / ioctl_write_msr. O próprio módulo só permite um conjunto
+// fixo de MSRs: leitura de sensores e escrita em limite de potência, OC mailbox
+// (undervolt) e prefetchers. Nada de multiplicador direto, nada de memória física.
+// Os valores escritos são voláteis: reiniciar o PC volta tudo ao padrão.
+
+#[cfg(target_os = "windows")]
+static INTEL_MSR_MODULE: &[u8] = include_bytes!("../resources/IntelMSR.bin");
+
+#[cfg(target_os = "windows")]
+#[link(name = "kernel32")]
+extern "system" {
+    #[link_name = "CreateFileW"]
+    fn pio_create_file(name: *const u16, access: u32, share: u32, sec: *mut core::ffi::c_void, disp: u32, flags: u32, template: isize) -> isize;
+    #[link_name = "DeviceIoControl"]
+    fn pio_ioctl(
+        h: isize,
+        code: u32,
+        inb: *const core::ffi::c_void,
+        in_size: u32,
+        outb: *mut core::ffi::c_void,
+        out_size: u32,
+        returned: *mut u32,
+        overlapped: *mut core::ffi::c_void,
+    ) -> i32;
+    #[link_name = "CloseHandle"]
+    fn pio_close(h: isize) -> i32;
+    #[link_name = "GetLastError"]
+    fn pio_last_error() -> u32;
+}
+
+#[cfg(target_os = "windows")]
+struct PawnIo {
+    h: isize,
+}
+
+#[cfg(target_os = "windows")]
+impl PawnIo {
+    fn open(module: &[u8]) -> Result<PawnIo, String> {
+        let path: Vec<u16> = r"\\?\GLOBALROOT\Device\PawnIO".encode_utf16().chain(std::iter::once(0)).collect();
+        let h = unsafe { pio_create_file(path.as_ptr(), 3, 3, std::ptr::null_mut(), 3, 0x80, 0) };
+        if h == -1 || h == 0 {
+            let e = unsafe { pio_last_error() };
+            return Err(match e {
+                2 | 3 => "O PawnIO não está instalado".to_string(),
+                5 => "Acesso negado: abra o FluxTweakers como administrador".to_string(),
+                _ => format!("Não consegui abrir o PawnIO (erro {e})"),
+            });
+        }
+        let code = (41394u32 << 16) | (0x821u32 << 2);
+        let mut ret: u32 = 0;
+        let ok = unsafe { pio_ioctl(h, code, module.as_ptr() as *const core::ffi::c_void, module.len() as u32, std::ptr::null_mut(), 0, &mut ret, std::ptr::null_mut()) };
+        if ok == 0 {
+            let e = unsafe { pio_last_error() };
+            unsafe {
+                pio_close(h);
+            }
+            return Err(format!("O módulo do PawnIO não carregou (erro {e}). Este recurso só funciona em processadores Intel."));
+        }
+        Ok(PawnIo { h })
+    }
+
+    fn exec(&self, name: &str, input: &[u64], out_len: usize) -> Result<Vec<u64>, String> {
+        let code = (41394u32 << 16) | (0x841u32 << 2);
+        let mut inb = vec![0u8; 32 + input.len() * 8];
+        let nb = name.as_bytes();
+        let n = nb.len().min(31);
+        inb[..n].copy_from_slice(&nb[..n]);
+        for (i, v) in input.iter().enumerate() {
+            inb[32 + i * 8..32 + i * 8 + 8].copy_from_slice(&v.to_le_bytes());
+        }
+        let mut outb = vec![0u8; out_len * 8];
+        let mut ret: u32 = 0;
+        let outp = if out_len == 0 { std::ptr::null_mut() } else { outb.as_mut_ptr() as *mut core::ffi::c_void };
+        let ok = unsafe { pio_ioctl(self.h, code, inb.as_ptr() as *const core::ffi::c_void, inb.len() as u32, outp, outb.len() as u32, &mut ret, std::ptr::null_mut()) };
+        if ok == 0 {
+            let e = unsafe { pio_last_error() };
+            return Err(format!("{name} falhou (erro {e})"));
+        }
+        let cnt = ((ret as usize) / 8).min(out_len);
+        let mut out = Vec::with_capacity(cnt);
+        for i in 0..cnt {
+            let mut a = [0u8; 8];
+            a.copy_from_slice(&outb[i * 8..i * 8 + 8]);
+            out.push(u64::from_le_bytes(a));
+        }
+        Ok(out)
+    }
+
+    fn rd(&self, msr: u64) -> Result<u64, String> {
+        Ok(self.exec("ioctl_read_msr", &[msr], 1)?.first().cloned().unwrap_or(0))
+    }
+    fn wr(&self, msr: u64, val: u64) -> Result<(), String> {
+        self.exec("ioctl_write_msr", &[msr, val], 0).map(|_| ())
+    }
+}
+
+#[cfg(target_os = "windows")]
+impl Drop for PawnIo {
+    fn drop(&mut self) {
+        unsafe {
+            pio_close(self.h);
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+static PIO: Mutex<Option<PawnIo>> = Mutex::new(None);
+
+#[cfg(target_os = "windows")]
+fn with_pio<T>(f: impl FnOnce(&PawnIo) -> Result<T, String>) -> Result<T, String> {
+    let mut g = PIO.lock().unwrap();
+    if g.is_none() {
+        *g = Some(PawnIo::open(INTEL_MSR_MODULE)?);
+    }
+    let r = f(g.as_ref().unwrap());
+    if r.is_err() {
+        // se algo deu errado, fecha a sessão pra reabrir limpa na próxima vez
+        *g = None;
+    }
+    r
+}
+
+#[cfg(target_os = "windows")]
+fn oc_offset_mv(p: &PawnIo, plane: u64) -> Option<f64> {
+    // comando 0x10 = ler offset de voltagem do plano
+    p.wr(0x150, 0x8000001000000000u64 | (plane << 40)).ok()?;
+    let v = p.rd(0x150).ok()?;
+    let raw = ((v >> 21) & 0x7FF) as i32;
+    let signed = if raw >= 0x400 { raw - 0x800 } else { raw };
+    Some(perf_round(signed as f64 / 1.024, 0))
+}
+
+#[cfg(target_os = "windows")]
+fn oc_write_offset(p: &PawnIo, plane: u64, mv: i32) -> Result<(), String> {
+    // comando 0x11 = escrever offset de voltagem do plano (negativo = undervolt)
+    let enc = ((mv as f64 * 1.024).round() as i64 & 0xFFF) as u64;
+    let val = 0x8000001100000000u64 | (plane << 40) | ((enc << 21) & 0xFFE0_0000);
+    p.wr(0x150, val)?;
+    let back = p.rd(0x150)?;
+    if (back >> 63) & 1 == 1 {
+        return Err("O processador não respondeu ao pedido de voltagem".to_string());
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn oc_snapshot(p: &PawnIo, with_offsets: bool) -> Result<serde_json::Value, String> {
+    let plat = p.rd(0xCE)?;
+    let unit_raw = p.rd(0x606)?;
+    let pl = p.rd(0x610)?;
+    let info = p.rd(0x614)?;
+    let perf = p.rd(0x198).unwrap_or(0);
+    let trl = p.rd(0x1AD).unwrap_or(0);
+    let tt = p.rd(0x1A2).unwrap_or(0);
+    let th = p.rd(0x1B1).unwrap_or(0);
+    let unit = 1.0 / ((1u64 << (unit_raw & 0xF)) as f64);
+    let tj = ((tt >> 16) & 0xFF) as f64;
+    let valid = (th >> 31) & 1 == 1;
+    let temp: Option<f64> = if valid && tj > 0.0 { Some(tj - ((th >> 16) & 0x7F) as f64) } else { None };
+    let offsets = if with_offsets {
+        serde_json::json!({ "core": oc_offset_mv(p, 0), "cache": oc_offset_mv(p, 2) })
+    } else {
+        serde_json::Value::Null
+    };
+    Ok(serde_json::json!({
+        "ok": true,
+        "installed": true,
+        "temp_c": temp,
+        "tjmax": tj,
+        "ratio_now": (perf >> 8) & 0xFF,
+        "ratio_base": (plat >> 8) & 0xFF,
+        "ratio_prog": (plat >> 28) & 1 == 1,
+        "tdp_prog": (plat >> 29) & 1 == 1,
+        "turbo_1c": trl & 0xFF,
+        "pl1_w": perf_round((pl & 0x7FFF) as f64 * unit, 1),
+        "pl1_on": (pl >> 15) & 1 == 1,
+        "pl2_w": perf_round(((pl >> 32) & 0x7FFF) as f64 * unit, 1),
+        "pl2_on": (pl >> 47) & 1 == 1,
+        "locked": (pl >> 63) & 1 == 1,
+        "tdp_w": perf_round((info & 0x7FFF) as f64 * unit, 1),
+        "pl_raw": format!("{:x}", pl),
+        "offsets": offsets
+    }))
+}
+
+fn oc_err_json(msg: String) -> serde_json::Value {
+    serde_json::json!({ "ok": false, "installed": !msg.contains("não está instalado"), "error": msg })
+}
+
+/// Lê o estado do processador Intel (sensores, limites de potência e undervolt atual).
+#[tauri::command]
+async fn oc_status() -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(|| -> Result<serde_json::Value, String> {
+        #[cfg(target_os = "windows")]
+        {
+            Ok(match with_pio(|p| oc_snapshot(p, true)) {
+                Ok(v) => v,
+                Err(e) => oc_err_json(e),
+            })
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+/// Leitura leve (sem mexer no OC mailbox), usada a cada segundo pra temperatura real.
+#[tauri::command]
+async fn oc_telemetry() -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(|| -> Result<serde_json::Value, String> {
+        #[cfg(target_os = "windows")]
+        {
+            Ok(match with_pio(|p| oc_snapshot(p, false)) {
+                Ok(v) => v,
+                Err(e) => oc_err_json(e),
+            })
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+/// Define PL1 (potência sustentada) e PL2 (potência de pico) em watts.
+#[tauri::command]
+async fn oc_set_power(pl1_w: f64, pl2_w: f64) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<serde_json::Value, String> {
+        #[cfg(target_os = "windows")]
+        {
+            if !(5.0..=300.0).contains(&pl1_w) || !(pl1_w..=400.0).contains(&pl2_w) {
+                return Err("Valores de potência fora do limite aceito (PL1 5 a 300 W, PL2 de PL1 até 400 W)".to_string());
+            }
+            with_pio(|p| {
+                let unit_raw = p.rd(0x606)?;
+                let unit = 1.0 / ((1u64 << (unit_raw & 0xF)) as f64);
+                let pl = p.rd(0x610)?;
+                if (pl >> 63) & 1 == 1 {
+                    return Err("Os limites de potência estão travados pela BIOS deste PC".to_string());
+                }
+                let p1 = ((pl1_w / unit).round() as u64) & 0x7FFF;
+                let p2 = ((pl2_w / unit).round() as u64) & 0x7FFF;
+                let mut nv = pl & !(0x7FFFu64 | (0x7FFFu64 << 32));
+                nv |= p1 | (1 << 15) | (p2 << 32) | (1u64 << 47);
+                p.wr(0x610, nv)?;
+                oc_snapshot(p, false)
+            })
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = (pl1_w, pl2_w);
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+/// Aplica undervolt (offset negativo em mV) nos planos core e cache. 0 = padrão.
+#[tauri::command]
+async fn oc_set_undervolt(mv: i32) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<serde_json::Value, String> {
+        #[cfg(target_os = "windows")]
+        {
+            if !(-150..=0).contains(&mv) {
+                return Err("Undervolt aceito: de 0 a -150 mV (só valores negativos)".to_string());
+            }
+            with_pio(|p| {
+                oc_write_offset(p, 0, mv)?;
+                oc_write_offset(p, 2, mv)?;
+                let core = oc_offset_mv(p, 0);
+                let cache = oc_offset_mv(p, 2);
+                let mut v = oc_snapshot(p, false)?;
+                v["offsets"] = serde_json::json!({ "core": core, "cache": cache });
+                Ok(v)
+            })
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = mv;
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+/// Volta o limite de potência ao valor guardado e zera o undervolt.
+#[tauri::command]
+async fn oc_restore(pl_raw_hex: String) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<serde_json::Value, String> {
+        #[cfg(target_os = "windows")]
+        {
+            let orig = u64::from_str_radix(pl_raw_hex.trim(), 16).map_err(|_| "Valor original inválido".to_string())?;
+            with_pio(|p| {
+                let cur = p.rd(0x610)?;
+                if (cur >> 63) & 1 == 0 && cur != orig {
+                    p.wr(0x610, orig)?;
+                }
+                let _ = oc_write_offset(p, 0, 0);
+                let _ = oc_write_offset(p, 2, 0);
+                oc_snapshot(p, true)
+            })
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = pl_raw_hex;
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+/// Fecha a sessão com o PawnIO.
+#[tauri::command]
+async fn oc_close() -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        *PIO.lock().unwrap() = None;
+    }
+    Ok(())
+}
+
+
 fn main() {
     #[cfg(target_os = "windows")]
     {
@@ -6254,7 +6587,7 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
         .manage(PdhState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes, debloat_list, debloat_remove, profile_scan, game_session_start, game_session_stop, game_session_sample, audit_registry, audit_powercfg, power_status, cpu_live_start, cpu_live_stop, cpu_live_sample, cpu_stress_start, cpu_stress_stop, open_url])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes, debloat_list, debloat_remove, profile_scan, game_session_start, game_session_stop, game_session_sample, audit_registry, audit_powercfg, power_status, cpu_live_start, cpu_live_stop, cpu_live_sample, cpu_stress_start, cpu_stress_stop, open_url, oc_status, oc_telemetry, oc_set_power, oc_set_undervolt, oc_restore, oc_close])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));

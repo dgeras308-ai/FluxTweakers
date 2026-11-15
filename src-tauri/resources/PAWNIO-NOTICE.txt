@@ -1,0 +1,4 @@
+IntelMSR.bin e um modulo oficial e assinado do projeto PawnIO.Modules
+(https://github.com/namazso/PawnIO.Modules, release 0.2.11), licenciado sob LGPL-2.1-or-later
+(texto em PAWNIO-MODULES-COPYING.txt). O modulo nao foi alterado. Ele e carregado no driver PawnIO
+(https://pawnio.eu), que o usuario instala separadamente.
