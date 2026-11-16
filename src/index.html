@@ -6869,7 +6869,9 @@ async function cphPioRead(){
   try{
     const r = await window.__TAURI__.core.invoke('oc_status');
     CPH.pio = r;
-    if (r.ok && !cphLoad(CPH_PIO_ORIG)) cphSave(CPH_PIO_ORIG, { pl_raw:r.pl_raw, pl1:r.pl1_w, pl2:r.pl2_w, ts:Date.now() });
+    const st = cphLoad(CPH_PIO_ORIG);
+    if (r.ok && r.vendor === 'amd' && (!st || st.vendor !== 'amd')) cphSave(CPH_PIO_ORIG, { vendor:'amd', p0_raw:r.p0_raw, fid:r.fid, vid:r.vid, freq:r.freq_mhz, volt:r.volt, ts:Date.now() });
+    else if (r.ok && r.vendor !== 'amd' && (!st || st.vendor === 'amd')) cphSave(CPH_PIO_ORIG, { pl_raw:r.pl_raw, pl1:r.pl1_w, pl2:r.pl2_w, ts:Date.now() });
   }catch(e){ CPH.pio = { ok:false, installed:true, error:String(e) }; }
   CPH.pioBusy = false; cphRenderPio(); cphRenderOc();
 }
@@ -6877,23 +6879,25 @@ function cphPioLive(){
   const p = CPH.pio; if (!p || !p.ok) return;
   const q = id => document.getElementById(id);
   if (q('pioTemp')) q('pioTemp').textContent = p.temp_c != null ? p.temp_c + '°C' : 'n/d';
+  if (p.vendor === 'amd'){ if (q('pioP0')) q('pioP0').textContent = cphGHz(p.freq_mhz) + ' GHz'; return; }
   if (q('pioRatio')) q('pioRatio').textContent = p.ratio_now ? 'x' + p.ratio_now + ' (' + cphGHz(p.ratio_now * 100) + ' GHz)' : 'n/d';
   if (q('pioPl')) q('pioPl').textContent = `${cphF(p.pl1_w, 0)} W / ${cphF(p.pl2_w, 0)} W`;
 }
 function cphRenderPio(){
   const box = document.getElementById('cphPio'); if (!box) return;
   const p = CPH.pio, orig = cphLoad(CPH_PIO_ORIG);
-  const head = '<h4>Ajuste fino real (Intel) <span class="cph-tag risk">via PawnIO</span></h4>';
-  const how = '<p class="cph-p">Lê o <b>sensor real de temperatura do processador</b> e permite mudar o <b>limite de potência (PL1/PL2)</b> e aplicar <b>undervolt</b>, usando o <b>PawnIO</b>: um driver assinado, o mesmo que o FanControl e o LibreHardwareMonitor usam. <b>Não precisa desativar o antivírus.</b> Tudo é temporário: <b>reiniciar o PC volta ao padrão</b>.</p>';
+  const head = `<h4>${p && p.vendor === 'amd' ? 'Overclock real (AMD Ryzen)' : p && p.ok ? 'Ajuste fino real (Intel)' : 'Overclock e ajuste fino reais'} <span class="cph-tag risk">via PawnIO</span></h4>`;
+  const how = '<p class="cph-p"><b>Intel:</b> lê o <b>sensor real de temperatura</b> e permite mudar o <b>limite de potência (PL1/PL2)</b> e aplicar <b>undervolt</b>. <b>AMD Ryzen 1000 a 5000:</b> overclock de <b>multiplicador e voltagem</b>. Tudo pelo <b>PawnIO</b>: um driver assinado, o mesmo que o FanControl e o LibreHardwareMonitor usam. <b>Não precisa desativar o antivírus.</b> Tudo é temporário: <b>reiniciar o PC volta ao padrão</b>.</p>';
   if (CPH.pioBusy){ box.innerHTML = head + '<p class="cph-p">Lendo o processador...</p>'; return; }
   if (!p){ box.innerHTML = head + how + '<div class="cph-row"><button class="cph-btn main" id="pioRead">Ler o meu processador</button><button class="cph-btn" id="pioSite">Baixar o PawnIO (site oficial)</button></div>'; document.getElementById('pioRead').onclick = cphPioRead; document.getElementById('pioSite').onclick = () => window.__TAURI__ && window.__TAURI__.core.invoke('open_url', { url:'https://pawnio.eu' }).catch(e => showToast(String(e))); return; }
   if (!p.ok){
     const nome = !p.installed;
-    box.innerHTML = head + how + `<div class="cph-warnbox">${ppEsc(p.error || 'Não foi possível ler o processador')}</div>` + (nome ? '<p class="cph-p">Instale o PawnIO (instalador oficial), depois volte aqui e leia de novo.</p>' : '<p class="cph-p">Este recurso funciona só em <b>processadores Intel</b>. Em AMD Ryzen use o <b>PBO e o Curve Optimizer</b> na BIOS ou no Ryzen Master (veja o guia abaixo).</p>') + '<div class="cph-row"><button class="cph-btn" id="pioSite">Baixar o PawnIO (site oficial)</button><button class="cph-btn main" id="pioRead">Ler de novo</button></div>';
+    box.innerHTML = head + how + `<div class="cph-warnbox">${ppEsc(p.error || 'Não foi possível ler o processador')}</div>` + (nome ? '<p class="cph-p">Instale o PawnIO (instalador oficial), depois volte aqui e leia de novo.</p>' : '<p class="cph-p">Não consegui carregar o módulo pra este processador. Se for um AMD recente (Zen 4 em diante), use o <b>PBO e o Curve Optimizer</b> na BIOS ou no Ryzen Master (veja o guia abaixo).</p>') + '<div class="cph-row"><button class="cph-btn" id="pioSite">Baixar o PawnIO (site oficial)</button><button class="cph-btn main" id="pioRead">Ler de novo</button></div>';
     document.getElementById('pioRead').onclick = cphPioRead;
     document.getElementById('pioSite').onclick = () => window.__TAURI__ && window.__TAURI__.core.invoke('open_url', { url:'https://pawnio.eu' }).catch(e => showToast(String(e)));
     return;
   }
+  if (p.vendor === 'amd'){ cphRenderAmd(box, head, p); return; }
   const tdp = p.tdp_w || p.pl1_w || 65;
   const pl1Max = Math.min(300, Math.round(tdp * 2)), pl1Min = Math.max(5, Math.round(tdp * 0.5)), pl2Max = Math.min(400, Math.round(tdp * 3));
   const uv0 = p.offsets && p.offsets.core != null ? p.offsets.core : 0;
@@ -6930,6 +6934,55 @@ function cphRenderPio(){
   };
 }
 
+function cphRenderAmd(box, head, p){
+  const stored = cphLoad(CPH_PIO_ORIG), o = stored && stored.vendor === 'amd' ? stored : null;
+  const stockFid = o ? o.fid : p.fid, stockVid = o ? o.vid : p.vid;
+  const stockMhz = stockFid * 25, stockV = 1.55 - 0.00625 * stockVid;
+  const curMhz = p.fid * 25, curDelta = Math.round((1.55 - 0.00625 * p.vid - stockV) * 1000);
+  const fMin = Math.max(1000, stockMhz - 200), fMax = Math.min(5000, stockMhz + 600);
+  const vMax = Math.max(0, Math.min(60, Math.floor((1.35 - stockV) * 1000)));
+  const how = '<p class="cph-p"><b>Overclock de P-state</b> (o mesmo método do ZenStates): muda o <b>multiplicador</b> e a <b>voltagem</b> do P-state 0 em todos os núcleos, pelo <b>PawnIO</b> (driver assinado, <b>sem desativar o antivírus</b>). Em Ryzen com Precision Boost, isso pode trocar o boost automático por um <b>clock fixo</b>; o comportamento varia por modelo. Tudo é temporário: <b>reiniciar o PC volta ao padrão</b>.</p>';
+  const info = `<div class="cph-res"><div><span>Temperatura (Tctl)</span><b id="pioTemp">${p.temp_c != null ? p.temp_c + '°C' : 'n/d'}</b></div><div><span>P-state 0 agora</span><b id="pioP0">${cphGHz(p.freq_mhz)} GHz</b></div><div><span>Voltagem do P0</span><b id="pioV">${cphF(p.volt, 3)} V</b></div><div><span>Família / modelo</span><b>${p.family.toString(16)}h / ${p.model.toString(16)}h</b></div></div>`;
+  if (!p.supported){
+    box.innerHTML = head + how + info + `<div class="cph-warnbox">Este Ryzen (família ${p.family.toString(16)}h, modelo ${p.model.toString(16)}h) <b>ainda não é suportado</b> pelo overclock do app: o formato do P-state muda a partir do Zen 4, e eu não escrevo no que não confirmei. Suportado: <b>Ryzen 1000 a 5000</b>. A leitura de temperatura continua funcionando. Pra overclock use o <b>PBO e o Curve Optimizer</b> na BIOS ou no Ryzen Master.</div><div class="cph-row"><button class="cph-btn main" id="pioReread">Reler</button></div>`;
+    document.getElementById('pioReread').onclick = cphPioRead; return;
+  }
+  if (p.did !== 8){
+    box.innerHTML = head + how + info + '<div class="cph-warnbox">O P-state 0 deste processador usa um divisor fora do padrão (DID ≠ 8): <b>não é seguro alterar</b> pelo app.</div><div class="cph-row"><button class="cph-btn main" id="pioReread">Reler</button></div>';
+    document.getElementById('pioReread').onclick = cphPioRead; return;
+  }
+  box.innerHTML = head + how + info + `
+    <div class="cph-state"><b>Multiplicador (clock do P0)</b><br>Alvo: <b id="amdFV">${curMhz}</b> MHz <small>(padrão: ${stockMhz} MHz)</small><input type="range" id="amdF" min="${fMin}" max="${fMax}" step="25" value="${curMhz}" style="width:100%"><p class="cph-p">Cada passo é 25 MHz. Mais clock exige mais voltagem pra ficar estável.</p></div>
+    <div class="cph-state"><b>Voltagem do P0</b><br>Offset: <b id="amdVV">${curDelta}</b> mV → <b id="amdVA">${cphF(stockV + curDelta / 1000, 3)}</b> V <small>(padrão: ${cphF(stockV, 3)} V; teto do app: 1,350 V)</small><input type="range" id="amdV" min="-100" max="${vMax}" step="6.25" value="${curDelta}" style="width:100%"><p class="cph-p">Voltagem alta aquece e <b>encurta a vida do processador</b>. Aumente aos poucos e teste a cada passo.</p></div>
+    <label class="cph-check"><input type="checkbox" class="pioAck"><span>Salvei meu trabalho. Sei que o PC pode <b>travar ou reiniciar</b> se o clock ou a voltagem não estiverem estáveis.</span></label>
+    <label class="cph-check"><input type="checkbox" class="pioAck"><span>Sei que overclock <b>pode anular a garantia</b>, gera mais calor e que <b>mais voltagem desgasta o chip</b>. O risco é meu.</span></label>
+    <label class="cph-check"><input type="checkbox" class="pioAck"><span>Vou acompanhar a <b>temperatura</b> e parar se passar de uns 85 a 90°C sob carga.</span></label>
+    <div class="cph-row"><button class="cph-btn main" id="pioApply" disabled>Aplicar</button><button class="cph-btn" id="pioTest">Testar 30 s</button><button class="cph-btn stop" id="pioReset">Voltar ao original</button><button class="cph-btn" id="pioReread">Reler</button></div>
+    <p class="cph-p">${o ? `Valores originais guardados: ${stockMhz} MHz a ${cphF(stockV, 3)} V.` : ''} Instável? <b>Reinicie</b>: tudo volta ao padrão.</p>`;
+  const q = id => document.getElementById(id);
+  const upd = () => { q('pioApply').disabled = ![...document.querySelectorAll('.pioAck')].every(c => c.checked); };
+  document.querySelectorAll('.pioAck').forEach(c => c.onchange = upd);
+  q('amdF').oninput = () => q('amdFV').textContent = q('amdF').value;
+  q('amdV').oninput = () => { q('amdVV').textContent = Math.round(q('amdV').value); q('amdVA').textContent = cphF(stockV + q('amdV').value / 1000, 3); };
+  q('pioReread').onclick = cphPioRead;
+  q('pioTest').onclick = () => cphStartTest(30);
+  q('pioApply').onclick = async () => {
+    const fid = Math.round(+q('amdF').value / 25), delta = +q('amdV').value;
+    const vid = Math.abs(delta - curDelta) < 3 ? null : stockVid - Math.round(delta / 6.25);
+    try{
+      const r = await window.__TAURI__.core.invoke('amd_set_pstate', { fid, vid });
+      CPH.pio = { ...CPH.pio, ...r };
+      showToast(r.mismatch ? `Aplicado, mas ${r.mismatch} núcleo(s) não confirmaram o valor` : `Aplicado: ${cphGHz(r.freq_mhz)} GHz a ${cphF(r.volt, 3)} V`);
+    }catch(e){ showToast(String(e)); }
+    cphRenderPio();
+  };
+  q('pioReset').onclick = async () => {
+    if (!o){ showToast('Sem valores originais guardados'); return; }
+    try{ const r = await window.__TAURI__.core.invoke('amd_restore', { p0RawHex:o.p0_raw }); CPH.pio = { ...CPH.pio, ...r }; showToast('Valores originais restaurados'); }catch(e){ showToast(String(e)); }
+    cphRenderPio();
+  };
+}
+
 // ---- Overclock real: guia seguro + ferramentas oficiais ----
 function cphRenderOc(){
   const box = document.getElementById('cphOc'); if (!box) return;
@@ -6941,7 +6994,7 @@ function cphRenderOc(){
     : amd ? '<li><b>AMD Ryzen:</b> o caminho mais seguro é o <b>PBO</b> (Precision Boost Overdrive) com <b>Curve Optimizer</b> em valores negativos pequenos, na BIOS ou no Ryzen Master. Ele respeita limites de temperatura e corrente, ao contrário de fixar um multiplicador.</li>' : '';
   box.innerHTML = `
     <h4>Overclock de multiplicador e voltagem <span class="cph-tag risk">risco real</span></h4>
-    <div class="cph-warnbox"><b>Multiplicador e voltagem positiva:</b> o módulo assinado do PawnIO <b>não permite</b> escrever o multiplicador direto, de propósito. Pra isso use a <b>BIOS</b> ou a ferramenta oficial do fabricante. O cartão acima (Intel) faz o que o driver permite: <b>potência e undervolt</b>. Overclock é por sua conta e risco: pode anular a garantia, causar instabilidade e encurtar a vida do chip.</div>
+    <div class="cph-warnbox"><b>Overclock é por sua conta e risco:</b> pode anular a garantia, causar instabilidade e encurtar a vida do chip. O cartão acima faz o que o driver assinado permite: em <b>AMD Ryzen 1000 a 5000</b>, multiplicador e voltagem; em <b>Intel</b>, potência e undervolt. O <b>multiplicador da Intel</b> o módulo assinado não deixa escrever: use a BIOS ou o XTU.</div>
     <div class="cph-row"><span class="cph-chip ${un.ok === true ? 'ok' : un.ok === false ? 'warn' : ''}">${ppEsc(un.t)}</span>${tool ? `<button class="cph-btn main" id="cphOpenTool">Abrir ${tool.name} (site oficial)</button>` : ''}</div>
     ${cphPlanHtml()}
     ${un.ok === false ? '<p class="cph-p">O seu processador parece ser <b>bloqueado</b>: overclock de CPU provavelmente não é possível. O <b>Boost Máximo</b> ao lado continua valendo.</p>' : ''}
@@ -10789,6 +10842,10 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.62', date:'11/11/2026', items:[
+    '<b>Overclock real em AMD Ryzen 1000 a 5000</b>: multiplicador e voltagem do P-state, em todos os núcleos, pelo PawnIO (driver assinado, <b>sem desativar o antivírus</b>). Teto de 5,0 GHz e 1,35 V, e só nas gerações com formato confirmado.',
+    '<b>Temperatura real (Tctl)</b> do Ryzen no medidor e no teste de estresse.',
+    'Mesmo esquema de segurança: três confirmações, teste de 30 s e <b>Voltar ao original</b>. Reiniciar o PC volta tudo ao padrão.' ] },
   { v:'1.1.61', date:'11/11/2026', items:[
     'Aba <b>CPU</b>: <b>ajuste fino real para processadores Intel</b>, via PawnIO (driver assinado, o mesmo do FanControl e do LibreHardwareMonitor, <b>sem precisar desativar o antivírus</b>).',
     '<b>Temperatura real do pacote</b> da CPU (sensor do processador), que passa a alimentar o medidor e o teste de estresse.',

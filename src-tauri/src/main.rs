@@ -6437,9 +6437,17 @@ async fn oc_status() -> Result<serde_json::Value, String> {
     tauri::async_runtime::spawn_blocking(|| -> Result<serde_json::Value, String> {
         #[cfg(target_os = "windows")]
         {
-            Ok(match with_pio(|p| oc_snapshot(p, true)) {
-                Ok(v) => v,
-                Err(e) => oc_err_json(e),
+            let (vendor, _, _) = cpu_vendor_fms();
+            Ok(if vendor.contains("AuthenticAMD") {
+                match with_pio_amd(|p| amd_snapshot(p)) {
+                    Ok(v) => v,
+                    Err(e) => oc_err_json(e),
+                }
+            } else {
+                match with_pio(|p| oc_snapshot(p, true)) {
+                    Ok(v) => v,
+                    Err(e) => oc_err_json(e),
+                }
             })
         }
         #[cfg(not(target_os = "windows"))]
@@ -6457,9 +6465,17 @@ async fn oc_telemetry() -> Result<serde_json::Value, String> {
     tauri::async_runtime::spawn_blocking(|| -> Result<serde_json::Value, String> {
         #[cfg(target_os = "windows")]
         {
-            Ok(match with_pio(|p| oc_snapshot(p, false)) {
-                Ok(v) => v,
-                Err(e) => oc_err_json(e),
+            let (vendor, _, _) = cpu_vendor_fms();
+            Ok(if vendor.contains("AuthenticAMD") {
+                match with_pio_amd(|p| amd_snapshot(p)) {
+                    Ok(v) => v,
+                    Err(e) => oc_err_json(e),
+                }
+            } else {
+                match with_pio(|p| oc_snapshot(p, false)) {
+                    Ok(v) => v,
+                    Err(e) => oc_err_json(e),
+                }
             })
         }
         #[cfg(not(target_os = "windows"))]
@@ -6567,8 +6583,236 @@ async fn oc_close() -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
         *PIO.lock().unwrap() = None;
+        *PIO_AMD.lock().unwrap() = None;
     }
     Ok(())
+}
+
+
+// ===== AMD Ryzen (Zen 1 a Zen 3) via PawnIO: overclock de P-state (multiplicador + voltagem) e temperatura real =====
+// Usa o módulo oficial e assinado AMDFamily17.bin (leitura/escrita só dos MSRs de P-state e do sensor SMN).
+// Formato do P-state (família 17h/19h até o Zen 3): FID bits 7:0, DID bits 13:8, VID bits 21:14.
+// Frequência = 200 MHz x FID / DID. Voltagem = 1,55 V - 0,00625 V x VID. O valor escrito é volátil:
+// reiniciar o PC volta ao padrão.
+
+#[cfg(target_os = "windows")]
+static AMD_MSR_MODULE: &[u8] = include_bytes!("../resources/AMDFamily17.bin");
+
+#[cfg(target_os = "windows")]
+#[link(name = "kernel32")]
+extern "system" {
+    #[link_name = "CreateMutexW"]
+    fn pio_create_mutex(attrs: *mut core::ffi::c_void, initial_owner: i32, name: *const u16) -> isize;
+    #[link_name = "WaitForSingleObject"]
+    fn pio_wait(h: isize, ms: u32) -> u32;
+    #[link_name = "ReleaseMutex"]
+    fn pio_release_mutex(h: isize) -> i32;
+    #[link_name = "SetThreadAffinityMask"]
+    fn pio_set_affinity(h: isize, mask: usize) -> usize;
+}
+
+#[cfg(target_os = "windows")]
+static PIO_AMD: Mutex<Option<PawnIo>> = Mutex::new(None);
+
+#[cfg(target_os = "windows")]
+fn with_pio_amd<T>(f: impl FnOnce(&PawnIo) -> Result<T, String>) -> Result<T, String> {
+    let mut g = PIO_AMD.lock().unwrap();
+    if g.is_none() {
+        *g = Some(PawnIo::open(AMD_MSR_MODULE).map_err(|e| e.replace("só funciona em processadores Intel", "só funciona em processadores AMD Ryzen"))?);
+    }
+    let r = f(g.as_ref().unwrap());
+    if r.is_err() {
+        *g = None;
+    }
+    r
+}
+
+/// (fabricante, família, modelo) pelo CPUID.
+fn cpu_vendor_fms() -> (String, u32, u32) {
+    #[cfg(target_arch = "x86_64")]
+    {
+        let r0 = unsafe { core::arch::x86_64::__cpuid(0) };
+        let mut v: Vec<u8> = Vec::new();
+        v.extend_from_slice(&r0.ebx.to_le_bytes());
+        v.extend_from_slice(&r0.edx.to_le_bytes());
+        v.extend_from_slice(&r0.ecx.to_le_bytes());
+        let r1 = unsafe { core::arch::x86_64::__cpuid(1) };
+        let base = (r1.eax >> 8) & 0xF;
+        let ext = (r1.eax >> 20) & 0xFF;
+        let family = if base == 0xF { base + ext } else { base };
+        let model = ((r1.eax >> 4) & 0xF) | (((r1.eax >> 16) & 0xF) << 4);
+        return (String::from_utf8_lossy(&v).to_string(), family, model);
+    }
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        (String::new(), 0, 0)
+    }
+}
+
+fn amd_supported(family: u32, model: u32) -> bool {
+    family == 0x17 || (family == 0x19 && model < 0x60)
+}
+
+#[cfg(target_os = "windows")]
+fn amd_temp(p: &PawnIo) -> Option<f64> {
+    let name: Vec<u16> = "Global\\Access_PCI".encode_utf16().chain(std::iter::once(0)).collect();
+    let m = unsafe { pio_create_mutex(std::ptr::null_mut(), 0, name.as_ptr()) };
+    if m == 0 {
+        return None;
+    }
+    let w = unsafe { pio_wait(m, 300) };
+    let mut out = None;
+    if w == 0 || w == 0x80 {
+        if let Ok(v) = p.exec("ioctl_read_smn", &[0x0005_9800], 1) {
+            if let Some(x) = v.first() {
+                let raw = *x as u32;
+                let mut t = ((raw >> 21) & 0x7FF) as f64 * 0.125;
+                if raw & 0x80000 != 0 {
+                    t -= 49.0;
+                }
+                if t > 0.0 && t < 150.0 {
+                    out = Some(perf_round(t, 1));
+                }
+            }
+        }
+        unsafe {
+            pio_release_mutex(m);
+        }
+    }
+    unsafe {
+        pio_close(m);
+    }
+    out
+}
+
+#[cfg(target_os = "windows")]
+fn amd_snapshot(p: &PawnIo) -> Result<serde_json::Value, String> {
+    let (_, family, model) = cpu_vendor_fms();
+    let p0 = p.rd(0xC001_0064)?;
+    let fid = (p0 & 0xFF) as u32;
+    let did = ((p0 >> 8) & 0x3F) as u32;
+    let vid = ((p0 >> 14) & 0xFF) as u32;
+    let freq = if did > 0 { 200.0 * fid as f64 / did as f64 } else { 0.0 };
+    Ok(serde_json::json!({
+        "ok": true, "installed": true, "vendor": "amd",
+        "family": family, "model": model, "supported": amd_supported(family, model),
+        "p0_raw": format!("{:x}", p0), "p0_on": (p0 >> 63) & 1 == 1,
+        "fid": fid, "did": did, "vid": vid,
+        "freq_mhz": perf_round(freq, 0), "volt": perf_round(1.55 - 0.00625 * vid as f64, 3),
+        "temp_c": amd_temp(p)
+    }))
+}
+
+/// Executa `f` em cada thread lógica (fixando a afinidade), porque o P-state é por núcleo.
+#[cfg(target_os = "windows")]
+fn amd_each_cpu(p: &PawnIo, mut f: impl FnMut(&PawnIo) -> Result<(), String>) -> Result<usize, String> {
+    let n = std::thread::available_parallelism().map(|v| v.get()).unwrap_or(1);
+    if n > 64 {
+        return Err("Mais de 64 threads lógicas: ainda não suportado".to_string());
+    }
+    let th: isize = -2; // pseudo-handle da thread atual
+    let mut prev: usize = 0;
+    let mut res: Result<(), String> = Ok(());
+    for i in 0..n {
+        let old = unsafe { pio_set_affinity(th, 1usize << i) };
+        if old == 0 {
+            res = Err("Não consegui fixar a thread em cada núcleo".to_string());
+            break;
+        }
+        if prev == 0 {
+            prev = old;
+        }
+        if let Err(e) = f(p) {
+            res = Err(e);
+            break;
+        }
+    }
+    if prev != 0 {
+        unsafe {
+            pio_set_affinity(th, prev);
+        }
+    }
+    res.map(|_| n)
+}
+
+/// Define o multiplicador (FID) e, opcionalmente, a voltagem (VID) do P-state 0 em todos os núcleos.
+#[tauri::command]
+async fn amd_set_pstate(fid: u32, vid: Option<u32>) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<serde_json::Value, String> {
+        #[cfg(target_os = "windows")]
+        {
+            let (v, family, model) = cpu_vendor_fms();
+            if !v.contains("AuthenticAMD") || !amd_supported(family, model) {
+                return Err("Overclock de P-state suportado só em Ryzen 1000 a 5000 (Zen 1 a Zen 3)".to_string());
+            }
+            with_pio_amd(|p| {
+                let p0 = p.rd(0xC001_0064)?;
+                if (p0 >> 63) & 1 == 0 {
+                    return Err("O P-state 0 não está habilitado neste processador".to_string());
+                }
+                if ((p0 >> 8) & 0x3F) != 8 {
+                    return Err("O P-state deste processador usa um divisor fora do padrão: não é seguro alterar".to_string());
+                }
+                let mhz = fid as f64 * 25.0;
+                if !(1000.0..=5000.0).contains(&mhz) {
+                    return Err("Frequência fora do limite aceito (1000 a 5000 MHz)".to_string());
+                }
+                let cur_vid = ((p0 >> 14) & 0xFF) as u32;
+                let new_vid = vid.unwrap_or(cur_vid);
+                if vid.is_some() {
+                    let volts = 1.55 - 0.00625 * new_vid as f64;
+                    if !(0.90..=1.35).contains(&volts) {
+                        return Err("Voltagem fora do limite aceito (0,90 a 1,35 V)".to_string());
+                    }
+                }
+                let mut bad = 0usize;
+                amd_each_cpu(p, |p| {
+                    let cur = p.rd(0xC001_0064)?;
+                    let nv = (cur & !((0xFFu64) | (0xFFu64 << 14))) | (fid as u64 & 0xFF) | ((new_vid as u64 & 0xFF) << 14);
+                    p.wr(0xC001_0064, nv)?;
+                    if (p.rd(0xC001_0064)? & 0xFF) as u32 != fid {
+                        bad += 1;
+                    }
+                    Ok(())
+                })?;
+                let mut snap = amd_snapshot(p)?;
+                snap["mismatch"] = serde_json::json!(bad);
+                Ok(snap)
+            })
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = (fid, vid);
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+/// Restaura o P-state 0 original (valor bruto guardado antes da primeira alteração).
+#[tauri::command]
+async fn amd_restore(p0_raw_hex: String) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<serde_json::Value, String> {
+        #[cfg(target_os = "windows")]
+        {
+            let orig = u64::from_str_radix(p0_raw_hex.trim(), 16).map_err(|_| "Valor original inválido".to_string())?;
+            if (orig >> 63) & 1 == 0 || ((orig >> 8) & 0x3F) == 0 || (orig & 0xFF) == 0 {
+                return Err("Valor original do P-state parece inválido: não vou escrever".to_string());
+            }
+            with_pio_amd(|p| {
+                amd_each_cpu(p, |p| p.wr(0xC001_0064, orig))?;
+                amd_snapshot(p)
+            })
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = p0_raw_hex;
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
 }
 
 
@@ -6587,7 +6831,7 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
         .manage(PdhState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes, debloat_list, debloat_remove, profile_scan, game_session_start, game_session_stop, game_session_sample, audit_registry, audit_powercfg, power_status, cpu_live_start, cpu_live_stop, cpu_live_sample, cpu_stress_start, cpu_stress_stop, open_url, oc_status, oc_telemetry, oc_set_power, oc_set_undervolt, oc_restore, oc_close])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes, debloat_list, debloat_remove, profile_scan, game_session_start, game_session_stop, game_session_sample, audit_registry, audit_powercfg, power_status, cpu_live_start, cpu_live_stop, cpu_live_sample, cpu_stress_start, cpu_stress_stop, open_url, oc_status, oc_telemetry, oc_set_power, oc_set_undervolt, oc_restore, oc_close, amd_set_pstate, amd_restore])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));
