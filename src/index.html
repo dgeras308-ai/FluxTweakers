@@ -420,6 +420,14 @@
   .cph-verdict{font-size:12px;line-height:1.6;border-radius:10px;padding:10px 13px;border:1px solid var(--border-soft);background:var(--card);color:var(--muted);} .cph-verdict b{color:var(--text);} .cph-verdict.ok{border-color:color-mix(in srgb, var(--ok) 40%, transparent);} .cph-verdict.bad{border-color:color-mix(in srgb, #f59e0b 50%, transparent);}
   .cph-details summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--text);list-style:none;display:flex;align-items:center;gap:8px;padding:2px 0;} .cph-details summary::before{content:"▸";transition:transform .15s;color:var(--muted2);} .cph-details[open] summary::before{transform:rotate(90deg);}
   .cph-details .cph-list{margin-top:10px;}
+  .pio-planes{display:grid;grid-template-columns:1fr 1fr;gap:12px;} @media (max-width:760px){ .pio-planes{grid-template-columns:1fr;} }
+  .pio-plane{background:var(--card);border:1px solid var(--border-soft);border-radius:12px;padding:12px 14px;}
+  .pio-plane-t{display:flex;justify-content:space-between;align-items:baseline;font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:6px;}
+  .pio-plane-t b{font-family:var(--mono);font-weight:800;color:var(--accent);}
+  .pio-plane input[type=range]{width:100%;accent-color:var(--accent);}
+  .pio-toprow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--card);border:1px solid var(--border-soft);border-radius:12px;padding:10px 14px;}
+  .pio-toprow .switch{flex-shrink:0;}
+  .pio-boost-t{font-size:12px;font-weight:700;color:var(--text);} .pio-boost-t small{display:block;font-size:10.5px;color:var(--muted);font-weight:500;margin-top:2px;}
   .cph-warnbox{font-size:11.5px;color:#f59e0b;background:color-mix(in srgb, #f59e0b 9%, transparent);border:1px solid color-mix(in srgb, #f59e0b 26%, transparent);border-radius:10px;padding:10px 13px;line-height:1.6;} .cph-warnbox b{color:#ffb84d;}
   /* ===== Aba Debloat ===== */
   .db-root{display:flex;flex-direction:column;gap:12px;}
@@ -6900,29 +6908,35 @@ function cphRenderPio(){
   if (p.vendor === 'amd'){ cphRenderAmd(box, head, p); return; }
   const tdp = p.tdp_w || p.pl1_w || 65;
   const pl1Max = Math.min(300, Math.round(tdp * 2)), pl1Min = Math.max(5, Math.round(tdp * 0.5)), pl2Max = Math.min(400, Math.round(tdp * 3));
-  const uv0 = p.offsets && p.offsets.core != null ? p.offsets.core : 0;
-  box.innerHTML = head + how + `
-    <div class="cph-res"><div><span>Temperatura do pacote</span><b id="pioTemp">${p.temp_c != null ? p.temp_c + '°C' : 'n/d'}</b></div><div><span>Multiplicador agora</span><b id="pioRatio">x${p.ratio_now}</b></div><div><span>PL1 / PL2 agora</span><b id="pioPl">${cphF(p.pl1_w, 0)} W / ${cphF(p.pl2_w, 0)} W</b></div><div><span>TDP de referência</span><b>${cphF(tdp, 0)} W</b></div></div>
+  const offs = p.offsets || {};
+  const planes = [['core', 'Núcleos', offs.core], ['cache', 'Cache / Anel', offs.cache], ['gpu', 'Vídeo integrado', offs.gpu], ['sa', 'Agente de sistema', offs.sa]];
+  box.innerHTML = head + how +
+    `<div class="cph-res"><div><span>Temperatura do pacote</span><b id="pioTemp">${p.temp_c != null ? p.temp_c + '°C' : 'n/d'}</b></div><div><span>Multiplicador agora</span><b id="pioRatio">x${p.ratio_now} (${cphGHz(p.ratio_now * 100)} GHz)</b></div><div><span>PL1 / PL2 agora</span><b id="pioPl">${cphF(p.pl1_w, 0)} W / ${cphF(p.pl2_w, 0)} W</b></div><div><span>Janela do PL1</span><b>${cphF(p.pl1_tau_s, 1)} s</b></div></div>
     <div class="cph-row"><span class="cph-chip ${p.ratio_prog ? 'ok' : 'warn'}">${p.ratio_prog ? 'Turbo programável' : 'Turbo bloqueado'}</span><span class="cph-chip ${p.locked ? 'warn' : 'ok'}">${p.locked ? 'Limite de potência travado pela BIOS' : 'Limite de potência editável'}</span></div>
-    ${p.locked ? '' : `<div class="cph-state"><b>Limite de potência</b><br>PL1 (sustentado): <b id="pioPl1V">${Math.round(p.pl1_w)}</b> W<input type="range" id="pioPl1" min="${pl1Min}" max="${pl1Max}" step="1" value="${Math.round(p.pl1_w)}" style="width:100%"><br>PL2 (pico): <b id="pioPl2V">${Math.round(p.pl2_w)}</b> W<input type="range" id="pioPl2" min="${pl1Min}" max="${pl2Max}" step="1" value="${Math.round(p.pl2_w)}" style="width:100%"><p class="cph-p">Subir o PL1 deixa a CPU sustentar mais clock sob carga (se o cooler e a placa-mãe aguentarem). Mais watts = mais calor.</p></div>`}
-    <div class="cph-state"><b>Undervolt</b> (reduz voltagem: menos calor, boost mais estável)<br>Offset: <b id="pioUvV">${Math.round(uv0)}</b> mV<input type="range" id="pioUv" min="-100" max="0" step="5" value="${Math.round(uv0)}" style="width:100%"><p class="cph-p">Só valores <b>negativos</b>. Muito undervolt causa travamento ou tela azul (reiniciar corrige). Alguns PCs bloqueiam undervolt na BIOS: o app avisa se for ignorado.</p></div>
+    ${p.locked ? '' : `<div class="cph-state"><b>Limite de potência</b><br>PL1 (sustentado): <b id="pioPl1V">${Math.round(p.pl1_w)}</b> W<input type="range" id="pioPl1" min="${pl1Min}" max="${pl1Max}" step="1" value="${Math.round(p.pl1_w)}" style="width:100%"><br>PL2 (pico): <b id="pioPl2V">${Math.round(p.pl2_w)}</b> W<input type="range" id="pioPl2" min="${pl1Min}" max="${pl2Max}" step="1" value="${Math.round(p.pl2_w)}" style="width:100%"><br>Janela do PL1: <b id="pioTauV">${cphF(p.pl1_tau_s, 1)}</b> s<input type="range" id="pioTau" min="1" max="56" step="1" value="${Math.round(Math.min(56, p.pl1_tau_s))}" style="width:100%"><p class="cph-p">Subir o PL1 deixa a CPU sustentar mais clock sob carga. A janela é quanto tempo o PL2 (pico) dura antes de cair pro PL1.</p></div>`}
+    <div class="cph-state"><b>Undervolt por plano</b> (reduz voltagem: menos calor, boost mais estável)
+      <div class="pio-planes">${planes.map(([id, label, v]) => `<div class="pio-plane"><div class="pio-plane-t">${label}<b id="pioV_${id}V">${v != null ? Math.round(v) : 0}</b> mV</div><input type="range" class="pioVplane" data-plane="${id}" min="-100" max="0" step="5" value="${v != null ? Math.round(v) : 0}"></div>`).join('')}</div>
+      <p class="cph-p">Só valores <b>negativos</b>. Muito undervolt causa travamento ou tela azul (reiniciar corrige). Alguns PCs ignoram undervolt na BIOS: o app avisa se for o caso.</p></div>
     <label class="cph-check"><input type="checkbox" class="pioAck"><span>Salvei meu trabalho. Sei que o PC pode <b>travar ou reiniciar</b>.</span></label>
     <label class="cph-check"><input type="checkbox" class="pioAck"><span>Sei que isso pode <b>anular a garantia</b> e que mais potência gera mais calor. O risco é meu.</span></label>
     <div class="cph-row"><button class="cph-btn main" id="pioApply" disabled>Aplicar</button><button class="cph-btn" id="pioTest">Testar 30 s</button><button class="cph-btn stop" id="pioReset">Voltar ao original</button><button class="cph-btn" id="pioReread">Reler</button></div>
     <p class="cph-p">${orig ? `Valores originais guardados (PL1 ${cphF(orig.pl1, 0)} W / PL2 ${cphF(orig.pl2, 0)} W, undervolt 0).` : ''} Mudou algo e o PC ficou instável? <b>Reinicie</b>: tudo volta ao padrão.</p>`;
+
   const q = id => document.getElementById(id);
   const upd = () => { const ok = [...document.querySelectorAll('.pioAck')].every(c => c.checked); q('pioApply').disabled = !ok; };
   document.querySelectorAll('.pioAck').forEach(c => c.onchange = upd);
-  if (q('pioPl1')){ q('pioPl1').oninput = () => { q('pioPl1V').textContent = q('pioPl1').value; if (+q('pioPl2').value < +q('pioPl1').value){ q('pioPl2').value = q('pioPl1').value; q('pioPl2V').textContent = q('pioPl2').value; } }; q('pioPl2').oninput = () => { if (+q('pioPl2').value < +q('pioPl1').value) q('pioPl2').value = q('pioPl1').value; q('pioPl2V').textContent = q('pioPl2').value; }; }
-  q('pioUv').oninput = () => q('pioUvV').textContent = q('pioUv').value;
+  if (q('pioPl1')){ q('pioPl1').oninput = () => { q('pioPl1V').textContent = q('pioPl1').value; if (+q('pioPl2').value < +q('pioPl1').value){ q('pioPl2').value = q('pioPl1').value; q('pioPl2V').textContent = q('pioPl2').value; } }; q('pioPl2').oninput = () => { if (+q('pioPl2').value < +q('pioPl1').value) q('pioPl2').value = q('pioPl1').value; q('pioPl2V').textContent = q('pioPl2').value; }; q('pioTau').oninput = () => q('pioTauV').textContent = cphF(+q('pioTau').value, 1); }
+  box.querySelectorAll('.pioVplane').forEach(sl => sl.oninput = () => document.getElementById('pioV_' + sl.dataset.plane + 'V').textContent = sl.value);
   q('pioReread').onclick = cphPioRead;
   q('pioTest').onclick = () => cphStartTest(30);
   q('pioApply').onclick = async () => {
     const inv = window.__TAURI__.core.invoke; let msg = [];
     try{
-      if (q('pioPl1')){ const r = await inv('oc_set_power', { pl1W:+q('pioPl1').value, pl2W:+q('pioPl2').value }); CPH.pio = { ...CPH.pio, ...r }; msg.push(`PL1 ${cphF(r.pl1_w, 0)} W / PL2 ${cphF(r.pl2_w, 0)} W`); }
-      const want = +q('pioUv').value;
-      if (want !== Math.round(uv0)){ const r = await inv('oc_set_undervolt', { mv:want }); CPH.pio = { ...CPH.pio, ...r }; const got = r.offsets && r.offsets.core; msg.push(got === want || (got != null && Math.abs(got - want) <= 2) ? `undervolt ${want} mV` : `undervolt IGNORADO pelo firmware (lido: ${got} mV)`); }
+      if (q('pioPl1')){ const r = await inv('oc_set_power', { pl1W:+q('pioPl1').value, pl2W:+q('pioPl2').value, tauS:+q('pioTau').value }); CPH.pio = { ...CPH.pio, ...r }; msg.push(`PL1 ${cphF(r.pl1_w, 0)} W / PL2 ${cphF(r.pl2_w, 0)} W`); }
+      const vals = {}; box.querySelectorAll('.pioVplane').forEach(sl => vals[sl.dataset.plane] = +sl.value);
+      const r = await inv('oc_set_voltage_planes', { core:vals.core, cache:vals.cache, gpu:vals.gpu, sa:vals.sa });
+      CPH.pio = { ...CPH.pio, ...r };
+      msg.push('undervolt aplicado' + (r.ignored && r.ignored.length ? ` (ignorado em: ${r.ignored.join(', ')})` : ''));
       showToast('Aplicado: ' + msg.join(' · '));
     }catch(e){ showToast(String(e)); }
     cphRenderPio();
@@ -6941,7 +6955,8 @@ function cphRenderAmd(box, head, p){
   const curMhz = p.fid * 25, curDelta = Math.round((1.55 - 0.00625 * p.vid - stockV) * 1000);
   const fMin = Math.max(1000, stockMhz - 200), fMax = Math.min(5000, stockMhz + 600);
   const vMax = Math.max(0, Math.min(60, Math.floor((1.35 - stockV) * 1000)));
-  const how = '<p class="cph-p"><b>Overclock de P-state</b> (o mesmo método do ZenStates): muda o <b>multiplicador</b> e a <b>voltagem</b> do P-state 0 em todos os núcleos, pelo <b>PawnIO</b> (driver assinado, <b>sem desativar o antivírus</b>). Em Ryzen com Precision Boost, isso pode trocar o boost automático por um <b>clock fixo</b>; o comportamento varia por modelo. Tudo é temporário: <b>reiniciar o PC volta ao padrão</b>.</p>';
+  const how = '<p class="cph-p"><b>Overclock de P-state</b> (o mesmo método do ZenStates): muda o <b>multiplicador</b> e a <b>voltagem</b> do P-state 0 em todos os núcleos, pelo <b>PawnIO</b> (driver assinado, <b>sem desativar o antivírus</b>). Tudo é temporário: <b>reiniciar o PC volta ao padrão</b>.</p>';
+  const boostRow = `<div class="pio-toprow"><div class="pio-boost-t">Boost automático (CPB)<small>Desligar trava o clock no multiplicador definido abaixo, sem variar sozinho.</small></div><label class="switch"><input type="checkbox" id="amdBoost" ${p.cpb_on ? 'checked' : ''}><span class="track"></span><span class="thumb"></span></label></div>`;
   const info = `<div class="cph-res"><div><span>Temperatura (Tctl)</span><b id="pioTemp">${p.temp_c != null ? p.temp_c + '°C' : 'n/d'}</b></div><div><span>P-state 0 agora</span><b id="pioP0">${cphGHz(p.freq_mhz)} GHz</b></div><div><span>Voltagem do P0</span><b id="pioV">${cphF(p.volt, 3)} V</b></div><div><span>Família / modelo</span><b>${p.family.toString(16)}h / ${p.model.toString(16)}h</b></div></div>`;
   if (!p.supported){
     box.innerHTML = head + how + info + `<div class="cph-warnbox">Este Ryzen (família ${p.family.toString(16)}h, modelo ${p.model.toString(16)}h) <b>ainda não é suportado</b> pelo overclock do app: o formato do P-state muda a partir do Zen 4, e o app não escreve no que não foi confirmado. Suportado: <b>Ryzen 1000 a 5000</b>. A leitura de temperatura continua funcionando.</div><div class="cph-row"><button class="cph-btn main" id="pioReread">Reler</button></div>`;
@@ -6951,9 +6966,11 @@ function cphRenderAmd(box, head, p){
     box.innerHTML = head + how + info + '<div class="cph-warnbox">O P-state 0 deste processador usa um divisor fora do padrão (DID ≠ 8): <b>não é seguro alterar</b> pelo app.</div><div class="cph-row"><button class="cph-btn main" id="pioReread">Reler</button></div>';
     document.getElementById('pioReread').onclick = cphPioRead; return;
   }
-  box.innerHTML = head + how + info + `
-    <div class="cph-state"><b>Multiplicador (clock do P0)</b><br>Alvo: <b id="amdFV">${curMhz}</b> MHz <small>(padrão: ${stockMhz} MHz)</small><input type="range" id="amdF" min="${fMin}" max="${fMax}" step="25" value="${curMhz}" style="width:100%"><p class="cph-p">Cada passo é 25 MHz. Mais clock exige mais voltagem pra ficar estável.</p></div>
-    <div class="cph-state"><b>Voltagem do P0</b><br>Offset: <b id="amdVV">${curDelta}</b> mV → <b id="amdVA">${cphF(stockV + curDelta / 1000, 3)}</b> V <small>(padrão: ${cphF(stockV, 3)} V; teto do app: 1,350 V)</small><input type="range" id="amdV" min="-100" max="${vMax}" step="6.25" value="${curDelta}" style="width:100%"><p class="cph-p">Voltagem alta aquece e <b>encurta a vida do processador</b>. Aumente aos poucos e teste a cada passo.</p></div>
+  box.innerHTML = head + how + boostRow + info + `
+    <div class="pio-planes">
+      <div class="pio-plane"><div class="pio-plane-t">Multiplicador (clock do P0)<b id="amdFV">${curMhz}</b> MHz</div><input type="range" id="amdF" min="${fMin}" max="${fMax}" step="25" value="${curMhz}"><p class="cph-p" style="margin-top:6px">Padrão: ${stockMhz} MHz · passo de 25 MHz.</p></div>
+      <div class="pio-plane"><div class="pio-plane-t">Voltagem do P0<b id="amdVA">${cphF(stockV + curDelta / 1000, 3)} V</b></div><input type="range" id="amdV" min="-100" max="${vMax}" step="6.25" value="${curDelta}"><p class="cph-p" style="margin-top:6px">Offset <b id="amdVV">${curDelta}</b> mV · padrão: ${cphF(stockV, 3)} V · teto do app: 1,350 V.</p></div>
+    </div>
     <label class="cph-check"><input type="checkbox" class="pioAck"><span>Salvei meu trabalho. Sei que o PC pode <b>travar ou reiniciar</b> se o clock ou a voltagem não estiverem estáveis.</span></label>
     <label class="cph-check"><input type="checkbox" class="pioAck"><span>Sei que overclock <b>pode anular a garantia</b>, gera mais calor e que <b>mais voltagem desgasta o chip</b>. O risco é meu.</span></label>
     <label class="cph-check"><input type="checkbox" class="pioAck"><span>Vou acompanhar a <b>temperatura</b> e parar se passar de uns 85 a 90°C sob carga.</span></label>
@@ -6963,9 +6980,13 @@ function cphRenderAmd(box, head, p){
   const upd = () => { q('pioApply').disabled = ![...document.querySelectorAll('.pioAck')].every(c => c.checked); };
   document.querySelectorAll('.pioAck').forEach(c => c.onchange = upd);
   q('amdF').oninput = () => q('amdFV').textContent = q('amdF').value;
-  q('amdV').oninput = () => { q('amdVV').textContent = Math.round(q('amdV').value); q('amdVA').textContent = cphF(stockV + q('amdV').value / 1000, 3); };
+  q('amdV').oninput = () => { q('amdVV').textContent = Math.round(q('amdV').value); q('amdVA').textContent = cphF(stockV + q('amdV').value / 1000, 3) + ' V'; };
   q('pioReread').onclick = cphPioRead;
   q('pioTest').onclick = () => cphStartTest(30);
+  q('amdBoost').onchange = async (e) => {
+    try{ const r = await window.__TAURI__.core.invoke('amd_set_boost', { enabled:e.target.checked }); CPH.pio = { ...CPH.pio, ...r }; showToast(e.target.checked ? 'Boost automático ligado' : 'Boost automático desligado: clock fixo no valor definido'); }
+    catch(err){ e.target.checked = !e.target.checked; showToast(String(err)); }
+  };
   q('pioApply').onclick = async () => {
     const fid = Math.round(+q('amdF').value / 25), delta = +q('amdV').value;
     const vid = Math.abs(delta - curDelta) < 3 ? null : stockVid - Math.round(delta / 6.25);
@@ -6983,7 +7004,6 @@ function cphRenderAmd(box, head, p){
   };
 }
 
-// ---- Overclock real: guia seguro + ferramentas oficiais ----
 function cphRenderOc(){
   const box = document.getElementById('cphOc'); if (!box) return;
   const nm = CPH.rawName || CPH.name || '';
@@ -10838,6 +10858,10 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.64', date:'11/11/2026', items:[
+    '<b>Intel:</b> undervolt agora em <b>4 planos</b> (núcleos, cache/anel, vídeo integrado e agente de sistema) e controle da <b>janela de tempo do PL1</b> (quanto tempo o PL2 dura antes de cair pro PL1).',
+    '<b>AMD Ryzen:</b> novo botão pra <b>ligar/desligar o Boost automático (CPB)</b>: desligado, o clock fica fixo no multiplicador definido.',
+    'Visual do cartão de overclock redesenhado: planos de voltagem em cartões lado a lado, mais parecido com apps como o Ryzen Master.' ] },
   { v:'1.1.63', date:'11/11/2026', items:[
     'Overclock <b>todo dentro do app</b>: removidos os botões e textos que mandavam pro Intel XTU e pro Ryzen Master. O plano de overclock agora manda aplicar o próximo passo direto no cartão <b>Overclock real</b>.' ] },
   { v:'1.1.62', date:'11/11/2026', items:[

@@ -6402,10 +6402,12 @@ fn oc_snapshot(p: &PawnIo, with_offsets: bool) -> Result<serde_json::Value, Stri
     let valid = (th >> 31) & 1 == 1;
     let temp: Option<f64> = if valid && tj > 0.0 { Some(tj - ((th >> 16) & 0x7F) as f64) } else { None };
     let offsets = if with_offsets {
-        serde_json::json!({ "core": oc_offset_mv(p, 0), "cache": oc_offset_mv(p, 2) })
+        serde_json::json!({ "core": oc_offset_mv(p, 0), "cache": oc_offset_mv(p, 2), "gpu": oc_offset_mv(p, 1), "sa": oc_offset_mv(p, 3) })
     } else {
         serde_json::Value::Null
     };
+    let tu = 1.0 / ((1u64 << ((unit_raw >> 16) & 0xF)) as f64);
+    let tau = tu * ((1u64 << ((pl >> 17) & 0x1F)) as f64) * (1.0 + (((pl >> 22) & 0x3) as f64) / 4.0);
     Ok(serde_json::json!({
         "ok": true,
         "installed": true,
@@ -6418,6 +6420,7 @@ fn oc_snapshot(p: &PawnIo, with_offsets: bool) -> Result<serde_json::Value, Stri
         "turbo_1c": trl & 0xFF,
         "pl1_w": perf_round((pl & 0x7FFF) as f64 * unit, 1),
         "pl1_on": (pl >> 15) & 1 == 1,
+        "pl1_tau_s": perf_round(tau, 1),
         "pl2_w": perf_round(((pl >> 32) & 0x7FFF) as f64 * unit, 1),
         "pl2_on": (pl >> 47) & 1 == 1,
         "locked": (pl >> 63) & 1 == 1,
@@ -6489,7 +6492,7 @@ async fn oc_telemetry() -> Result<serde_json::Value, String> {
 
 /// Define PL1 (potência sustentada) e PL2 (potência de pico) em watts.
 #[tauri::command]
-async fn oc_set_power(pl1_w: f64, pl2_w: f64) -> Result<serde_json::Value, String> {
+async fn oc_set_power(pl1_w: f64, pl2_w: f64, tau_s: Option<f64>) -> Result<serde_json::Value, String> {
     tauri::async_runtime::spawn_blocking(move || -> Result<serde_json::Value, String> {
         #[cfg(target_os = "windows")]
         {
@@ -6507,13 +6510,30 @@ async fn oc_set_power(pl1_w: f64, pl2_w: f64) -> Result<serde_json::Value, Strin
                 let p2 = ((pl2_w / unit).round() as u64) & 0x7FFF;
                 let mut nv = pl & !(0x7FFFu64 | (0x7FFFu64 << 32));
                 nv |= p1 | (1 << 15) | (p2 << 32) | (1u64 << 47);
+                if let Some(t) = tau_s {
+                    if !(0.5..=128.0).contains(&t) {
+                        return Err("Janela de tempo do PL1 fora do limite (0,5 a 128 s)".to_string());
+                    }
+                    let tu = 1.0 / ((1u64 << ((unit_raw >> 16) & 0xF)) as f64);
+                    let mut best = (0u64, 0u64, f64::MAX);
+                    for y in 0u64..32 {
+                        for z in 0u64..4 {
+                            let v = tu * ((1u64 << y) as f64) * (1.0 + (z as f64) / 4.0);
+                            let d = (v - t).abs();
+                            if d < best.2 {
+                                best = (y, z, d);
+                            }
+                        }
+                    }
+                    nv = (nv & !(0x7Fu64 << 17)) | ((best.0 | (best.1 << 5)) << 17);
+                }
                 p.wr(0x610, nv)?;
                 oc_snapshot(p, false)
             })
         }
         #[cfg(not(target_os = "windows"))]
         {
-            let _ = (pl1_w, pl2_w);
+            let _ = (pl1_w, pl2_w, tau_s);
             Err("Disponível apenas no Windows".to_string())
         }
     })
@@ -6550,6 +6570,44 @@ async fn oc_set_undervolt(mv: i32) -> Result<serde_json::Value, String> {
     .map_err(|e| format!("Falha interna: {e}"))?
 }
 
+/// Undervolt por plano (núcleo, cache, iGPU, agente de sistema). Só valores negativos (0 = padrão).
+#[tauri::command]
+async fn oc_set_voltage_planes(core: i32, cache: i32, gpu: i32, sa: i32) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<serde_json::Value, String> {
+        #[cfg(target_os = "windows")]
+        {
+            for v in [core, cache, gpu, sa] {
+                if !(-150..=0).contains(&v) {
+                    return Err("Undervolt aceito: de 0 a -150 mV (só valores negativos)".to_string());
+                }
+            }
+            with_pio(|p| {
+                let mut ignored: Vec<&str> = Vec::new();
+                for (plane, mv, name) in [(0u64, core, "núcleo"), (2u64, cache, "cache"), (1u64, gpu, "iGPU"), (3u64, sa, "agente de sistema")] {
+                    let wrote = oc_write_offset(p, plane, mv);
+                    if mv != 0 {
+                        let back = oc_offset_mv(p, plane);
+                        let ok = wrote.is_ok() && back.map(|b| (b - mv as f64).abs() <= 2.0).unwrap_or(false);
+                        if !ok {
+                            ignored.push(name);
+                        }
+                    }
+                }
+                let mut v = oc_snapshot(p, true)?;
+                v["ignored"] = serde_json::json!(ignored);
+                Ok(v)
+            })
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = (core, cache, gpu, sa);
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
 /// Volta o limite de potência ao valor guardado e zera o undervolt.
 #[tauri::command]
 async fn oc_restore(pl_raw_hex: String) -> Result<serde_json::Value, String> {
@@ -6562,8 +6620,9 @@ async fn oc_restore(pl_raw_hex: String) -> Result<serde_json::Value, String> {
                 if (cur >> 63) & 1 == 0 && cur != orig {
                     p.wr(0x610, orig)?;
                 }
-                let _ = oc_write_offset(p, 0, 0);
-                let _ = oc_write_offset(p, 2, 0);
+                for plane in [0u64, 2, 1, 3] {
+                    let _ = oc_write_offset(p, plane, 0);
+                }
                 oc_snapshot(p, true)
             })
         }
@@ -6693,8 +6752,10 @@ fn amd_snapshot(p: &PawnIo) -> Result<serde_json::Value, String> {
     let did = ((p0 >> 8) & 0x3F) as u32;
     let vid = ((p0 >> 14) & 0xFF) as u32;
     let freq = if did > 0 { 200.0 * fid as f64 / did as f64 } else { 0.0 };
+    let hwcr = p.rd(0xC001_0015).unwrap_or(0);
     Ok(serde_json::json!({
         "ok": true, "installed": true, "vendor": "amd",
+        "cpb_on": (hwcr >> 25) & 1 == 0,
         "family": family, "model": model, "supported": amd_supported(family, model),
         "p0_raw": format!("{:x}", p0), "p0_on": (p0 >> 63) & 1 == 1,
         "fid": fid, "did": did, "vid": vid,
@@ -6790,6 +6851,38 @@ async fn amd_set_pstate(fid: u32, vid: Option<u32>) -> Result<serde_json::Value,
     .map_err(|e| format!("Falha interna: {e}"))?
 }
 
+/// Liga ou desliga o boost automático (Core Performance Boost) em todos os núcleos.
+#[tauri::command]
+async fn amd_set_boost(enabled: bool) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<serde_json::Value, String> {
+        #[cfg(target_os = "windows")]
+        {
+            let (v, family, model) = cpu_vendor_fms();
+            if !v.contains("AuthenticAMD") || !amd_supported(family, model) {
+                return Err("Controle de boost suportado só em Ryzen 1000 a 5000".to_string());
+            }
+            with_pio_amd(|p| {
+                amd_each_cpu(p, |p| {
+                    let cur = p.rd(0xC001_0015)?;
+                    let nv = if enabled { cur & !(1u64 << 25) } else { cur | (1u64 << 25) };
+                    if nv != cur {
+                        p.wr(0xC001_0015, nv)?;
+                    }
+                    Ok(())
+                })?;
+                amd_snapshot(p)
+            })
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = enabled;
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
 /// Restaura o P-state 0 original (valor bruto guardado antes da primeira alteração).
 #[tauri::command]
 async fn amd_restore(p0_raw_hex: String) -> Result<serde_json::Value, String> {
@@ -6831,7 +6924,7 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
         .manage(PdhState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes, debloat_list, debloat_remove, profile_scan, game_session_start, game_session_stop, game_session_sample, audit_registry, audit_powercfg, power_status, cpu_live_start, cpu_live_stop, cpu_live_sample, cpu_stress_start, cpu_stress_stop, open_url, oc_status, oc_telemetry, oc_set_power, oc_set_undervolt, oc_restore, oc_close, amd_set_pstate, amd_restore])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes, debloat_list, debloat_remove, profile_scan, game_session_start, game_session_stop, game_session_sample, audit_registry, audit_powercfg, power_status, cpu_live_start, cpu_live_stop, cpu_live_sample, cpu_stress_start, cpu_stress_stop, open_url, oc_status, oc_telemetry, oc_set_power, oc_set_undervolt, oc_restore, oc_close, amd_set_pstate, amd_restore, amd_set_boost, oc_set_voltage_planes])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));
