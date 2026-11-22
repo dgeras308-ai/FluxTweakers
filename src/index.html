@@ -451,6 +451,41 @@
   .tc-verdict{font-size:12px;line-height:1.6;border-radius:10px;padding:10px 13px;border:1px solid var(--border-soft);background:var(--card);color:var(--muted);}
   .tc-verdict.ok{border-color:color-mix(in srgb, var(--ok) 40%, transparent);} .tc-verdict b{color:var(--text);}
   .tc-verdict.bad{border-color:color-mix(in srgb, #f59e0b 50%, transparent);}
+
+  /* Gráfico ao vivo + extras do overclock */
+  .cphc{background:var(--card);border:1px solid var(--border-soft);border-radius:14px;padding:12px 14px 10px;margin-bottom:16px;}
+  .cphc-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
+  .cphc-leg,.cphc-win{display:flex;gap:6px;flex-wrap:wrap;}
+  .cphc-chip{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:999px;border:1px solid var(--border-soft);background:transparent;color:var(--muted2);cursor:pointer;opacity:.55;transition:.15s;}
+  .cphc-chip i{width:8px;height:8px;border-radius:50%;background:var(--c);display:inline-block;}
+  .cphc-chip b{font-family:var(--mono);color:var(--c);font-weight:800;min-width:34px;text-align:left;}
+  .cphc-chip.on{opacity:1;color:var(--text);border-color:color-mix(in srgb, var(--c) 45%, transparent);background:color-mix(in srgb, var(--c) 10%, transparent);}
+  .cphc-ghost{cursor:default;}
+  .cphc-w{font-family:inherit;font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:8px;border:1px solid var(--border-soft);background:transparent;color:var(--muted);cursor:pointer;}
+  .cphc-w.on{color:var(--accent);border-color:var(--accent);}
+  .cphc-plot{position:relative;width:100%;}
+  .cphc-empty{display:flex;align-items:center;justify-content:center;font-size:11.5px;color:var(--muted2);}
+  .cphc-tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--border);border-radius:9px;padding:6px 10px;font-size:11px;font-family:var(--mono);color:var(--muted);white-space:nowrap;box-shadow:0 6px 18px rgba(0,0,0,.35);z-index:3;line-height:1.6;}
+  .cphc-tip span{display:block;font-size:9.5px;color:var(--muted2);} .cphc-tip b{color:var(--text);}
+  .cphc-foot{display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:10.5px;color:var(--muted2);} .cphc-foot b{color:var(--text);font-family:var(--mono);}
+  .oc-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;} @media(max-width:800px){.oc-tiles{grid-template-columns:repeat(2,1fr);}}
+  .oc-tile{background:var(--card);border:1px solid var(--border-soft);border-radius:12px;padding:11px 14px;}
+  .oc-tile span{display:block;font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted2);}
+  .oc-tile b{display:block;margin-top:5px;font-size:20px;font-weight:800;font-family:var(--mono);color:var(--text);line-height:1;} .oc-tile b small{font-size:11px;font-weight:600;color:var(--muted);margin-left:3px;}
+  .oc-tile em{display:block;margin-top:5px;font-style:normal;font-size:10.5px;color:var(--muted);} .oc-tile em.up{color:var(--ok);}
+  .oc-sub{font-size:10px;font-weight:600;color:var(--muted);}
+  .oc-presets{display:flex;gap:8px;flex-wrap:wrap;}
+  .oc-pre{font-family:inherit;text-align:left;background:var(--panel);border:1px solid var(--border-soft);border-radius:11px;padding:9px 13px;cursor:pointer;color:var(--text);transition:.15s;min-width:118px;}
+  .oc-pre b{display:block;font-size:12.5px;font-weight:800;} .oc-pre small{display:block;font-size:10px;color:var(--muted);margin-top:3px;}
+  .oc-pre:hover,.oc-pre.on{border-color:var(--accent);} .oc-pre.on b{color:var(--accent);}
+  .oc-vbar-track{position:relative;height:8px;border-radius:99px;background:linear-gradient(90deg,#22c55e 0%,#22c55e 45%,#f59e0b 75%,#ef4444 100%);margin-top:6px;}
+  .oc-vbar-track i{position:absolute;top:-4px;width:4px;height:16px;border-radius:3px;background:var(--text);box-shadow:0 0 0 2px var(--panel);transform:translateX(-50%);transition:left .15s;}
+  .oc-vbar-lab{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--muted2);margin-top:6px;} .oc-vbar-lab b{font-family:var(--mono);font-size:11px;color:var(--text);} .oc-vbar-lab b.hot{color:#f59e0b;}
+  .oc-hint{margin:0;font-size:11.5px;color:var(--muted2);}
+  .oc-prof-add{display:flex;gap:8px;} .oc-prof-add input{flex:1;min-width:0;background:var(--panel);border:1px solid var(--border-soft);border-radius:9px;padding:8px 11px;color:var(--text);font-family:inherit;font-size:12px;}
+  .oc-prof{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--border-soft);}
+  .oc-prof b{display:block;font-size:12.5px;color:var(--text);} .oc-prof small{display:block;font-size:10.5px;color:var(--muted);font-family:var(--mono);margin-top:2px;}
+  .oc-prof-b{display:flex;gap:6px;} .oc-prof-b .oc-btn{padding:6px 11px;font-size:11px;}
   /* pio-toprow herdado */
   .pio-toprow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
   .pio-boost-t{font-size:12px;font-weight:700;color:var(--text);} .pio-boost-t small{display:block;font-size:10.5px;color:var(--muted);font-weight:500;margin-top:2px;}
@@ -6621,7 +6656,7 @@ const CPH = {
   tab:'monitor',
   pio:null, pioBusy:false,
   test:{ running:false, secs:0, series:[], abort:false },
-  res:null
+  res:null, hist:[]
 };
 const CPH_KEY='flux_cpu_tests_v1', CPH_SNAP='flux_cpu_boost_snapshot_v1', CPH_REF='flux_cpu_oc_ref_v1', CPH_PIO_ORIG='flux_pio_orig_v1';
 const cphF=(v,d=0)=>Number(v).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -6639,6 +6674,104 @@ function cphSpark(vals,lo,hi){
   const W=300,H=56,span=Math.max(1,hi-lo);
   const pts=vals.map((v,i)=>`${(i/(vals.length-1)*W).toFixed(1)},${(H-4-((v-lo)/span)*(H-8)).toFixed(1)}`).join(' ');
   return`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><polygon points="0,${H} ${pts} ${W},${H}" fill="var(--accent)" opacity=".12"/><polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
+}
+
+// ===== Gráfico ao vivo: clock, temperatura e uso =====
+const CPH_CH={win:120,on:{f:true,t:true,u:false}};
+const CPH_PROF='flux_cpu_profiles_v1';
+function cphPath(pts){
+  if(pts.length<2)return'';
+  let d='M'+pts[0][0].toFixed(1)+','+pts[0][1].toFixed(1);
+  for(let i=1;i<pts.length-1;i++){const mx=(pts[i][0]+pts[i+1][0])/2,my=(pts[i][1]+pts[i+1][1])/2;d+=' Q'+pts[i][0].toFixed(1)+','+pts[i][1].toFixed(1)+' '+mx.toFixed(1)+','+my.toFixed(1);}
+  const l=pts[pts.length-1];return d+' L'+l[0].toFixed(1)+','+l[1].toFixed(1);
+}
+function cphChartMount(root,mode){
+  if(!root)return;
+  root.classList.add('cphc');root.dataset.mode=mode;root._hov=null;
+  const chips=[['f','Clock','var(--accent)'],['t','Temperatura','#f59e0b'],['u','Uso','#8b5cf6']].map(([k,l,c])=>`<button class="cphc-chip${CPH_CH.on[k]?' on':''}" data-k="${k}" style="--c:${c}"><i></i>${l} <b data-v="${k}">–</b></button>`).join('');
+  const ghost=mode==='test'?'<span class="cphc-chip on cphc-ghost" style="--c:var(--muted);display:none"><i></i>Referência</span>':'';
+  const wins=mode==='live'?`<div class="cphc-win">${[[60,'1 min'],[120,'2 min'],[300,'5 min']].map(([s,l])=>`<button class="cphc-w${CPH_CH.win===s?' on':''}" data-w="${s}">${l}</button>`).join('')}</div>`:'';
+  root.innerHTML=`<div class="cphc-top"><div class="cphc-leg">${chips}${ghost}</div>${wins}</div><div class="cphc-plot"></div><div class="cphc-foot"></div>`;
+  root.querySelectorAll('.cphc-chip[data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k;CPH_CH.on[k]=!CPH_CH.on[k];document.querySelectorAll('.cphc-chip[data-k="'+k+'"]').forEach(x=>x.classList.toggle('on',CPH_CH.on[k]));cphChartPaintAll();});
+  root.querySelectorAll('.cphc-w').forEach(b=>b.onclick=()=>{CPH_CH.win=+b.dataset.w;document.querySelectorAll('.cphc-w').forEach(x=>x.classList.toggle('on',+x.dataset.w===CPH_CH.win));cphChartPaintAll();});
+  const plot=root.querySelector('.cphc-plot');
+  plot.onmousemove=e=>{if(!root._xi)return;const r=plot.getBoundingClientRect();root._hov=root._xi((e.clientX-r.left)/Math.max(1,r.width));cphChartPaint(root);};
+  plot.onmouseleave=()=>{root._hov=null;cphChartPaint(root);};
+}
+function cphChartPaint(root){
+  if(!root||!root.isConnected)return;
+  const plot=root.querySelector('.cphc-plot');if(!plot)return;
+  const mode=root.dataset.mode,H=+root.dataset.h||190,on=CPH_CH.on,n0=CPH_CH.win;
+  let f,t,u,ref=null,dom,xm=1;
+  if(mode==='live'){const hs=CPH.hist.slice(-n0);f=hs.map(x=>x.f);t=hs.map(x=>x.t);u=hs.map(x=>x.u);dom=i=>(n0-f.length+i)/Math.max(1,n0-1);}
+  else{const d=root._data||{f:[],t:[],u:[]};f=d.f;t=d.t;u=d.u;ref=d.ref||null;xm=Math.max(d.xmax||0,f.length-1,1);if(ref)ref=ref.slice(0,Math.floor(xm)+1);dom=i=>i/xm;}
+  const n=f.length,gh=root.querySelector('.cphc-ghost');if(gh)gh.style.display=ref?'inline-flex':'none';
+  if(n<2){plot.innerHTML=`<div class="cphc-empty" style="height:${H}px">${mode==='live'?'Coletando amostras...':'O gráfico aparece aqui durante o teste.'}</div>`;root.querySelector('.cphc-foot').innerHTML='';root._xi=null;return;}
+  const W=Math.max(320,plot.clientWidth||600),L=46,R=44,T=16,B=22,pw=W-L-R,ph=H-T-B;
+  const fv=f.concat(ref||[]).filter(x=>x>0);if(!fv.length)fv.push(0,1000);
+  let flo=Math.floor(Math.min(...fv)*0.96/100)*100,fhi=Math.ceil(Math.max(...fv)*1.04/100)*100;
+  if(fhi-flo<400){const m=(fhi+flo)/2;flo=Math.max(0,m-200);fhi=flo+400;}
+  const tv=t.filter(x=>x!=null),hasT=on.t&&tv.length>1;
+  let tlo=20,thi=100;
+  if(tv.length){tlo=Math.floor((Math.min(...tv)-4)/10)*10;thi=Math.ceil((Math.max(...tv)+4)/10)*10;if(thi-tlo<20)thi=tlo+20;thi=tlo+Math.ceil((thi-tlo)/4)*4;}
+  const fy=v=>T+ph-(v-flo)/(fhi-flo)*ph,ty=v=>T+ph-(v-tlo)/(thi-tlo)*ph,uy=v=>T+ph-Math.min(100,Math.max(0,v))/100*ph;
+  const px=i=>L+dom(i)*pw;
+  const pf=f.map((v,i)=>[px(i),fy(v)]),pu=u.map((v,i)=>[px(i),uy(v)]),pt=[];
+  t.forEach((v,i)=>{if(v!=null)pt.push([px(i),ty(v)]);});
+  const base=(T+ph).toFixed(1),dot=(x,y,c)=>`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="${c}" stroke="var(--panel)" stroke-width="2"/>`;
+  let g='';
+  for(let k=0;k<=4;k++){
+    const y=T+ph-k/4*ph;
+    g+=`<line x1="${L}" x2="${W-R}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--border-soft)" stroke-dasharray="${k===0?'0':'3 4'}"/>`;
+    g+=`<text x="${L-7}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9.5" font-family="var(--mono)" fill="var(--muted2)">${cphF((flo+k/4*(fhi-flo))/1000,2)}</text>`;
+    if(hasT)g+=`<text x="${W-R+7}" y="${(y+3).toFixed(1)}" font-size="9.5" font-family="var(--mono)" fill="#f59e0b" opacity=".85">${Math.round(tlo+k/4*(thi-tlo))}°</text>`;
+  }
+  const xl=mode==='live'?[['-'+n0+'s',0],['-'+Math.round(n0/2)+'s',.5],['agora',1]]:[['0s',0],[Math.round(xm/2)+'s',.5],[Math.round(xm)+'s',1]];
+  xl.forEach(([l,fr],j)=>{g+=`<text x="${(L+fr*pw).toFixed(1)}" y="${H-6}" text-anchor="${j===0?'start':j===2?'end':'middle'}" font-size="9.5" font-family="var(--mono)" fill="var(--muted2)">${l}</text>`;});
+  let sv='';
+  if(on.u){const d=cphPath(pu);sv+=`<path d="${d} L${pu[n-1][0].toFixed(1)},${base} L${pu[0][0].toFixed(1)},${base} Z" fill="url(#cphGU)"/><path d="${d}" fill="none" stroke="#8b5cf6" stroke-width="1.2" opacity=".7"/>`;}
+  if(ref&&on.f&&ref.length>1){sv+=`<path d="${cphPath(ref.map((v,i)=>[px(i),fy(v)]))}" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="5 4" opacity=".85"/>`;}
+  if(on.f){
+    const d=cphPath(pf);
+    sv+=`<path d="${d} L${pf[n-1][0].toFixed(1)},${base} L${pf[0][0].toFixed(1)},${base} Z" fill="url(#cphGF)"/><path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 60%, transparent))"/>`;
+    let mi=0;f.forEach((v,i)=>{if(v>f[mi])mi=i;});
+    sv+=`<circle cx="${pf[mi][0].toFixed(1)}" cy="${pf[mi][1].toFixed(1)}" r="3.5" fill="var(--panel)" stroke="var(--accent)" stroke-width="2"/><text x="${Math.min(W-R-14,Math.max(L+14,pf[mi][0])).toFixed(1)}" y="${(pf[mi][1]-8).toFixed(1)}" text-anchor="middle" font-size="9.5" font-weight="700" font-family="var(--mono)" fill="var(--accent)">${cphGHz(f[mi])}</text>`;
+    if(mode==='live')sv+=`<circle cx="${pf[n-1][0].toFixed(1)}" cy="${pf[n-1][1].toFixed(1)}" r="8" fill="var(--accent)" opacity=".2"/>`+dot(pf[n-1][0],pf[n-1][1],'var(--accent)');
+  }
+  if(hasT)sv+=`<path d="${cphPath(pt)}" fill="none" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity=".95"/>`;
+  let hi=null,tip='';
+  if(root._hov){hi=mode==='live'?n-1-root._hov.back:root._hov.idx;hi=Math.max(0,Math.min(n-1,hi));}
+  if(hi!=null){
+    const hx=px(hi);
+    sv+=`<line x1="${hx.toFixed(1)}" x2="${hx.toFixed(1)}" y1="${T}" y2="${T+ph}" stroke="var(--muted)" stroke-dasharray="3 3" opacity=".7"/>`;
+    if(on.f)sv+=dot(hx,fy(f[hi]),'var(--accent)');
+    if(hasT&&t[hi]!=null)sv+=dot(hx,ty(t[hi]),'#f59e0b');
+    const lab=mode==='live'?(hi===n-1?'agora':'-'+(n-1-hi)+'s'):hi+'s',rows=[];
+    if(on.f)rows.push(`Clock <b>${cphGHz(f[hi])} GHz</b>`);
+    if(hasT&&t[hi]!=null)rows.push(`Temp <b>${cphT(t[hi])}°C</b>`);
+    if(on.u)rows.push(`Uso <b>${Math.round(u[hi])}%</b>`);
+    if(ref&&on.f&&ref[hi]!=null)rows.push(`Ref. <b>${cphGHz(ref[hi])} GHz</b>`);
+    const cw=plot.clientWidth||W,left=hx/W*cw;
+    tip=`<div class="cphc-tip" style="${hx>W*0.6?'right:'+Math.round(cw-left+12)+'px':'left:'+Math.round(left+12)+'px'};top:${T}px"><span>${lab}</span>${rows.join('<br>')}</div>`;
+  }
+  plot.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block"><defs><linearGradient id="cphGF" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".32"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient><linearGradient id="cphGU" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8b5cf6" stop-opacity=".22"/><stop offset="1" stop-color="#8b5cf6" stop-opacity="0"/></linearGradient></defs>${g}${sv}</svg>${tip}`;
+  const cur=hi!=null?hi:n-1,setV=(k,txt)=>root.querySelectorAll('[data-v="'+k+'"]').forEach(e=>e.textContent=txt);
+  setV('f',cphGHz(f[cur])+' GHz');setV('t',t[cur]!=null?cphT(t[cur])+'°C':'n/d');setV('u',Math.round(u[cur])+'%');
+  const pos=f.filter(x=>x>0),avg=pos.length?pos.reduce((a,b)=>a+b,0)/pos.length:0;
+  root.querySelector('.cphc-foot').innerHTML=`<span>Clock mín <b>${cphGHz(pos.length?Math.min(...pos):0)}</b></span><span>média <b>${cphGHz(avg)}</b></span><span>máx <b>${cphGHz(pos.length?Math.max(...pos):0)} GHz</b></span>${tv.length?`<span>Temp. máx <b>${cphT(Math.max(...tv))}°C</b></span>`:''}`;
+  root._xi=fr=>{const x=fr*W;if(x<L||x>L+pw)return null;const xr=(x-L)/pw;const i=Math.max(0,Math.min(n-1,mode==='live'?Math.round(xr*(n0-1)-(n0-n)):Math.round(xr*xm)));return mode==='live'?{back:n-1-i}:{idx:i};};
+}
+const cphT=v=>cphF(Math.round(v*10)/10,Math.round(v*10)/10%1?1:0);
+function cphChartPaintAll(){document.querySelectorAll('.cphc').forEach(cphChartPaint);}
+window.addEventListener('resize',cphChartPaintAll);
+function cphTestData(){
+  const t=CPH.test,hist=cphLoad(CPH_KEY)||[],shown=t.running?null:(CPH.res||hist[0]||null);
+  const d={f:[],t:[],u:[],xmax:t.running?t.secs:0};
+  if(t.running){const s=t.series;d.f=s.map(x=>x.f||0);d.t=s.map(x=>x.temp==null?null:x.temp);d.u=s.map(x=>x.u||0);}
+  else if(shown&&shown.series){d.f=shown.series.map(x=>x[0]);d.t=shown.series.map(x=>x[1]);d.u=shown.series.map(x=>x[2]);}
+  const refTs=cphLoad(CPH_REF),rr=hist.find(h=>h.ts===refTs&&h.series&&(!shown||h.ts!==shown.ts));
+  if(rr)d.ref=rr.series.map(x=>x[0]);
+  return d;
 }
 
 function cphHubInit(panel){
@@ -6705,7 +6838,8 @@ function cphRenderMonitor(body){
     ${p.vendor!=='amd'&&p.pl1_w?`<div class="oc-row"><div class="oc-label"><b>PL1 / PL2</b>limites de potência</div><div class="oc-val">${cphF(p.pl1_w,0)} / ${cphF(p.pl2_w,0)} W</div></div>`:''}
     ${p.vendor!=='amd'&&p.ratio_now?`<div class="oc-row"><div class="oc-label"><b>Multiplicador</b>agora</div><div class="oc-val">×${p.ratio_now}</div></div>`:''}
     </div>`:'';
-  body.innerHTML=`<p class="cph-p" style="color:var(--muted);margin:0 0 14px">Leitura ao vivo direto do Windows. ${!CPH.pio?'Clique em <b>Overclock</b> e ative o PawnIO pra obter temperatura real do processador.':''}</p>${pioCard}`;
+  body.innerHTML=`<div id="monChart" data-h="210"></div><p class="cph-p" style="color:var(--muted);margin:0 0 14px">Leitura ao vivo direto do Windows. ${!CPH.pio?'Clique em <b>Overclock</b> e ative o PawnIO pra obter temperatura real do processador.':''}</p>${pioCard}`;
+  {const _c=document.getElementById('monChart');cphChartMount(_c,'live');cphChartPaint(_c);}
   const mb=document.getElementById('monBoost');
   if(mb)mb.onchange=async(e)=>{try{const r=await window.__TAURI__.core.invoke('amd_set_boost',{enabled:e.target.checked});CPH.pio={...CPH.pio,...r};showToast(e.target.checked?'Boost ligado':'Boost desligado: clock fixo');}catch(err){e.target.checked=!e.target.checked;showToast(String(err));}};
 }
@@ -6729,8 +6863,28 @@ function cphRenderOcTab(body){
     return;
   }
   const isAmd=p.vendor==='amd',o=orig&&orig.vendor===(isAmd?'amd':'intel')?orig:null;
-  body.innerHTML=isAmd?cphOcAmdHtml(p,o):cphOcIntelHtml(p,o);
-  cphOcBindHandlers(isAmd,p,o);
+  body.innerHTML='<div id="ocChart" data-h="160"></div>'+(isAmd?cphOcAmdHtml(p,o):cphOcIntelHtml(p,o));
+  {const _c=document.getElementById('ocChart');cphChartMount(_c,'live');cphChartPaint(_c);}
+  cphOcBindHandlers(isAmd,p,o);cphOcBindExtras(isAmd,p,o);
+}
+
+function cphProfGet(v){const a=(cphLoad(CPH_PROF)||{})[v];return Array.isArray(a)?a:[];}
+function cphProfSet(v,arr){const all=cphLoad(CPH_PROF)||{};all[v]=arr;cphSave(CPH_PROF,all);}
+function cphProfListHtml(v){
+  const a=cphProfGet(v);
+  if(!a.length)return'<p class="oc-hint">Nenhum perfil salvo. Ajuste os controles, dê um nome e salve.</p>';
+  return a.map((x,i)=>`<div class="oc-prof"><div><b>${ppEsc(x.n)}</b><small>${v==='amd'?`${cphGHz(x.mhz)} GHz · ${x.mv>0?'+':''}${x.mv} mV`:`PL1 ${x.pl1} W · PL2 ${x.pl2} W · núcleo ${(x.vp&&x.vp.core)||0} mV`}</small></div><div class="oc-prof-b"><button class="oc-btn ghost ocProfLoad" data-i="${i}">Carregar</button><button class="oc-btn ghost ocProfDel" data-i="${i}" title="Apagar">✕</button></div></div>`).join('');
+}
+function cphPresetsHtml(list){
+  return`<div class="oc-block" style="margin-bottom:16px"><h4>Predefinições <span class="oc-sub">pontos de partida: valide sempre com o teste de estabilidade</span></h4><div class="oc-presets">${list.map(x=>`<button class="oc-pre" data-pre="${x.id}" data-mhz="${x.mhz||0}" data-mv="${x.mv||0}"><b>${x.label}</b><small>${x.sub}</small></button>`).join('')}</div></div>`;
+}
+function cphProfBlockHtml(v){
+  return`<div class="oc-block"><h4>Meus perfis <span class="oc-sub">até 8, ficam salvos no app</span></h4><div class="oc-prof-add"><input id="ocProfName" maxlength="24" placeholder="Nome (ex.: Jogos)"><button class="oc-btn ghost" id="ocProfSave">Salvar atual</button></div><div id="ocProfList">${cphProfListHtml(v)}</div></div>`;
+}
+function cphVbarUpdate(v){
+  const m=document.getElementById('ocVbarM'),t=document.getElementById('ocVbarV');if(!m)return;
+  m.style.left=Math.max(0,Math.min(100,(v-1.0)/0.35*100))+'%';
+  if(t){t.textContent=cphF(v,3)+' V';t.className=v>1.30?'hot':'';}
 }
 
 function cphOcAmdHtml(p,o){
@@ -6741,27 +6895,45 @@ function cphOcAmdHtml(p,o){
   const vMax=Math.max(0,Math.min(60,Math.floor((1.35-stockV)*1000)));
   if(!p.supported)return`<div class="oc-warn">Zen 4+ ainda não suportado. Ryzen 1000–5000 (Zen 1–3) são compatíveis. A temperatura está disponível na aba Monitor.</div>`;
   if(p.did!==8)return`<div class="oc-warn">P-state com divisor fora do padrão: overclock automático não é seguro neste modelo.</div>`;
-  return`<div class="oc-grid">
+  const gain=curMhz-stockMhz,pct=stockMhz?gain/stockMhz*100:0,liveF=CPH.last?CPH.last.freq_mhz:p.freq_mhz;
+  const tiles=`<div class="oc-tiles">
+    <div class="oc-tile"><span>Clock real agora</span><b id="ocLiveClk">${cphGHz(liveF||0)}<small>GHz</small></b></div>
+    <div class="oc-tile"><span>P-state 0</span><b>${cphGHz(curMhz)}<small>GHz</small></b><em class="${gain>0?'up':''}">${gain>=0?'+':''}${gain} MHz (${gain>=0?'+':''}${cphF(pct,1)}%) vs padrão</em></div>
+    <div class="oc-tile"><span>Voltagem P0</span><b>${cphF(p.volt,3)}<small>V</small></b><em>padrão ${cphF(stockV,3)} V</em></div>
+    <div class="oc-tile"><span>Temperatura</span><b id="ocLiveTemp">${p.temp_c!=null?p.temp_c:'–'}<small>°C</small></b><em>${p.cpb_on===false?'Boost desligado':'Tctl'}</em></div>
+  </div>`;
+  const presets=cphPresetsHtml([
+    {id:'stock',label:'Padrão',sub:'volta ao original',mhz:0,mv:0},
+    {id:'cool',label:'Frio',sub:'clock padrão · −50 mV',mhz:0,mv:-50},
+    {id:'p1',label:'Leve',sub:'+100 MHz · +12,5 mV',mhz:100,mv:12.5},
+    {id:'p2',label:'Médio',sub:'+200 MHz · +25 mV',mhz:200,mv:25},
+    {id:'p3',label:'Forte',sub:'+300 MHz · +50 mV',mhz:300,mv:50}]);
+  return tiles+presets+`<div class="oc-grid">
     <div class="oc-block">
-      <h4>Multiplicador (P-state 0) <span style="font-size:10px;font-weight:600;color:var(--muted)">passo de 25 MHz</span></h4>
+      <h4>Multiplicador (P-state 0) <span class="oc-sub">passo de 25 MHz</span></h4>
       <div class="oc-slider">
         <div class="oc-slider-row"><input type="range" id="ocFid" min="${fMin}" max="${fMax}" step="25" value="${curMhz}"><span id="ocFidV">${curMhz} MHz</span></div>
       </div>
       <div class="oc-row" style="margin-top:4px"><span class="oc-label">Padrão: ${stockMhz} MHz</span><span class="oc-val" id="ocFidGhz">${cphGHz(curMhz)} GHz</span></div>
     </div>
     <div class="oc-block">
-      <h4>Voltagem (P0) <span style="font-size:10px;font-weight:600;color:var(--muted)">teto 1,350 V</span></h4>
+      <h4>Voltagem (P0) <span class="oc-sub">teto 1,350 V</span></h4>
       <div class="oc-slider">
         <div class="oc-slider-row"><input type="range" id="ocVid" min="-100" max="${vMax}" step="6.25" value="${curDelta}"><span id="ocVidV">${curDelta>0?'+':''}${curDelta} mV</span></div>
       </div>
       <div class="oc-row" style="margin-top:4px"><span class="oc-label">Padrão: ${cphF(stockV,3)} V</span><span class="oc-val" id="ocVidA">${cphF(stockV+curDelta/1000,3)} V</span></div>
+      <div class="oc-vbar"><div class="oc-vbar-track"><i id="ocVbarM"></i></div><div class="oc-vbar-lab"><span>1,000 V</span><b id="ocVbarV">–</b><span>teto 1,350 V</span></div></div>
     </div>
   </div>
-  <div class="oc-acks" id="ocAcks">
+  <div class="oc-grid" style="margin-top:16px">
+    <div class="oc-block"><h4>Boost automático (CPB)</h4><div class="oc-boost-row"><div class="oc-boost-label">Liga/desliga o boost<small>Desligado = clock fixo no multiplicador acima</small></div><label class="switch"><input type="checkbox" id="ocBoost" ${p.cpb_on?'checked':''}><span class="track"></span><span class="thumb"></span></label></div></div>
+    ${cphProfBlockHtml('amd')}
+  </div>
+  <div class="oc-acks" id="ocAcks" style="margin-top:16px">
     <label class="oc-ack"><input type="checkbox" class="ocAck"><span>Salvei meu trabalho. Sei que o PC pode <b>travar ou reiniciar</b>.</span></label>
     <label class="oc-ack"><input type="checkbox" class="ocAck"><span>Sei que overclock pode <b>anular a garantia</b> e que mais voltagem desgasta o chip. O risco é meu.</span></label>
   </div>
-  <div class="oc-actions"><button class="oc-btn" id="ocApply" disabled>Aplicar</button><button class="oc-btn ghost" id="ocTest">Testar 30s</button><button class="oc-btn stop" id="ocReset">Voltar ao original</button><button class="oc-btn ghost" id="ocReread">Reler</button></div>
+  <div class="oc-actions" style="margin-top:12px"><button class="oc-btn" id="ocApply" disabled>Aplicar</button><button class="oc-btn ghost" id="ocTest">Testar estabilidade</button><button class="oc-btn stop" id="ocReset">Voltar ao original</button><button class="oc-btn ghost" id="ocReread">Reler</button></div>
   <p style="font-size:11px;color:var(--muted2);margin:8px 0 0">${o?`Original guardado: ${stockMhz} MHz a ${cphF(stockV,3)} V. `:''}Reiniciar o PC volta tudo ao padrão.</p>`;
 }
 
@@ -6770,24 +6942,76 @@ function cphOcIntelHtml(p,o){
   const pl1Min=Math.max(5,Math.round(tdp*0.5)),pl1Max=Math.min(300,Math.round(tdp*2)),pl2Max=Math.min(400,Math.round(tdp*3));
   const offs=p.offsets||{};
   const planes=[['core','Núcleos',offs.core||0],['cache','Cache / Anel',offs.cache||0],['gpu','Vídeo integrado',offs.gpu||0],['sa','Sistema',offs.sa||0]];
-  if(p.locked)return`<div class="oc-warn">Os limites de potência estão travados pela BIOS. Undervolt disponível abaixo.</div>${cphOcIntelUVHtml(planes,o,p)}`;
-  return`<div class="oc-grid">
-    <div class="oc-block">
+  const liveF=CPH.last?CPH.last.freq_mhz:0;
+  const tiles=`<div class="oc-tiles">
+    <div class="oc-tile"><span>Clock real agora</span><b id="ocLiveClk">${cphGHz(liveF||0)}<small>GHz</small></b></div>
+    <div class="oc-tile"><span>PL1 / PL2</span><b>${p.pl1_w?cphF(p.pl1_w,0)+' / '+cphF(p.pl2_w,0):'–'}<small>W</small></b></div>
+    <div class="oc-tile"><span>Multiplicador</span><b>${p.ratio_now?'×'+p.ratio_now:'–'}</b></div>
+    <div class="oc-tile"><span>Temperatura</span><b id="ocLiveTemp">${p.temp_c!=null?p.temp_c:'–'}<small>°C</small></b></div>
+  </div>`;
+  const presets=cphPresetsHtml([
+    {id:'orig',label:'Padrão',sub:'limites e voltagem originais'},
+    {id:'eco',label:'Frio e econômico',sub:'PL1 75% · −40 mV'},
+    {id:'bal',label:'Equilibrado',sub:'PL1 100% · PL2 150% · −50 mV'},
+    {id:'perf',label:'Desempenho',sub:'PL1 150% · PL2 250% · −60 mV'}]);
+  const note=p.locked?'<div class="oc-warn" style="margin-bottom:14px">Os limites de potência estão travados pela BIOS. Só o undervolt está disponível.</div>':'';
+  const power=p.locked?'':`<div class="oc-block">
       <h4>Limite de potência</h4>
       <div class="oc-slider"><label>PL1 sustentado</label><div class="oc-slider-row"><input type="range" id="ocPl1" min="${pl1Min}" max="${pl1Max}" step="1" value="${Math.round(p.pl1_w)}"><span id="ocPl1V">${Math.round(p.pl1_w)} W</span></div></div>
       <div class="oc-slider"><label>PL2 de pico</label><div class="oc-slider-row"><input type="range" id="ocPl2" min="${pl1Min}" max="${pl2Max}" step="1" value="${Math.round(p.pl2_w)}"><span id="ocPl2V">${Math.round(p.pl2_w)} W</span></div></div>
       <div class="oc-slider"><label>Janela do PL1</label><div class="oc-slider-row"><input type="range" id="ocTau" min="1" max="56" step="1" value="${Math.round(Math.min(56,p.pl1_tau_s||28))}"><span id="ocTauV">${cphF(Math.min(56,p.pl1_tau_s||28),0)} s</span></div></div>
-    </div>
-    <div class="oc-block"><h4>Undervolt por plano</h4>
+    </div>`;
+  const uv=`<div class="oc-block"><h4>Undervolt por plano <span class="oc-sub">mais negativo = mais frio, até perder estabilidade</span></h4>
       ${planes.map(([id,label,v])=>`<div class="oc-slider"><label>${label}</label><div class="oc-slider-row"><input type="range" class="ocVP" data-plane="${id}" min="-100" max="0" step="5" value="${Math.round(v)}"><span id="ocVP_${id}">${Math.round(v)} mV</span></div></div>`).join('')}
-    </div>
-  </div>
-  <div class="oc-acks">
+    </div>`;
+  return note+tiles+presets+`<div class="oc-grid"${p.locked?' style="grid-template-columns:1fr"':''}>${power}${uv}</div>
+  <div style="margin-top:16px">${cphProfBlockHtml('intel')}</div>
+  <div class="oc-acks" style="margin-top:16px">
     <label class="oc-ack"><input type="checkbox" class="ocAck"><span>Salvei meu trabalho. Sei que o PC pode <b>travar ou reiniciar</b>.</span></label>
     <label class="oc-ack"><input type="checkbox" class="ocAck"><span>Sei que pode <b>anular a garantia</b>. O risco é meu.</span></label>
   </div>
-  <div class="oc-actions"><button class="oc-btn" id="ocApply" disabled>Aplicar</button><button class="oc-btn ghost" id="ocTest">Testar 30s</button><button class="oc-btn stop" id="ocReset">Voltar ao original</button><button class="oc-btn ghost" id="ocReread">Reler</button></div>
+  <div class="oc-actions" style="margin-top:12px"><button class="oc-btn" id="ocApply" disabled>Aplicar</button><button class="oc-btn ghost" id="ocTest">Testar estabilidade</button><button class="oc-btn stop" id="ocReset">Voltar ao original</button><button class="oc-btn ghost" id="ocReread">Reler</button></div>
   <p style="font-size:11px;color:var(--muted2);margin:8px 0 0">${o?`Original guardado (PL1 ${cphF(o.pl1,0)} W). `:''}Reiniciar o PC volta tudo ao padrão.</p>`;
+}
+
+function cphOcBindExtras(isAmd,p,o){
+  const q=id=>document.getElementById(id),v=isAmd?'amd':'intel';
+  const setR=(id,val)=>{const e=q(id);if(!e)return;e.value=val;e.dispatchEvent(new Event('input'));};
+  const setPlane=(pl,val)=>{const e=document.querySelector('.ocVP[data-plane="'+pl+'"]');if(e){e.value=val;e.dispatchEvent(new Event('input'));}};
+  if(!q('ocFid')&&!q('ocPl1')&&!document.querySelector('.ocVP'))return;
+  if(isAmd){
+    const stockMhz=(o?o.fid:p.fid)*25,stockV=1.55-0.00625*(o?o.vid:p.vid);
+    if(q('ocVid'))cphVbarUpdate(stockV+(+q('ocVid').value)/1000);
+    const mb=q('ocBoost');
+    if(mb)mb.onchange=async(e)=>{try{const r=await window.__TAURI__.core.invoke('amd_set_boost',{enabled:e.target.checked});CPH.pio={...CPH.pio,...r};showToast(e.target.checked?'Boost ligado':'Boost desligado: clock fixo');}catch(err){e.target.checked=!e.target.checked;showToast(String(err));}};
+    document.querySelectorAll('.oc-pre').forEach(b=>b.onclick=()=>{setR('ocFid',stockMhz+(+b.dataset.mhz));setR('ocVid',+b.dataset.mv);document.querySelectorAll('.oc-pre').forEach(x=>x.classList.toggle('on',x===b));showToast('Valores carregados: clique em Aplicar');});
+  } else {
+    const tdp=p.tdp_w||p.pl1_w||65;
+    const P={
+      orig:()=>{setR('ocPl1',Math.round(o?o.pl1:p.pl1_w));setR('ocPl2',Math.round(o?o.pl2:p.pl2_w));['core','cache','gpu','sa'].forEach(k=>setPlane(k,0));},
+      eco:()=>{setR('ocPl1',Math.round(tdp*.75));setR('ocPl2',Math.round(tdp));setPlane('core',-40);setPlane('cache',-40);},
+      bal:()=>{setR('ocPl1',Math.round(tdp));setR('ocPl2',Math.round(tdp*1.5));setPlane('core',-50);setPlane('cache',-50);},
+      perf:()=>{setR('ocPl1',Math.round(tdp*1.5));setR('ocPl2',Math.round(tdp*2.5));setPlane('core',-60);setPlane('cache',-60);}};
+    document.querySelectorAll('.oc-pre').forEach(b=>b.onclick=()=>{if(P[b.dataset.pre])P[b.dataset.pre]();document.querySelectorAll('.oc-pre').forEach(x=>x.classList.toggle('on',x===b));showToast('Valores carregados: clique em Aplicar');});
+  }
+  const refresh=()=>{const l=q('ocProfList');if(l){l.innerHTML=cphProfListHtml(v);bindList();}};
+  const bindList=()=>{
+    document.querySelectorAll('.ocProfLoad').forEach(b=>b.onclick=()=>{
+      const x=cphProfGet(v)[+b.dataset.i];if(!x)return;
+      if(isAmd){setR('ocFid',x.mhz);setR('ocVid',x.mv);}
+      else{setR('ocPl1',x.pl1);setR('ocPl2',x.pl2);setR('ocTau',x.tau);Object.keys(x.vp||{}).forEach(k=>setPlane(k,x.vp[k]));}
+      showToast('Perfil carregado: clique em Aplicar');});
+    document.querySelectorAll('.ocProfDel').forEach(b=>b.onclick=()=>{const a=cphProfGet(v);a.splice(+b.dataset.i,1);cphProfSet(v,a);refresh();});
+  };
+  bindList();
+  if(q('ocProfSave'))q('ocProfSave').onclick=()=>{
+    const n=(q('ocProfName').value||'').trim().slice(0,24);if(!n){showToast('Dê um nome ao perfil');return;}
+    let e;
+    if(isAmd)e={n,mhz:+q('ocFid').value,mv:+q('ocVid').value};
+    else{const vp={};document.querySelectorAll('.ocVP').forEach(sl=>vp[sl.dataset.plane]=+sl.value);
+      e={n,pl1:q('ocPl1')?+q('ocPl1').value:Math.round(p.pl1_w||0),pl2:q('ocPl2')?+q('ocPl2').value:Math.round(p.pl2_w||0),tau:q('ocTau')?+q('ocTau').value:Math.round(p.pl1_tau_s||28),vp};}
+    const a=cphProfGet(v).filter(x=>x.n!==n);a.unshift(e);cphProfSet(v,a.slice(0,8));q('ocProfName').value='';refresh();showToast('Perfil salvo');
+  };
 }
 
 function cphOcBindHandlers(isAmd,p,o){
@@ -6799,7 +7023,7 @@ function cphOcBindHandlers(isAmd,p,o){
   if(isAmd){
     const stockFid=o?o.fid:p.fid,stockVid=o?o.vid:p.vid,stockV=1.55-0.00625*stockVid;
     if(q('ocFid')){q('ocFid').oninput=()=>{q('ocFidV').textContent=q('ocFid').value+' MHz';q('ocFidGhz').textContent=cphGHz(+q('ocFid').value)+' GHz';};}
-    if(q('ocVid')){q('ocVid').oninput=()=>{const d=+q('ocVid').value;q('ocVidV').textContent=(d>0?'+':'')+d+' mV';q('ocVidA').textContent=cphF(stockV+d/1000,3)+' V';};}
+    if(q('ocVid')){q('ocVid').oninput=()=>{const d=+q('ocVid').value;q('ocVidV').textContent=(d>0?'+':'')+d+' mV';q('ocVidA').textContent=cphF(stockV+d/1000,3)+' V';cphVbarUpdate(stockV+d/1000);};}
     if(q('ocApply'))q('ocApply').onclick=async()=>{
       const fid=Math.round(+q('ocFid').value/25),delta=+q('ocVid').value;
       const curDelta=Math.round((1.55-0.00625*p.vid-stockV)*1000);
@@ -6839,8 +7063,9 @@ function cphRenderTestTab(body){
   const t=CPH.test,hist=cphLoad(CPH_KEY)||[];
   body.innerHTML=`<p class="cph-p" style="color:var(--muted);margin:0 0 14px">Coloca todos os núcleos em 100% de carga e mede se o clock <b>se sustenta</b> ou cai (throttling por calor ou limite de energia). Rode <b>antes e depois</b> de um ajuste pra comparar.</p>
     <div class="oc-actions"><button class="oc-btn" id="tcS30" ${t.running?'disabled':''}>Teste de 30s</button><button class="oc-btn ghost" id="tcS60" ${t.running?'disabled':''}>Teste de 60s</button><button class="oc-btn stop" id="tcStop" ${!t.running?'disabled':''}>Parar</button></div>
-    <div class="tc-spark" id="tcSpark"><p style="font-size:11px;color:var(--muted2);padding:6px">O gráfico do clock aparece aqui durante o teste.</p></div>
+    <div id="tcChart" data-h="210" style="margin-top:14px"></div>
     <div id="tcRes">${cphResultHtml(CPH.res||(hist[0]?{...hist[0],saved:true}:null),hist)}</div>`;
+  {const _c=document.getElementById('tcChart');cphChartMount(_c,'test');_c._data=cphTestData();cphChartPaint(_c);}
   document.getElementById('tcS30').onclick=()=>cphStartTest(30);
   document.getElementById('tcS60').onclick=()=>cphStartTest(60);
   document.getElementById('tcStop').onclick=()=>{CPH.test.abort=true;window.__TAURI__?.core.invoke('cpu_stress_stop').catch(()=>{});};
@@ -6860,16 +7085,12 @@ function cphFinishTest(){
   const s=t.series;if(s.length<6){showToast('Teste curto demais');cphRenderTestTab(document.getElementById('cphTabBody'));return;}
   const f=s.map(x=>x.f),peak=Math.max(...f),tail=f.slice(-Math.max(5,Math.floor(f.length/3))),sustained=tail.reduce((a,b)=>a+b,0)/tail.length,drop=peak>0?(1-sustained/peak)*100:0;
   const temps=s.map(x=>x.temp).filter(x=>x!=null);
-  const res={ts:Date.now(),secs:s.length-1,peak,sustained,drop,tempMax:temps.length?Math.max(...temps):null,util:s.reduce((a,b)=>a+b.u,0)/s.length,aborted:t.abort};
+  const res={ts:Date.now(),secs:s.length-1,peak,sustained,drop,tempMax:temps.length?Math.max(...temps):null,util:s.reduce((a,b)=>a+b.u,0)/s.length,aborted:t.abort,series:s.map(x=>[Math.round(x.f||0),x.temp==null?null:x.temp,Math.round(x.u||0)])};
   CPH.res=res;const hist=cphLoad(CPH_KEY)||[];hist.unshift(res);cphSave(CPH_KEY,hist.slice(0,8));
   if(!cphLoad(CPH_REF))cphSave(CPH_REF,res.ts);
   cphRenderTestTab(document.getElementById('cphTabBody'));
 }
-function cphPaintTestLive(){
-  const sp=document.getElementById('tcSpark');if(!sp)return;
-  const s=CPH.test.series;if(!s.length){sp.innerHTML='<p style="font-size:11px;color:var(--muted2);padding:6px">O gráfico do clock aparece aqui durante o teste.</p>';return;}
-  const f=s.map(x=>x.f),lo=Math.min(...f)*0.97,hi=Math.max(...f)*1.02;sp.innerHTML=cphSpark(f,lo,hi);
-}
+function cphPaintTestLive(){const r=document.getElementById('tcChart');if(!r)return;r._data=cphTestData();cphChartPaint(r);}
 function cphResultHtml(r,hist){
   if(!r)return'<p style="font-size:12px;color:var(--muted2)">Nenhum teste ainda. Faça o primeiro teste com o PC no padrão — ele vira a referência pra comparar.</p>';
   const refTs=cphLoad(CPH_REF),prev=(hist||[]).find(h=>h.ts!==r.ts&&h.ts===refTs)||(hist||[]).find(h=>h.ts!==r.ts);
@@ -6904,6 +7125,7 @@ function cphPaintLive(r){
   const st=q('cphSTemp');if(st){const tc=r.temp_c;st.querySelector('span').textContent=CPH.pio&&CPH.pio.ok?'Temperatura real':'Temperatura';st.querySelector('p').innerHTML=tc!=null?`${tc}<small>°C</small>`:'<small>n/d</small>';st.classList.toggle('crit',tc>=90);st.classList.toggle('hot',tc>=80&&tc<90);}
   const bars=q('cphBars');
   if(bars){const cs=r.cores||[],top=Math.max(CPH.peak,1);if(bars.children.length!==cs.length)bars.innerHTML=cs.map(()=>'<div class="cph-bar"></div>').join('');cs.forEach((c,i)=>{const b=bars.children[i];b.style.height=Math.max(5,c.freq/top*100)+'%';b.dataset.g=cphGHz(c.freq);b.className='cph-bar'+(c.util>=85?' hot':'');});}
+  {const lc=q('ocLiveClk');if(lc)lc.innerHTML=cphGHz(f)+'<small>GHz</small>';const lt=q('ocLiveTemp');if(lt)lt.innerHTML=(r.temp_c!=null?r.temp_c:'–')+'<small>°C</small>';}
   cphPaintHeader();
   if(CPH.pio&&CPH.pio.ok){const mt=document.getElementById('monTemp');if(mt)mt.textContent=r.temp_c!=null?r.temp_c+'°C':'n/d';}
 }
@@ -6926,6 +7148,8 @@ async function cphTick(){
     if(CPH.pio&&CPH.pio.ok){try{const t=await window.__TAURI__.core.invoke('oc_telemetry');if(t&&t.ok){CPH.pio={...CPH.pio,...t,offsets:CPH.pio.offsets};if(t.temp_c!=null)r.temp_c=t.temp_c;}}catch(e){}}
     CPH.last=r;CPH.base=r.base_mhz||CPH.base;CPH.peak=Math.max(CPH.peak,r.freq_mhz||0,...(r.cores||[]).map(c=>c.freq));
     cphPaintLive(r);
+    CPH.hist.push({f:r.freq_mhz||0,t:r.temp_c==null?null:r.temp_c,u:r.util||0});if(CPH.hist.length>300)CPH.hist.shift();
+    cphChartPaintAll();
     if(CPH.test.running){
       CPH.test.series.push({t:CPH.test.series.length,f:r.freq_mhz,u:r.util,temp:r.temp_c});
       if(r.temp_c!=null&&r.temp_c>=95&&!CPH.test.abort){CPH.test.abort=true;window.__TAURI__.core.invoke('cpu_stress_stop').catch(()=>{});showToast('Teste interrompido: temperatura muito alta');}
@@ -10948,6 +11172,10 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.67', date:'22/11/2026', items:[
+    '<b>Gráfico ao vivo na aba CPU</b>: clock, temperatura e uso em um gráfico só, com janela de 1, 2 ou 5 minutos, eixos, pico marcado e dica ao passar o mouse. O teste de estabilidade usa o mesmo gráfico e mostra a <b>referência tracejada</b> pra comparar antes e depois.',
+    '<b>Overclock mais completo</b> (AMD e Intel): cartões com clock, voltagem e temperatura ao vivo, <b>predefinições</b>, <b>perfis salvos</b> com nome, barra de voltagem com o teto e, no AMD, o liga/desliga do Boost direto na aba Overclock.',
+    'Corrigido: Intel com limites de potência travados pela BIOS não abria a aba Overclock.' ] },
   { v:'1.1.66', date:'11/11/2026', items:[
     'Menu de contexto do navegador (clique direito com "Inspecionar elemento", "Baixar" etc.) removido. O app agora se comporta como um app de verdade, sem atalhos do webview.' ] },
   { v:'1.1.65', date:'11/11/2026', items:[
