@@ -6785,7 +6785,7 @@ function cphChartPaint(root){
 }
 const cphT=v=>cphF(Math.round(v*10)/10,Math.round(v*10)/10%1?1:0);
 function cphRmHtml(){
-  return`<div class="fxg-grid">${[['Clock','fxGf'],['Temperatura','fxGt'],['Uso','fxGu'],['Voltagem','fxGv']].map(([l,id])=>`<div class="fxg" id="${id}"><div class="fxg-ring"><svg viewBox="0 0 96 96"><circle class="fxg-bg" cx="48" cy="48" r="34"/><circle class="fxg-fg" cx="48" cy="48" r="34"/></svg><b>–</b></div><span>${l}</span><small>–</small></div>`).join('')}</div><div class="fxc-h"><span>Núcleos / threads</span><span>★ mais rápido</span></div><div class="fxc-grid" id="fxCores"></div>`;
+  return`<div class="fxg-grid">${[['Clock','fxGf'],['Temperatura','fxGt'],['Uso','fxGu'],['Desempenho','fxGv']].map(([l,id])=>`<div class="fxg" id="${id}"><div class="fxg-ring"><svg viewBox="0 0 96 96"><circle class="fxg-bg" cx="48" cy="48" r="34"/><circle class="fxg-fg" cx="48" cy="48" r="34"/></svg><b>–</b></div><span>${l}</span><small>–</small></div>`).join('')}</div><div class="fxc-h"><span>Núcleos / threads</span><span>★ mais rápido</span></div><div class="fxc-grid" id="fxCores"></div>`;
 }
 function cphRmSet(id,frac,val,sub,color){
   const el=document.getElementById(id);if(!el)return;
@@ -6796,10 +6796,10 @@ function cphRmPaint(r){
   if(!r||!document.getElementById('fxGf'))return;
   const f=r.freq_mhz||0,max=Math.max(CPH.peak*1.05,(CPH.base||3000)*1.3,1000),tc=r.temp_c;
   cphRmSet('fxGf',f/max,cphGHz(f)+'<em>GHz</em>','pico '+cphGHz(CPH.peak)+' GHz');
-  cphRmSet('fxGt',tc!=null?tc/100:0,tc!=null?cphT(tc)+'<em>°C</em>':'n/d',tc==null?'ative o PawnIO':tc>=90?'crítica':tc>=80?'quente':'ok',tc>=90?'#ef4444':tc>=80?'#f59e0b':'#22c55e');
+  cphRmSet('fxGt',tc!=null?tc/100:0,tc!=null?cphT(tc)+'<em>°C</em>':'n/d',tc==null?'ative o PawnIO':!(CPH.pio&&CPH.pio.ok)?'sensor do Windows, pode ser impreciso':tc>=90?'crítica':tc>=80?'quente':'ok',tc>=90?'#ef4444':tc>=80?'#f59e0b':'#22c55e');
   cphRmSet('fxGu',(r.util||0)/100,cphF(r.util||0)+'<em>%</em>',(r.cores||[]).length+' threads',r.util>=85?'#f59e0b':'var(--accent)');
-  const pp=CPH.pio,v=pp&&pp.ok&&pp.vendor==='amd'?pp.volt:null;
-  cphRmSet('fxGv',v!=null?(v-0.9)/0.6:0,v!=null?cphF(v,3)+'<em>V</em>':'n/d',v!=null?'P-state 0':'só AMD com PawnIO',v>1.3?'#f59e0b':'var(--accent)');
+  const pc=r.perf_pct;
+  cphRmSet('fxGv',pc!=null?Math.min(1,pc/100):0,pc!=null?cphF(pc,0)+'<em>%</em>':'n/d',pc==null?'':pc>100?'acima do clock base':'do clock base',pc>100?'#22c55e':'var(--accent)');
   const box=document.getElementById('fxCores'),cs=r.cores||[];
   if(box&&cs.length){
     if(box.children.length!==cs.length)box.innerHTML=cs.map((_,i)=>`<div class="fxc"><span>T${i}</span><b>–</b><i></i></div>`).join('');
@@ -6945,7 +6945,7 @@ function cphOcAmdHtml(p,o){
   const tiles=`<div class="oc-tiles">
     <div class="oc-tile"><span>Clock real agora</span><b id="ocLiveClk">${cphGHz(liveF||0)}<small>GHz</small></b></div>
     <div class="oc-tile"><span>P-state 0</span><b>${cphGHz(curMhz)}<small>GHz</small></b><em class="${gain>0?'up':''}">${gain>=0?'+':''}${gain} MHz (${gain>=0?'+':''}${cphF(pct,1)}%) vs padrão</em></div>
-    <div class="oc-tile"><span>Voltagem P0</span><b>${cphF(p.volt,3)}<small>V</small></b><em>padrão ${cphF(stockV,3)} V</em></div>
+    <div class="oc-tile"><span>Voltagem P0 (programada)</span><b>${cphF(p.volt,3)}<small>V</small></b><em>padrão ${cphF(stockV,3)} V</em></div>
     <div class="oc-tile"><span>Temperatura</span><b id="ocLiveTemp">${p.temp_c!=null?p.temp_c:'–'}<small>°C</small></b><em>${p.cpb_on===false?'Boost desligado':'Tctl'}</em></div>
   </div>`;
   const presets=cphPresetsHtml([
@@ -11231,6 +11231,9 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.69', date:'23/11/2026', items:[
+    '<b>Uso da CPU agora bate com o Gerenciador de Tarefas</b>: o hub passou a usar o mesmo contador (Processor Utility) em vez do clássico, que mostrava um valor diferente.',
+    'O medidor de voltagem (que era só o valor programado no P-state) virou <b>Desempenho</b>: % do clock base medido pelo Windows. A voltagem programada continua na aba Overclock, com o nome certo.' ] },
   { v:'1.1.68', date:'22/11/2026', items:[
     'Aba CPU com cara de painel profissional: <b>4 medidores circulares</b> (clock, temperatura, uso e voltagem) e um <b>cartão por thread</b> com clock, carga e destaque pro núcleo mais rápido.',
     'Overclock: sliders redesenhados e um <b>resumo do que vai mudar</b> (antes → depois) antes de aplicar, com a barra de ações sempre visível.' ] },

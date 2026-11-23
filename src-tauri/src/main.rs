@@ -6045,6 +6045,7 @@ struct CpuLive {
     query: isize,
     perf: isize,
     util: Option<isize>,
+    utility: Option<isize>,
     temp: Option<isize>,
     base_mhz: f64,
 }
@@ -6089,9 +6090,10 @@ async fn cpu_live_start() -> Result<(), String> {
                     }
                 };
                 let util = add(r"\Processor Information(*)\% Processor Time");
+                let utility = add(r"\Processor Information(*)\% Processor Utility");
                 let temp = add(r"\Thermal Zone Information(*)\Temperature");
                 PdhCollectQueryData(query);
-                *guard = Some(CpuLive { query, perf, util, temp, base_mhz: read_base_cpu_mhz().unwrap_or(0.0) });
+                *guard = Some(CpuLive { query, perf, util, utility, temp, base_mhz: read_base_cpu_mhz().unwrap_or(0.0) });
             }
             Ok(())
         }
@@ -6142,7 +6144,12 @@ async fn cpu_live_sample() -> Result<serde_json::Value, String> {
                 Some((a, b))
             };
             let perf_all = read_pdh_array(s.perf);
-            let util_all: Vec<(String, f64)> = s.util.map(read_pdh_array).unwrap_or_default();
+            // Mesmo contador do Gerenciador de Tarefas ("% Processor Utility"); se o Windows não
+            // devolver valores ainda, cai no contador clássico.
+            let util_all: Vec<(String, f64)> = {
+                let u = s.utility.map(read_pdh_array).unwrap_or_default();
+                if u.is_empty() { s.util.map(read_pdh_array).unwrap_or_default() } else { u }
+            };
             let mut cores: Vec<((u32, u32), f64, f64)> = Vec::new();
             let mut total_perf = 0.0f64;
             for (name, v) in perf_all.iter() {
