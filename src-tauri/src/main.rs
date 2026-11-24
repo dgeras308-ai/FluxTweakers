@@ -6935,7 +6935,7 @@ static PIO_SMU: Mutex<Option<PawnIo>> = Mutex::new(None);
 fn with_pio_smu<T>(f: impl FnOnce(&PawnIo) -> Result<T, String>) -> Result<T, String> {
     let mut g = PIO_SMU.lock().unwrap();
     if g.is_none() {
-        *g = Some(PawnIo::open(RYZEN_SMU_MODULE).map_err(|e| e.replace("só funciona em processadores Intel", "só funciona em Ryzen 3000 e 5000"))?);
+        *g = Some(PawnIo::open(RYZEN_SMU_MODULE).map_err(|e| e.replace("só funciona em processadores Intel", "só funciona em Ryzen 3000, 5000 e 5500/5600G"))?);
     }
     let r = f(g.as_ref().unwrap());
     if r.is_err() {
@@ -6967,31 +6967,70 @@ fn with_pci_lock<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> 
     r
 }
 
-/// Só libera Matisse (3) e Vermeer (11), os únicos com IDs de comando conferidos.
+/// Libera Matisse (3), Vermeer (11) e Cezanne (13), os únicos com IDs de comando conferidos.
 #[cfg(target_os = "windows")]
 fn smu_gate(p: &PawnIo) -> Result<(&'static str, u64), String> {
     let cn = p.exec("ioctl_get_code_name", &[], 1)?.first().cloned().unwrap_or(u64::MAX);
     let name = match cn {
         3 => "Matisse",
         11 => "Vermeer",
-        _ => return Err("Limites de PPT/TDC/EDC só estão liberados para Ryzen 3000 (Matisse) e 5000 (Vermeer)".to_string()),
+        13 => "Cezanne",
+        _ => return Err("Limites de PPT/TDC/EDC só estão liberados para Ryzen 3000, 5000 e 5500/5600G (Matisse, Vermeer, Cezanne)".to_string()),
     };
     let ver = p.exec("ioctl_get_smu_version", &[], 1)?.first().cloned().unwrap_or(0);
     Ok((name, ver))
 }
 
-/// Lê limites e consumo reais da PM table. Só decodifica a versão 0x240903; qualquer outra volta sem números.
+/// Cezanne fala com o MP1 (RyzenAdj, mailbox 0x3B10528 / 0x3B10564 / 0x3B10998). O módulo só envia pelo
+/// RSMU, então o protocolo é feito com leitura e escrita de registrador: espera resposta, zera, escreve os
+/// 6 argumentos, escreve o comando e espera a resposta 1 (OK). Precisa da trava Access_PCI já segurada.
 #[cfg(target_os = "windows")]
-fn smu_pm_read(p: &PawnIo) -> Option<serde_json::Value> {
+fn mp1_send(p: &PawnIo, cmd: u64, arg0: u64) -> Result<(), String> {
+    const MSG: u64 = 0x3B10528;
+    const RSP: u64 = 0x3B10564;
+    const ARG: u64 = 0x3B10998;
+    let rd = |a: u64| -> Result<u64, String> { Ok(p.exec("ioctl_read_smu_register", &[a], 1)?.first().cloned().unwrap_or(0) & 0xFFFF_FFFF) };
+    let wr = |a: u64, v: u64| -> Result<(), String> { p.exec("ioctl_write_smu_register", &[a, v], 0).map(|_| ()) };
+    let espera = || -> Result<u64, String> {
+        for _ in 0..1000 {
+            let r = rd(RSP)?;
+            if r != 0 {
+                return Ok(r);
+            }
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        Err("o SMU não respondeu a tempo".to_string())
+    };
+    espera()?;
+    wr(RSP, 0)?;
+    for i in 0..6u64 {
+        wr(ARG + 4 * i, if i == 0 { arg0 } else { 0 })?;
+    }
+    wr(MSG, cmd)?;
+    match espera()? {
+        1 => Ok(()),
+        0xFE => Err("comando desconhecido neste chip".to_string()),
+        0xFD => Err("pré-requisito não atendido".to_string()),
+        0xFC => Err("SMU ocupado".to_string()),
+        _ => Err("comando recusado".to_string()),
+    }
+}
+
+/// Lê limites e consumo reais da PM table. Matisse/Vermeer: versão 0x240903 (layout do monitor_cpu do ryzen_smu).
+/// Cezanne: versões 0x400004/0x400005 (offsets do RyzenAdj). Qualquer outra versão volta sem números.
+#[cfg(target_os = "windows")]
+fn smu_pm_read(p: &PawnIo, cpu: &str) -> Option<serde_json::Value> {
     let r = p.exec("ioctl_resolve_pm_table", &[], 2).ok()?;
     let ver = *r.first()?;
-    if ver != 0x240903 {
+    let cez = cpu == "Cezanne";
+    let ver_ok = if cez { ver == 0x400004 || ver == 0x400005 } else { ver == 0x240903 };
+    if !ver_ok {
         return Some(serde_json::json!({ "version": format!("{:x}", ver), "readable": false }));
     }
     p.exec("ioctl_update_pm_table", &[], 0).ok()?;
     std::thread::sleep(std::time::Duration::from_millis(3));
     let q = p.exec("ioctl_read_pm_table", &[], 8).ok()?;
-    if q.len() < 5 {
+    if q.len() < 7 {
         return None;
     }
     let fl = |i: usize| -> f64 {
@@ -6999,8 +7038,13 @@ fn smu_pm_read(p: &PawnIo) -> Option<serde_json::Value> {
         let bits = if i % 2 == 0 { (w & 0xFFFF_FFFF) as u32 } else { (w >> 32) as u32 };
         f32::from_bits(bits) as f64
     };
-    let (ppt_l, ppt_v, tdc_l, tdc_v, thm_l, thm_v, edc_l) = (fl(0), fl(1), fl(2), fl(3), fl(4), fl(5), fl(8));
-    let all = [ppt_l, ppt_v, tdc_l, tdc_v, thm_l, thm_v, edc_l];
+    // (limite PPT, consumo PPT, limite TDC, consumo TDC, limite EDC, limite térmico, temperatura)
+    let (ppt_l, ppt_v, tdc_l, tdc_v, edc_l, thm_l, thm_v) = if cez {
+        (fl(4), fl(5), fl(8), fl(9), fl(12), f64::NAN, f64::NAN)
+    } else {
+        (fl(0), fl(1), fl(2), fl(3), fl(8), fl(4), fl(5))
+    };
+    let all = [ppt_l, ppt_v, tdc_l, tdc_v, edc_l];
     if all.iter().any(|x| !x.is_finite()) || !(5.0..=600.0).contains(&ppt_l) || !(5.0..=500.0).contains(&tdc_l) || !(5.0..=600.0).contains(&edc_l) {
         return Some(serde_json::json!({ "version": format!("{:x}", ver), "readable": false }));
     }
@@ -7016,7 +7060,7 @@ fn smu_pm_read(p: &PawnIo) -> Option<serde_json::Value> {
 #[cfg(target_os = "windows")]
 fn smu_status_json(p: &PawnIo) -> Result<serde_json::Value, String> {
     let (name, ver) = smu_gate(p)?;
-    let pm = smu_pm_read(p);
+    let pm = smu_pm_read(p, name);
     Ok(serde_json::json!({
         "ok": true, "supported": true, "codename": name,
         "smu": format!("{}.{}.{}", (ver >> 16) & 0xFF, (ver >> 8) & 0xFF, ver & 0xFF),
@@ -7031,11 +7075,11 @@ async fn amd_smu_status() -> Result<serde_json::Value, String> {
         {
             let (v, family, model) = cpu_vendor_fms();
             if !v.contains("AuthenticAMD") || !amd_supported(family, model) {
-                return Ok(serde_json::json!({ "ok": true, "supported": false, "reason": "Só Ryzen 3000 e 5000" }));
+                return Ok(serde_json::json!({ "ok": true, "supported": false, "reason": "Só Ryzen 3000, 5000 e 5500/5600G" }));
             }
             match with_pio_smu(|p| with_pci_lock(|| smu_status_json(p))) {
                 Ok(j) => Ok(j),
-                Err(e) if e.contains("Ryzen 3000 (Matisse)") => Ok(serde_json::json!({ "ok": true, "supported": false, "reason": e })),
+                Err(e) if e.contains("só estão liberados") => Ok(serde_json::json!({ "ok": true, "supported": false, "reason": e })),
                 Err(e) => Err(e),
             }
         }
@@ -7070,11 +7114,24 @@ async fn amd_smu_set_limits(ppt_w: u32, tdc_a: u32, edc_a: u32, scalar: Option<u
             }
             let (v, family, model) = cpu_vendor_fms();
             if !v.contains("AuthenticAMD") || !amd_supported(family, model) {
-                return Err("Limites de potência suportados só em Ryzen 3000 e 5000".to_string());
+                return Err("Limites de potência suportados só em Ryzen 3000, 5000 e 5500/5600G".to_string());
             }
             with_pio_smu(|p| {
                 with_pci_lock(|| {
-                    smu_gate(p)?;
+                    let (cpu, _) = smu_gate(p)?;
+                    if cpu == "Cezanne" {
+                        if scalar.is_some() {
+                            return Err("PBO Scalar não está disponível no Cezanne".to_string());
+                        }
+                        let envia = |nome: &str, cmd: u64, arg: u64| -> Result<(), String> {
+                            mp1_send(p, cmd, arg).map_err(|e| format!("O processador recusou o comando de {nome} ({e}). O que veio antes pode já ter sido aplicado; reiniciar o PC volta tudo ao BIOS"))
+                        };
+                        envia("PPT rápido", 0x15, ppt_w as u64 * 1000)?;
+                        envia("PPT sustentado", 0x16, ppt_w as u64 * 1000)?;
+                        envia("TDC", 0x1a, tdc_a as u64 * 1000)?;
+                        envia("EDC", 0x1c, edc_a as u64 * 1000)?;
+                        return smu_status_json(p);
+                    }
                     let send = |nome: &str, cmd: u64, arg: u64| -> Result<(), String> {
                         p.exec("ioctl_send_smu_command", &[cmd, arg, 0, 0, 0, 0, 0], 6)
                             .map(|_| ())

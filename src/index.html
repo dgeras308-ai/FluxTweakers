@@ -6932,7 +6932,7 @@ function cphSmuHtml(st){
   <div class="smu-live">${cphSmuLiveHtml(st.pm)}</div>
   ${pm?'':'<p class="oc-hint" style="margin-top:8px">Sem leitura dos limites atuais: os valores iniciais abaixo são só uma sugestão, não o que está ativo.</p>'}
   <div class="oc-grid" style="margin-top:12px"><div>${sl('ocSmuPpt','PPT',30,300,d.p,'W')}${sl('ocSmuTdc','TDC',20,250,d.t,'A')}${sl('ocSmuEdc','EDC',20,350,d.e,'A')}</div>
-  <div><div class="oc-slider"><label>PBO Scalar</label><select id="ocSmuSc"><option value="">Não mexer</option>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}">${n}x</option>`).join('')}</select></div><p class="oc-hint" style="margin-top:10px">Os valores valem até reiniciar o PC.</p></div></div>
+  <div>${st.codename==='Cezanne'?'':`<div class="oc-slider"><label>PBO Scalar</label><select id="ocSmuSc"><option value="">Não mexer</option>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}">${n}x</option>`).join('')}</select></div>`}<p class="oc-hint" style="margin-top:10px">Os valores valem até reiniciar o PC.${st.codename==='Cezanne'?' No Cezanne o PBO Scalar não existe.':''}</p></div></div>
   <div class="oc-actions" style="margin-top:12px"><button class="oc-btn" id="ocSmuApply">Aplicar limites</button><button class="oc-btn ghost" id="ocSmuRestore" ${stock?'':'disabled'}>${stock?`Voltar para ${stock.ppt} W / ${stock.tdc} A / ${stock.edc} A`:'Voltar ao anterior'}</button></div>`;
 }
 async function cphSmuInit(){
@@ -6949,7 +6949,7 @@ async function cphSmuInit(){
     [['ocSmuPpt','W'],['ocSmuTdc','A'],['ocSmuEdc','A']].forEach(([id,u])=>{q(id).oninput=()=>{q(id+'V').textContent=q(id).value+' '+u;};});
     q('ocSmuApply').onclick=async()=>{
       if(![...document.querySelectorAll('.ocAck')].every(c=>c.checked)){showToast('Marque os dois avisos antes de aplicar');return;}
-      const ppt=+q('ocSmuPpt').value,tdc=+q('ocSmuTdc').value,edc=+q('ocSmuEdc').value,sc=q('ocSmuSc').value,pm=st.pm&&st.pm.readable?st.pm:null;
+      const ppt=+q('ocSmuPpt').value,tdc=+q('ocSmuTdc').value,edc=+q('ocSmuEdc').value,sc=q('ocSmuSc')?q('ocSmuSc').value:'',pm=st.pm&&st.pm.readable?st.pm:null;
       if(pm&&!cphLoad(CPH_SMU_STOCK))cphSave(CPH_SMU_STOCK,{ppt:Math.round(pm.ppt_limit),tdc:Math.round(pm.tdc_limit),edc:Math.round(pm.edc_limit)});
       CPH_SMU_BUSY=true;
       try{
@@ -11296,6 +11296,8 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.71', date:'24/11/2026', items:[
+    '<b>Limites de potência (PBO) agora também no Ryzen 5 5500 / 5600G (Cezanne)</b>: PPT, TDC e EDC com leitura real do processador e confirmação depois de aplicar. No Cezanne não existe PBO Scalar, então o seletor some.' ] },
   { v:'1.1.70', date:'23/11/2026', items:[
     '<b>Limites de potência do PBO (PPT, TDC, EDC) e PBO Scalar</b> na aba Overclock, para Ryzen 3000 e 5000. O app lê direto do processador o consumo e os limites ativos (em watts, amperes e %) e confirma pela leitura depois de aplicar. Valem até reiniciar o PC.' ] },
   { v:'1.1.69', date:'23/11/2026', items:[
