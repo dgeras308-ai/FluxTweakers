@@ -2,3 +2,6 @@ IntelMSR.bin e um modulo oficial e assinado do projeto PawnIO.Modules
 (https://github.com/namazso/PawnIO.Modules, release 0.2.11), licenciado sob LGPL-2.1-or-later
 (texto em PAWNIO-MODULES-COPYING.txt). O modulo nao foi alterado. Ele e carregado no driver PawnIO
 (https://pawnio.eu), que o usuario instala separadamente.
+
+RyzenSMU.bin tambem e um modulo oficial e assinado do PawnIO.Modules (release 0.2.12, LGPL-2.1-or-later,
+sem alteracoes). Ele fala com o SMU dos Ryzen 3000 e 5000 para ler e ajustar PPT/TDC/EDC.

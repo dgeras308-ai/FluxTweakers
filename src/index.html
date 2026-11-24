@@ -507,6 +507,9 @@
   .oc-slider input[type=range]{-webkit-appearance:none;appearance:none;height:6px;border-radius:99px;background:color-mix(in srgb,var(--muted) 22%,transparent);outline:0;}
   .oc-slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);border:3px solid var(--panel);box-shadow:0 0 0 1px var(--accent),0 0 10px color-mix(in srgb,var(--accent) 55%,transparent);cursor:pointer;}
   .oc-diff{display:flex;gap:20px;flex-wrap:wrap;font-size:12px;color:var(--muted);background:color-mix(in srgb,var(--accent) 7%,var(--card));border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);border-radius:12px;padding:10px 14px;} .oc-diff b{font-family:var(--mono);color:var(--text);} .oc-diff em{font-style:normal;color:var(--accent);font-weight:700;}
+    .smu-row{margin-bottom:10px;} .smu-top{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);} .smu-top b{font-family:var(--mono);color:var(--text);} .smu-top em{font-style:normal;font-family:var(--mono);color:var(--accent);min-width:40px;text-align:right;}
+  .smu-bar{height:6px;border-radius:99px;background:color-mix(in srgb,var(--muted) 20%,transparent);margin-top:5px;overflow:hidden;} .smu-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .6s;} .smu-bar i.hot{background:#f59e0b;}
+  .oc-block select{background:var(--panel);color:var(--text);border:1px solid var(--border-soft);border-radius:9px;padding:7px 10px;font-family:inherit;font-size:12px;}
   .oc-actions.sticky{position:sticky;bottom:0;z-index:5;padding:12px 0 4px;background:linear-gradient(0deg,var(--panel) 70%,transparent);}
   /* pio-toprow herdado */
   .pio-toprow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
@@ -6914,6 +6917,66 @@ function cphRenderOcTab(body){
   cphOcBindHandlers(isAmd,p,o);cphOcBindExtras(isAmd,p,o);
 }
 
+const CPH_SMU_STOCK='flux_smu_stock_v1';
+let CPH_SMU_BUSY=false,CPH_SMU_TIMER=null;
+function cphSmuLiveHtml(pm){
+  if(!pm||!pm.readable)return'<p class="oc-hint">'+(pm?'Consumo ao vivo indisponível: a versão da tabela do SMU ('+ppEsc(pm.version)+') ainda não está mapeada. Os limites abaixo continuam funcionando.':'Não consegui ler a tabela de potência agora.')+'</p>';
+  const row=(l,v,m,u)=>{const pc=m>0?Math.round(v/m*100):0;return`<div class="smu-row"><div class="smu-top"><span>${l}</span><b>${cphF(v,1)} / ${cphF(m,0)} ${u}</b><em>${pc}%</em></div><div class="smu-bar"><i class="${pc>=95?'hot':''}" style="width:${Math.min(100,pc)}%"></i></div></div>`;};
+  return row('PPT · potência do pacote',pm.ppt_value,pm.ppt_limit,'W')+row('TDC · corrente sustentada',pm.tdc_value,pm.tdc_limit,'A')+`<div class="smu-top"><span>EDC · corrente de pico</span><b>limite ${cphF(pm.edc_limit,0)} A</b></div>`;
+}
+function cphSmuHtml(st){
+  const pm=st.pm&&st.pm.readable?st.pm:null,stock=cphLoad(CPH_SMU_STOCK);
+  const d=pm?{p:Math.round(pm.ppt_limit),t:Math.round(pm.tdc_limit),e:Math.round(pm.edc_limit)}:{p:88,t:60,e:90};
+  const sl=(id,lab,min,max,val,u)=>{const v=Math.min(max,Math.max(min,val));return`<div class="oc-slider"><label>${lab}</label><div class="oc-slider-row"><input type="range" id="${id}" min="${min}" max="${max}" step="1" value="${v}"><span id="${id}V">${v} ${u}</span></div></div>`;};
+  return`<h4>Limites de potência (PBO) <span class="oc-sub">${ppEsc(st.codename)} · SMU ${ppEsc(st.smu)} · lido do processador</span></h4>
+  <div class="smu-live">${cphSmuLiveHtml(st.pm)}</div>
+  ${pm?'':'<p class="oc-hint" style="margin-top:8px">Sem leitura dos limites atuais: os valores iniciais abaixo são só uma sugestão, não o que está ativo.</p>'}
+  <div class="oc-grid" style="margin-top:12px"><div>${sl('ocSmuPpt','PPT',30,300,d.p,'W')}${sl('ocSmuTdc','TDC',20,250,d.t,'A')}${sl('ocSmuEdc','EDC',20,350,d.e,'A')}</div>
+  <div><div class="oc-slider"><label>PBO Scalar</label><select id="ocSmuSc"><option value="">Não mexer</option>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}">${n}x</option>`).join('')}</select></div><p class="oc-hint" style="margin-top:10px">Os valores valem até reiniciar o PC.</p></div></div>
+  <div class="oc-actions" style="margin-top:12px"><button class="oc-btn" id="ocSmuApply">Aplicar limites</button><button class="oc-btn ghost" id="ocSmuRestore" ${stock?'':'disabled'}>${stock?`Voltar para ${stock.ppt} W / ${stock.tdc} A / ${stock.edc} A`:'Voltar ao anterior'}</button></div>`;
+}
+async function cphSmuInit(){
+  const q=id=>document.getElementById(id);
+  if(!q('ocSmuBlock')||!window.__TAURI__)return;
+  const inv=(c,a)=>window.__TAURI__.core.invoke(c,a);
+  const head='<h4>Limites de potência (PBO)</h4>';
+  let st;
+  try{st=await inv('amd_smu_status');}catch(e){if(q('ocSmuBlock'))q('ocSmuBlock').innerHTML=head+'<p class="oc-hint">'+ppEsc(String(e))+'</p>';return;}
+  if(!q('ocSmuBlock'))return;
+  if(!st.supported){q('ocSmuBlock').innerHTML=head+'<p class="oc-hint">'+ppEsc(st.reason||'Não suportado neste processador')+'</p>';return;}
+  const render=()=>{
+    q('ocSmuBlock').innerHTML=cphSmuHtml(st);
+    [['ocSmuPpt','W'],['ocSmuTdc','A'],['ocSmuEdc','A']].forEach(([id,u])=>{q(id).oninput=()=>{q(id+'V').textContent=q(id).value+' '+u;};});
+    q('ocSmuApply').onclick=async()=>{
+      if(![...document.querySelectorAll('.ocAck')].every(c=>c.checked)){showToast('Marque os dois avisos antes de aplicar');return;}
+      const ppt=+q('ocSmuPpt').value,tdc=+q('ocSmuTdc').value,edc=+q('ocSmuEdc').value,sc=q('ocSmuSc').value,pm=st.pm&&st.pm.readable?st.pm:null;
+      if(pm&&!cphLoad(CPH_SMU_STOCK))cphSave(CPH_SMU_STOCK,{ppt:Math.round(pm.ppt_limit),tdc:Math.round(pm.tdc_limit),edc:Math.round(pm.edc_limit)});
+      CPH_SMU_BUSY=true;
+      try{
+        const r=await inv('amd_smu_set_limits',{pptW:ppt,tdcA:tdc,edcA:edc,scalar:sc?+sc:null});
+        const rp=r.pm&&r.pm.readable?r.pm:null,ok=rp&&Math.abs(rp.ppt_limit-ppt)<1.5&&Math.abs(rp.tdc_limit-tdc)<1.5&&Math.abs(rp.edc_limit-edc)<1.5;
+        showToast(rp?(ok?'Aplicado e confirmado pela leitura do processador':'Enviado, mas a leitura não bateu com o valor pedido'):'Enviado: o processador aceitou (sem leitura de confirmação)');
+        st=r;render();
+      }catch(e){showToast(String(e));}
+      CPH_SMU_BUSY=false;
+    };
+    q('ocSmuRestore').onclick=async()=>{
+      const k=cphLoad(CPH_SMU_STOCK);if(!k)return;
+      CPH_SMU_BUSY=true;
+      try{st=await inv('amd_smu_set_limits',{pptW:k.ppt,tdcA:k.tdc,edcA:k.edc,scalar:null});showToast('Limites de antes reenviados');render();}catch(e){showToast(String(e));}
+      CPH_SMU_BUSY=false;
+    };
+  };
+  render();
+  clearInterval(CPH_SMU_TIMER);
+  CPH_SMU_TIMER=setInterval(async()=>{
+    const b=q('ocSmuBlock');if(!b){clearInterval(CPH_SMU_TIMER);return;}
+    if(CPH_SMU_BUSY||document.hidden)return;
+    CPH_SMU_BUSY=true;
+    try{const x=await inv('amd_smu_status');const l=b.querySelector('.smu-live');if(l&&x.supported){st=x;l.innerHTML=cphSmuLiveHtml(x.pm);}}catch(e){}
+    CPH_SMU_BUSY=false;
+  },2000);
+}
 function cphProfGet(v){const a=(cphLoad(CPH_PROF)||{})[v];return Array.isArray(a)?a:[];}
 function cphProfSet(v,arr){const all=cphLoad(CPH_PROF)||{};all[v]=arr;cphSave(CPH_PROF,all);}
 function cphProfListHtml(v){
@@ -6975,6 +7038,7 @@ function cphOcAmdHtml(p,o){
     <div class="oc-block"><h4>Boost automático (CPB)</h4><div class="oc-boost-row"><div class="oc-boost-label">Liga/desliga o boost<small>Desligado = clock fixo no multiplicador acima</small></div><label class="switch"><input type="checkbox" id="ocBoost" ${p.cpb_on?'checked':''}><span class="track"></span><span class="thumb"></span></label></div></div>
     ${cphProfBlockHtml('amd')}
   </div>
+  <div class="oc-block" id="ocSmuBlock" style="margin-top:16px"><h4>Limites de potência (PBO)</h4><p class="oc-hint">Lendo o processador…</p></div>
   <div class="oc-diff" id="ocDiff" style="margin-top:16px"></div>
   <div class="oc-acks" id="ocAcks" style="margin-top:16px">
     <label class="oc-ack"><input type="checkbox" class="ocAck"><span>Salvei meu trabalho. Sei que o PC pode <b>travar ou reiniciar</b>.</span></label>
@@ -7028,6 +7092,7 @@ function cphOcBindExtras(isAmd,p,o){
   const setPlane=(pl,val)=>{const e=document.querySelector('.ocVP[data-plane="'+pl+'"]');if(e){e.value=val;e.dispatchEvent(new Event('input'));}};
   if(!q('ocFid')&&!q('ocPl1')&&!document.querySelector('.ocVP'))return;
   if(isAmd){
+    cphSmuInit();
     const stockMhz=(o?o.fid:p.fid)*25,stockV=1.55-0.00625*(o?o.vid:p.vid);
     if(q('ocVid'))cphVbarUpdate(stockV+(+q('ocVid').value)/1000);
     const mb=q('ocBoost');
@@ -11231,6 +11296,8 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.70', date:'23/11/2026', items:[
+    '<b>Limites de potência do PBO (PPT, TDC, EDC) e PBO Scalar</b> na aba Overclock, para Ryzen 3000 e 5000. O app lê direto do processador o consumo e os limites ativos (em watts, amperes e %) e confirma pela leitura depois de aplicar. Valem até reiniciar o PC.' ] },
   { v:'1.1.69', date:'23/11/2026', items:[
     '<b>Uso da CPU agora bate com o Gerenciador de Tarefas</b>: o hub passou a usar o mesmo contador (Processor Utility) em vez do clássico, que mostrava um valor diferente.',
     'O medidor de voltagem (que era só o valor programado no P-state) virou <b>Desempenho</b>: % do clock base medido pelo Windows. A voltagem programada continua na aba Overclock, com o nome certo.' ] },

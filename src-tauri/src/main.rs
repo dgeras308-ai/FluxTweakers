@@ -6916,6 +6916,190 @@ async fn amd_restore(p0_raw_hex: String) -> Result<serde_json::Value, String> {
 }
 
 
+
+// ===== AMD PBO: limites de PPT / TDC / EDC e PBO Scalar via SMU =====
+// Usa o módulo oficial e assinado RyzenSMU.bin (PawnIO.Modules 0.2.12, LGPL-2.1, sem alterações).
+// Comandos do mailbox RSMU do Ryzen 3000 (Matisse) e 5000 (Vermeer), conferidos em fontes independentes
+// (ryzen_smu de leogx9r e de amkillam, ZenStatesDLL, ZenStates-Core, ZenStates-C):
+//   0x53 PPT em mW, 0x54 TDC em mA, 0x55 EDC em mA, 0x58 PBO Scalar (valor x 100).
+// Leitura real do consumo e dos limites: PM table versão 0x240903 (layout do monitor_cpu do ryzen_smu).
+// Os valores escritos são voláteis: reiniciar o PC volta tudo ao BIOS.
+
+#[cfg(target_os = "windows")]
+static RYZEN_SMU_MODULE: &[u8] = include_bytes!("../resources/RyzenSMU.bin");
+
+#[cfg(target_os = "windows")]
+static PIO_SMU: Mutex<Option<PawnIo>> = Mutex::new(None);
+
+#[cfg(target_os = "windows")]
+fn with_pio_smu<T>(f: impl FnOnce(&PawnIo) -> Result<T, String>) -> Result<T, String> {
+    let mut g = PIO_SMU.lock().unwrap();
+    if g.is_none() {
+        *g = Some(PawnIo::open(RYZEN_SMU_MODULE).map_err(|e| e.replace("só funciona em processadores Intel", "só funciona em Ryzen 3000 e 5000"))?);
+    }
+    let r = f(g.as_ref().unwrap());
+    if r.is_err() {
+        *g = None;
+    }
+    r
+}
+
+/// O módulo exige a trava global do barramento PCI ("Access_PCI") durante qualquer comando de SMU.
+#[cfg(target_os = "windows")]
+fn with_pci_lock<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
+    let name: Vec<u16> = "Global\\Access_PCI".encode_utf16().chain(std::iter::once(0)).collect();
+    let m = unsafe { pio_create_mutex(std::ptr::null_mut(), 0, name.as_ptr()) };
+    if m == 0 {
+        return Err("Não consegui reservar o barramento PCI".to_string());
+    }
+    let w = unsafe { pio_wait(m, 5000) };
+    if w != 0 && w != 0x80 {
+        unsafe {
+            pio_close(m);
+        }
+        return Err("Outro programa está usando o barramento PCI agora. Tente de novo em instantes".to_string());
+    }
+    let r = f();
+    unsafe {
+        pio_release_mutex(m);
+        pio_close(m);
+    }
+    r
+}
+
+/// Só libera Matisse (3) e Vermeer (11), os únicos com IDs de comando conferidos.
+#[cfg(target_os = "windows")]
+fn smu_gate(p: &PawnIo) -> Result<(&'static str, u64), String> {
+    let cn = p.exec("ioctl_get_code_name", &[], 1)?.first().cloned().unwrap_or(u64::MAX);
+    let name = match cn {
+        3 => "Matisse",
+        11 => "Vermeer",
+        _ => return Err("Limites de PPT/TDC/EDC só estão liberados para Ryzen 3000 (Matisse) e 5000 (Vermeer)".to_string()),
+    };
+    let ver = p.exec("ioctl_get_smu_version", &[], 1)?.first().cloned().unwrap_or(0);
+    Ok((name, ver))
+}
+
+/// Lê limites e consumo reais da PM table. Só decodifica a versão 0x240903; qualquer outra volta sem números.
+#[cfg(target_os = "windows")]
+fn smu_pm_read(p: &PawnIo) -> Option<serde_json::Value> {
+    let r = p.exec("ioctl_resolve_pm_table", &[], 2).ok()?;
+    let ver = *r.first()?;
+    if ver != 0x240903 {
+        return Some(serde_json::json!({ "version": format!("{:x}", ver), "readable": false }));
+    }
+    p.exec("ioctl_update_pm_table", &[], 0).ok()?;
+    std::thread::sleep(std::time::Duration::from_millis(3));
+    let q = p.exec("ioctl_read_pm_table", &[], 8).ok()?;
+    if q.len() < 5 {
+        return None;
+    }
+    let fl = |i: usize| -> f64 {
+        let w = q[i / 2];
+        let bits = if i % 2 == 0 { (w & 0xFFFF_FFFF) as u32 } else { (w >> 32) as u32 };
+        f32::from_bits(bits) as f64
+    };
+    let (ppt_l, ppt_v, tdc_l, tdc_v, thm_l, thm_v, edc_l) = (fl(0), fl(1), fl(2), fl(3), fl(4), fl(5), fl(8));
+    let all = [ppt_l, ppt_v, tdc_l, tdc_v, thm_l, thm_v, edc_l];
+    if all.iter().any(|x| !x.is_finite()) || !(5.0..=600.0).contains(&ppt_l) || !(5.0..=500.0).contains(&tdc_l) || !(5.0..=600.0).contains(&edc_l) {
+        return Some(serde_json::json!({ "version": format!("{:x}", ver), "readable": false }));
+    }
+    Some(serde_json::json!({
+        "version": format!("{:x}", ver), "readable": true,
+        "ppt_limit": perf_round(ppt_l, 1), "ppt_value": perf_round(ppt_v, 1),
+        "tdc_limit": perf_round(tdc_l, 1), "tdc_value": perf_round(tdc_v, 1),
+        "edc_limit": perf_round(edc_l, 1),
+        "thm_limit": perf_round(thm_l, 1), "thm_value": perf_round(thm_v, 1)
+    }))
+}
+
+#[cfg(target_os = "windows")]
+fn smu_status_json(p: &PawnIo) -> Result<serde_json::Value, String> {
+    let (name, ver) = smu_gate(p)?;
+    let pm = smu_pm_read(p);
+    Ok(serde_json::json!({
+        "ok": true, "supported": true, "codename": name,
+        "smu": format!("{}.{}.{}", (ver >> 16) & 0xFF, (ver >> 8) & 0xFF, ver & 0xFF),
+        "pm": pm
+    }))
+}
+
+#[tauri::command]
+async fn amd_smu_status() -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(|| -> Result<serde_json::Value, String> {
+        #[cfg(target_os = "windows")]
+        {
+            let (v, family, model) = cpu_vendor_fms();
+            if !v.contains("AuthenticAMD") || !amd_supported(family, model) {
+                return Ok(serde_json::json!({ "ok": true, "supported": false, "reason": "Só Ryzen 3000 e 5000" }));
+            }
+            match with_pio_smu(|p| with_pci_lock(|| smu_status_json(p))) {
+                Ok(j) => Ok(j),
+                Err(e) if e.contains("Ryzen 3000 (Matisse)") => Ok(serde_json::json!({ "ok": true, "supported": false, "reason": e })),
+                Err(e) => Err(e),
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+/// Envia PPT (W), TDC (A), EDC (A) e, opcionalmente, o PBO Scalar (1 a 10). Depois relê o processador.
+#[tauri::command]
+async fn amd_smu_set_limits(ppt_w: u32, tdc_a: u32, edc_a: u32, scalar: Option<u32>) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<serde_json::Value, String> {
+        #[cfg(target_os = "windows")]
+        {
+            if !(30..=300).contains(&ppt_w) {
+                return Err("PPT fora do limite seguro (30 a 300 W)".to_string());
+            }
+            if !(20..=250).contains(&tdc_a) {
+                return Err("TDC fora do limite seguro (20 a 250 A)".to_string());
+            }
+            if !(20..=350).contains(&edc_a) {
+                return Err("EDC fora do limite seguro (20 a 350 A)".to_string());
+            }
+            if let Some(sc) = scalar {
+                if !(1..=10).contains(&sc) {
+                    return Err("PBO Scalar precisa ficar entre 1 e 10".to_string());
+                }
+            }
+            let (v, family, model) = cpu_vendor_fms();
+            if !v.contains("AuthenticAMD") || !amd_supported(family, model) {
+                return Err("Limites de potência suportados só em Ryzen 3000 e 5000".to_string());
+            }
+            with_pio_smu(|p| {
+                with_pci_lock(|| {
+                    smu_gate(p)?;
+                    let send = |nome: &str, cmd: u64, arg: u64| -> Result<(), String> {
+                        p.exec("ioctl_send_smu_command", &[cmd, arg, 0, 0, 0, 0, 0], 6)
+                            .map(|_| ())
+                            .map_err(|_| format!("O processador recusou o comando de {nome}. O que veio antes pode já ter sido aplicado; reiniciar o PC volta tudo ao BIOS"))
+                    };
+                    send("PPT", 0x53, ppt_w as u64 * 1000)?;
+                    send("TDC", 0x54, tdc_a as u64 * 1000)?;
+                    send("EDC", 0x55, edc_a as u64 * 1000)?;
+                    if let Some(sc) = scalar {
+                        send("PBO Scalar", 0x58, sc as u64 * 100)?;
+                    }
+                    smu_status_json(p)
+                })
+            })
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = (ppt_w, tdc_a, edc_a, scalar);
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
 fn main() {
     #[cfg(target_os = "windows")]
     {
@@ -6931,7 +7115,7 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
         .manage(PdhState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes, debloat_list, debloat_remove, profile_scan, game_session_start, game_session_stop, game_session_sample, audit_registry, audit_powercfg, power_status, cpu_live_start, cpu_live_stop, cpu_live_sample, cpu_stress_start, cpu_stress_stop, open_url, oc_status, oc_telemetry, oc_set_power, oc_set_undervolt, oc_restore, oc_close, amd_set_pstate, amd_restore, amd_set_boost, oc_set_voltage_planes])
+        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes, debloat_list, debloat_remove, profile_scan, game_session_start, game_session_stop, game_session_sample, audit_registry, audit_powercfg, power_status, cpu_live_start, cpu_live_stop, cpu_live_sample, cpu_stress_start, cpu_stress_stop, open_url, oc_status, oc_telemetry, oc_set_power, oc_set_undervolt, oc_restore, oc_close, amd_set_pstate, amd_restore, amd_set_boost, oc_set_voltage_planes, amd_smu_status, amd_smu_set_limits])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));
