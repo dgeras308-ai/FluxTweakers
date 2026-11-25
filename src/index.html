@@ -515,6 +515,24 @@
   .oc-sec.on+.oc-sec.on{margin-top:16px;}
   .oc-bar{position:sticky;bottom:0;z-index:5;background:var(--panel);border-top:1px solid var(--border-soft);padding:12px 0 6px;margin-top:16px;}
   .oc-bar .oc-diff{margin:0 0 10px !important;} .oc-bar .oc-acks{margin:0 0 10px !important;} .oc-bar .oc-actions{position:static;padding:0;background:none;margin:0 !important;}
+  /* Overclock: cantos arredondados, perfis e overlay do fluxo animado */
+  .oc-block,.oc-tile,.cphc,.fxg{border-radius:18px;}
+  .oc-pre{border-radius:16px;padding:9px 16px;min-width:0;}
+  .oc-btn{border-radius:999px;}
+  .oc-diff{border-radius:16px;} .oc-warn{border-radius:14px;}
+  .oc-prof-add input{border-radius:999px;padding:9px 16px;}
+  .oc-prof{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border-soft);border-radius:16px;margin-top:8px;background:var(--panel);}
+  .oc-prof-av{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex-shrink:0;font-weight:800;font-size:15px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);}
+  .oc-prof-info{flex:1;min-width:0;} .oc-prof-info b{display:block;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .oc-prof-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;}
+  .oc-prof-chips i{font-style:normal;font-family:var(--mono);font-size:10.5px;padding:2px 9px;border-radius:99px;background:color-mix(in srgb,var(--muted) 14%,transparent);color:var(--muted);}
+  .oc-empty{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:10px;padding:22px 16px;text-align:center;border:1.5px dashed var(--border-soft);border-radius:16px;color:var(--muted2);font-size:12px;}
+  .oc-empty svg{width:26px;height:26px;stroke:var(--muted2);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
+  #ocFlow{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:rgba(6,8,12,.72);backdrop-filter:blur(6px);padding:24px;}
+  #ocFlow.show{display:flex;}
+  .ocf-card{width:min(780px,100%);max-height:90vh;overflow:auto;background:transparent;border:0;padding:0;animation:cardIn .25s ease both;}
+  .ocf-card .at-pipe{box-shadow:0 30px 80px rgba(0,0,0,.55);}
+  .ocf-actions{display:flex;justify-content:flex-end;margin-top:14px;}
   .smu-row{margin-bottom:10px;} .smu-top{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);} .smu-top b{font-family:var(--mono);color:var(--text);} .smu-top em{font-style:normal;font-family:var(--mono);color:var(--accent);min-width:40px;text-align:right;}
   .smu-bar{height:6px;border-radius:99px;background:color-mix(in srgb,var(--muted) 20%,transparent);margin-top:5px;overflow:hidden;} .smu-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .6s;} .smu-bar i.hot{background:#f59e0b;}
   .oc-block select{background:var(--panel);color:var(--text);border:1px solid var(--border-soft);border-radius:9px;padding:7px 10px;font-family:inherit;font-size:12px;}
@@ -6983,6 +7001,18 @@ function cphSmuHtml(st){
   <div>${st.codename==='Cezanne'?'':`<div class="oc-slider"><label>PBO Scalar</label><select id="ocSmuSc"><option value="">Não mexer</option>${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}">${n}x</option>`).join('')}</select></div>`}<p class="oc-hint" style="margin-top:10px">Os valores valem até reiniciar o PC.${st.codename==='Cezanne'?' No Cezanne o PBO Scalar não existe.':''}</p></div></div>
   <div class="oc-actions" style="margin-top:12px"><button class="oc-btn" id="ocSmuApply">Aplicar limites</button><button class="oc-btn ghost" id="ocSmuRestore" ${stock?'':'disabled'}>${stock?`Voltar para ${stock.ppt} W / ${stock.tdc} A / ${stock.edc} A`:'Voltar ao anterior'}</button></div>`;
 }
+async function cphSmuFlow(title,ppt,tdc,edc,sc,st0,setSt,fin){
+  const inv=(c,a)=>window.__TAURI__.core.invoke(c,a);let before=st0&&st0.pm&&st0.pm.readable?st0.pm:null,rr=null;
+  const fmt=(v,u)=>v==null?'—':cphF(v,0)+' '+u;
+  return ocRunFlow(title,`${st0.codename} · PPT, TDC e EDC`,[
+    {icon:'cpu',label:'Seu PC',msg:'Lendo os limites atuais...',call:async()=>{const x=await inv('amd_smu_status');if(x.supported){setSt(x);before=x.pm&&x.pm.readable?x.pm:null;}return{message:before?`Agora: PPT ${fmt(before.ppt_limit,'W')} · TDC ${fmt(before.tdc_limit,'A')} · EDC ${fmt(before.edc_limit,'A')}`:'Limites atuais não legíveis nesta tabela'};}},
+    {icon:'bolt',label:'Enviando',msg:`PPT ${ppt} W · TDC ${tdc} A · EDC ${edc} A...`,call:async()=>{rr=await inv('amd_smu_set_limits',{pptW:ppt,tdcA:tdc,edcA:edc,scalar:sc?+sc:null});setSt(rr);return{message:'O processador aceitou os comandos'};}},
+    {icon:'verify',label:'Confirmando',msg:'Relendo os limites do processador...',call:async()=>{
+      const a=rr&&rr.pm&&rr.pm.readable?rr.pm:null,ok=a&&Math.abs(a.ppt_limit-ppt)<1.5&&Math.abs(a.tdc_limit-tdc)<1.5&&Math.abs(a.edc_limit-edc)<1.5;
+      return{message:a?(ok?'Confirmado pela leitura do processador':'A leitura não bateu com o valor pedido'):'Enviado (sem leitura de confirmação nesta tabela)',
+        changes:[{label:'PPT',before:fmt(before&&before.ppt_limit,'W'),after:a?fmt(a.ppt_limit,'W'):ppt+' W (enviado)'},{label:'TDC',before:fmt(before&&before.tdc_limit,'A'),after:a?fmt(a.tdc_limit,'A'):tdc+' A (enviado)'},{label:'EDC',before:fmt(before&&before.edc_limit,'A'),after:a?fmt(a.edc_limit,'A'):edc+' A (enviado)'}]};}}
+  ],fin);
+}
 async function cphSmuInit(){
   const q=id=>document.getElementById(id);
   if(!q('ocSmuBlock')||!window.__TAURI__)return;
@@ -7000,19 +7030,14 @@ async function cphSmuInit(){
       const ppt=+q('ocSmuPpt').value,tdc=+q('ocSmuTdc').value,edc=+q('ocSmuEdc').value,sc=q('ocSmuSc')?q('ocSmuSc').value:'',pm=st.pm&&st.pm.readable?st.pm:null;
       if(pm&&!cphLoad(CPH_SMU_STOCK))cphSave(CPH_SMU_STOCK,{ppt:Math.round(pm.ppt_limit),tdc:Math.round(pm.tdc_limit),edc:Math.round(pm.edc_limit)});
       CPH_SMU_BUSY=true;
-      try{
-        const r=await inv('amd_smu_set_limits',{pptW:ppt,tdcA:tdc,edcA:edc,scalar:sc?+sc:null});
-        const rp=r.pm&&r.pm.readable?r.pm:null,ok=rp&&Math.abs(rp.ppt_limit-ppt)<1.5&&Math.abs(rp.tdc_limit-tdc)<1.5&&Math.abs(rp.edc_limit-edc)<1.5;
-        showToast(rp?(ok?'Aplicado e confirmado pela leitura do processador':'Enviado, mas a leitura não bateu com o valor pedido'):'Enviado: o processador aceitou (sem leitura de confirmação)');
-        st=r;render();
-      }catch(e){showToast(String(e));}
-      CPH_SMU_BUSY=false;
+      await cphSmuFlow('Aplicando limites de potência',ppt,tdc,edc,sc,st,x=>{st=x;},'Limites aplicados');
+      CPH_SMU_BUSY=false;render();
     };
     q('ocSmuRestore').onclick=async()=>{
       const k=cphLoad(CPH_SMU_STOCK);if(!k)return;
       CPH_SMU_BUSY=true;
-      try{st=await inv('amd_smu_set_limits',{pptW:k.ppt,tdcA:k.tdc,edcA:k.edc,scalar:null});showToast('Limites de antes reenviados');render();}catch(e){showToast(String(e));}
-      CPH_SMU_BUSY=false;
+      await cphSmuFlow('Voltando aos limites de antes',k.ppt,k.tdc,k.edc,'',st,x=>{st=x;},'Limites de antes reenviados');
+      CPH_SMU_BUSY=false;render();
     };
   };
   render();
@@ -7054,12 +7079,51 @@ function cphOcOrganize(){
   if(tiles)body.insertBefore(nav,tiles);else body.insertBefore(nav,body.firstChild);
   show(CPH_OCSEC);
 }
+const OCP = fxPipe('ocPipeRoot');
+let OC_FLOW_BUSY=false;
+function ocFlowEl(){
+  let el=document.getElementById('ocFlow');
+  if(!el){el=document.createElement('div');el.id='ocFlow';
+    el.innerHTML='<div class="ocf-card"><div id="ocPipeRoot"></div><div id="ocChanges"></div><div class="ocf-actions"><button class="oc-btn" id="ocFlowClose" disabled>Fechar</button></div></div>';
+    document.body.appendChild(el);
+    document.getElementById('ocFlowClose').onclick=()=>el.classList.remove('show');
+  }
+  return el;
+}
+// Cada etapa roda de verdade; o ✓ só aparece quando o comando termina. Falhou = para e mostra o motivo.
+async function ocRunFlow(title,sub,steps,finalMsg){
+  if(OC_FLOW_BUSY)return false;
+  OC_FLOW_BUSY=true;
+  const ov=ocFlowEl(),btn=document.getElementById('ocFlowClose');
+  btn.disabled=true;document.getElementById('ocChanges').innerHTML='';
+  ov.classList.add('show');
+  OCP.mount(title,sub,steps,'');OCP.msg('Começando...',true);
+  await OCP.start();
+  const all=[];let ok=true;
+  for(let i=0;i<steps.length;i++){
+    const st=steps[i];
+    await OCP.enter(i+1);OCP.msg(st.msg,true);
+    const t0=Date.now();let r;
+    try{r=await st.call();}
+    catch(err){OCP.fail(i+1,'falhou');OCP.msg(gmEsc(String(err)));ok=false;break;}
+    const wait=850-(Date.now()-t0);if(wait>0)await gmSleep(wait);
+    if(r){if(r.changes)all.push(...r.changes);OCP.count(i+1,'✓');OCP.msg(gmEsc(r.message));}
+    OCP.finish(i+1);await gmSleep(300);
+  }
+  if(ok){await OCP.end();OCP.msg(finalMsg);}
+  mkRenderChanges(all,'ocChanges');
+  btn.disabled=false;OC_FLOW_BUSY=false;
+  return ok;
+}
 function cphProfGet(v){const a=(cphLoad(CPH_PROF)||{})[v];return Array.isArray(a)?a:[];}
 function cphProfSet(v,arr){const all=cphLoad(CPH_PROF)||{};all[v]=arr;cphSave(CPH_PROF,all);}
 function cphProfListHtml(v){
   const a=cphProfGet(v);
-  if(!a.length)return'<p class="oc-hint">Nenhum perfil salvo. Ajuste os controles, dê um nome e salve.</p>';
-  return a.map((x,i)=>`<div class="oc-prof"><div><b>${ppEsc(x.n)}</b><small>${v==='amd'?`${cphGHz(x.mhz)} GHz · ${x.mv>0?'+':''}${x.mv} mV`:`PL1 ${x.pl1} W · PL2 ${x.pl2} W · núcleo ${(x.vp&&x.vp.core)||0} mV`}</small></div><div class="oc-prof-b"><button class="oc-btn ghost ocProfLoad" data-i="${i}">Carregar</button><button class="oc-btn ghost ocProfDel" data-i="${i}" title="Apagar">✕</button></div></div>`).join('');
+  if(!a.length)return'<div class="oc-empty"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nenhum perfil salvo ainda.<br>Ajuste os controles, dê um nome e toque em Salvar.</div>';
+  return a.map((x,i)=>{
+    const chips=v==='amd'?[cphGHz(x.mhz)+' GHz',(x.mv>0?'+':'')+x.mv+' mV']:['PL1 '+x.pl1+' W','PL2 '+x.pl2+' W','núcleo '+((x.vp&&x.vp.core)||0)+' mV'];
+    return`<div class="oc-prof"><div class="oc-prof-av">${ppEsc((x.n||'?').charAt(0).toUpperCase())}</div><div class="oc-prof-info"><b>${ppEsc(x.n)}</b><div class="oc-prof-chips">${chips.map(c=>`<i>${c}</i>`).join('')}</div></div><div class="oc-prof-b"><button class="oc-btn ocProfLoad" data-i="${i}">Carregar</button><button class="oc-btn ghost ocProfDel" data-i="${i}" title="Apagar">✕</button></div></div>`;
+  }).join('');
 }
 function cphPresetsHtml(list){
   return`<div class="oc-block" style="margin-bottom:16px"><h4>Predefinições <span class="oc-sub">pontos de partida: valide sempre com o teste de estabilidade</span></h4><div class="oc-presets">${list.map(x=>`<button class="oc-pre" data-pre="${x.id}" data-mhz="${x.mhz||0}" data-mv="${x.mv||0}"><b>${x.label}</b><small>${x.sub}</small></button>`).join('')}</div></div>`;
@@ -7226,32 +7290,46 @@ function cphOcBindHandlers(isAmd,p,o){
       const fid=Math.round(+q('ocFid').value/25),delta=+q('ocVid').value;
       const curDelta=Math.round((1.55-0.00625*p.vid-stockV)*1000);
       const vid=Math.abs(delta-curDelta)<3?null:stockVid-Math.round(delta/6.25);
-      try{const r=await window.__TAURI__.core.invoke('amd_set_pstate',{fid,vid});CPH.pio={...CPH.pio,...r};
-        if(!o)cphSave(CPH_PIO_ORIG,{vendor:'amd',p0_raw:p.p0_raw,fid:p.fid,vid:p.vid,freq:p.freq_mhz,volt:p.volt,ts:Date.now()});
-        showToast(r.mismatch?`Aplicado (${r.mismatch} núcleo(s) não confirmaram)`:`${cphGHz(r.freq_mhz)} GHz a ${cphF(r.volt,3)} V`);
-      }catch(e){showToast(String(e));}
+      const inv=window.__TAURI__.core.invoke,bf={mhz:p.fid*25,volt:p.volt};let res=null;
+      await ocRunFlow('Aplicando overclock','Ryzen · P-state 0 em todos os núcleos',[
+        {icon:'cpu',label:'Seu PC',msg:'Lendo o estado atual do processador...',call:async()=>{const r=await inv('oc_status');CPH.pio=r;bf.mhz=r.fid*25;bf.volt=r.volt;return{message:`Agora: ${cphGHz(bf.mhz)} GHz a ${cphF(bf.volt,3)} V`};}},
+        {icon:'sliders',label:'Aplicando',msg:`Enviando ${cphGHz(fid*25)} GHz${vid==null?'':' e a nova voltagem'}...`,call:async()=>{res=await inv('amd_set_pstate',{fid,vid});CPH.pio={...CPH.pio,...res};if(!o)cphSave(CPH_PIO_ORIG,{vendor:'amd',p0_raw:p.p0_raw,fid:p.fid,vid:p.vid,freq:p.freq_mhz,volt:p.volt,ts:Date.now()});return{message:'Valores gravados nos núcleos'};}},
+        {icon:'verify',label:'Verificando',msg:'Relendo o processador para confirmar...',call:async()=>{const r=await inv('oc_status');CPH.pio=r;return{message:res&&res.mismatch?`${res.mismatch} núcleo(s) não confirmaram`:'Confirmado pela leitura do processador',changes:[{label:'Clock P0',before:cphGHz(bf.mhz)+' GHz',after:cphGHz(r.fid*25)+' GHz'},{label:'Voltagem P0',before:cphF(bf.volt,3)+' V',after:cphF(r.volt,3)+' V'}]};}}
+      ],'Overclock aplicado e confirmado');
       cphRenderOcTab(document.getElementById('cphTabBody'));
     };
     if(q('ocReset'))q('ocReset').onclick=async()=>{if(!o){showToast('Sem original guardado');return;}
-      try{const r=await window.__TAURI__.core.invoke('amd_restore',{p0RawHex:o.p0_raw});CPH.pio={...CPH.pio,...r};showToast('Restaurado');}catch(e){showToast(String(e));}
+      const inv=window.__TAURI__.core.invoke,bf={mhz:p.fid*25,volt:p.volt};
+      await ocRunFlow('Voltando ao original','Ryzen · P-state 0 salvo antes das mudanças',[
+        {icon:'cpu',label:'Seu PC',msg:'Lendo o estado atual...',call:async()=>{const r=await inv('oc_status');CPH.pio=r;bf.mhz=r.fid*25;bf.volt=r.volt;return{message:`Agora: ${cphGHz(bf.mhz)} GHz a ${cphF(bf.volt,3)} V`};}},
+        {icon:'sliders',label:'Restaurando',msg:'Reenviando o valor original...',call:async()=>{const r=await inv('amd_restore',{p0RawHex:o.p0_raw});CPH.pio={...CPH.pio,...r};return{message:'Valor original gravado'};}},
+        {icon:'verify',label:'Verificando',msg:'Relendo o processador...',call:async()=>{const r=await inv('oc_status');CPH.pio=r;return{message:'Confirmado pela leitura do processador',changes:[{label:'Clock P0',before:cphGHz(bf.mhz)+' GHz',after:cphGHz(r.fid*25)+' GHz'},{label:'Voltagem P0',before:cphF(bf.volt,3)+' V',after:cphF(r.volt,3)+' V'}]};}}
+      ],'Valores originais restaurados');
       cphRenderOcTab(document.getElementById('cphTabBody'));};
   } else {
     if(q('ocPl1')){q('ocPl1').oninput=()=>{q('ocPl1V').textContent=q('ocPl1').value+' W';if(+q('ocPl2')?.value<+q('ocPl1').value){q('ocPl2').value=q('ocPl1').value;q('ocPl2V').textContent=q('ocPl2').value+' W';}};q('ocPl2').oninput=()=>{if(+q('ocPl2').value<+q('ocPl1').value)q('ocPl2').value=q('ocPl1').value;q('ocPl2V').textContent=q('ocPl2').value+' W';};q('ocTau').oninput=()=>q('ocTauV').textContent=q('ocTau').value+' s';}
     document.querySelectorAll('.ocVP').forEach(sl=>sl.oninput=()=>document.getElementById('ocVP_'+sl.dataset.plane).textContent=sl.value+' mV');
     if(q('ocApply'))q('ocApply').onclick=async()=>{
-      const inv=window.__TAURI__.core.invoke;const msgs=[];
-      try{
-        if(q('ocPl1')){const r=await inv('oc_set_power',{pl1W:+q('ocPl1').value,pl2W:+q('ocPl2').value,tauS:+q('ocTau').value});CPH.pio={...CPH.pio,...r};msgs.push(`PL1 ${cphF(r.pl1_w,0)} W`);}
-        const vals={};document.querySelectorAll('.ocVP').forEach(sl=>vals[sl.dataset.plane]=+sl.value);
-        const r2=await inv('oc_set_voltage_planes',{core:vals.core,cache:vals.cache,gpu:vals.gpu,sa:vals.sa});CPH.pio={...CPH.pio,...r2};
-        msgs.push('undervolt'+(r2.ignored&&r2.ignored.length?` (ignorado em: ${r2.ignored.join(', ')})` :''));
-        if(!o)cphSave(CPH_PIO_ORIG,{pl_raw:p.pl_raw,pl1:p.pl1_w,pl2:p.pl2_w,ts:Date.now()});
-        showToast(msgs.join(' · '));
-      }catch(e){showToast(String(e));}
+      const inv=window.__TAURI__.core.invoke,hasP=!!q('ocPl1'),vals={};let bf=p,res2=null;
+      document.querySelectorAll('.ocVP').forEach(sl=>vals[sl.dataset.plane]=+sl.value);
+      const steps=[{icon:'cpu',label:'Seu PC',msg:'Lendo o estado atual do processador...',call:async()=>{const r=await inv('oc_status');CPH.pio=r;bf=r;return{message:`Agora: PL1 ${cphF(r.pl1_w,0)} W · PL2 ${cphF(r.pl2_w,0)} W`};}}];
+      if(hasP)steps.push({icon:'bolt',label:'Potência',msg:`Enviando PL1 ${q('ocPl1').value} W · PL2 ${q('ocPl2').value} W...`,call:async()=>{const r=await inv('oc_set_power',{pl1W:+q('ocPl1').value,pl2W:+q('ocPl2').value,tauS:+q('ocTau').value});CPH.pio={...CPH.pio,...r};return{message:'Limites de potência gravados'};}});
+      steps.push({icon:'sliders',label:'Undervolt',msg:'Enviando o undervolt de cada plano...',call:async()=>{res2=await inv('oc_set_voltage_planes',{core:vals.core,cache:vals.cache,gpu:vals.gpu,sa:vals.sa});CPH.pio={...CPH.pio,...res2};if(!o)cphSave(CPH_PIO_ORIG,{pl_raw:p.pl_raw,pl1:p.pl1_w,pl2:p.pl2_w,ts:Date.now()});return{message:'Undervolt gravado'+(res2.ignored&&res2.ignored.length?` (ignorado em: ${res2.ignored.join(', ')})`:'')};}});
+      steps.push({icon:'verify',label:'Verificando',msg:'Relendo o processador para confirmar...',call:async()=>{
+        const r=await inv('oc_status');CPH.pio=r;const b0=bf.offsets||{},a0=r.offsets||{},ch=[];
+        if(hasP){ch.push({label:'PL1',before:cphF(bf.pl1_w,0)+' W',after:cphF(r.pl1_w,0)+' W'},{label:'PL2',before:cphF(bf.pl2_w,0)+' W',after:cphF(r.pl2_w,0)+' W'});}
+        [['core','Undervolt núcleo'],['cache','Undervolt cache'],['gpu','Undervolt vídeo'],['sa','Undervolt sistema']].forEach(([k,l])=>ch.push({label:l,before:Math.round(b0[k]||0)+' mV',after:Math.round(a0[k]||0)+' mV'}));
+        return{message:'Confirmado pela leitura do processador',changes:ch};}});
+      await ocRunFlow('Aplicando ajustes','Intel · potência e undervolt',steps,'Ajustes aplicados e confirmados');
       cphRenderOcTab(document.getElementById('cphTabBody'));
     };
     if(q('ocReset'))q('ocReset').onclick=async()=>{if(!o){showToast('Sem original guardado');return;}
-      try{const r=await window.__TAURI__.core.invoke('oc_restore',{plRawHex:o.pl_raw});CPH.pio={...CPH.pio,...r};showToast('Restaurado');}catch(e){showToast(String(e));}
+      const inv=window.__TAURI__.core.invoke;let bf=p;
+      await ocRunFlow('Voltando ao original','Intel · limites de potência salvos antes das mudanças',[
+        {icon:'cpu',label:'Seu PC',msg:'Lendo o estado atual...',call:async()=>{const r=await inv('oc_status');CPH.pio=r;bf=r;return{message:`Agora: PL1 ${cphF(r.pl1_w,0)} W · PL2 ${cphF(r.pl2_w,0)} W`};}},
+        {icon:'sliders',label:'Restaurando',msg:'Reenviando o valor original...',call:async()=>{const r=await inv('oc_restore',{plRawHex:o.pl_raw});CPH.pio={...CPH.pio,...r};return{message:'Valor original gravado'};}},
+        {icon:'verify',label:'Verificando',msg:'Relendo o processador...',call:async()=>{const r=await inv('oc_status');CPH.pio=r;return{message:'Confirmado pela leitura do processador',changes:[{label:'PL1',before:cphF(bf.pl1_w,0)+' W',after:cphF(r.pl1_w,0)+' W'},{label:'PL2',before:cphF(bf.pl2_w,0)+' W',after:cphF(r.pl2_w,0)+' W'}]};}}
+      ],'Valores originais restaurados');
       cphRenderOcTab(document.getElementById('cphTabBody'));};
   }
 }
@@ -11373,6 +11451,9 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.75', date:'25/11/2026', items:[
+    '<b>Animação de aplicar de volta</b>: ao aplicar overclock (AMD e Intel), limites de potência (PBO) ou voltar ao original, abre o fluxo animado com a roda e as etapas (Seu PC, Aplicando, Verificando). Cada etapa roda de verdade e só ganha o ✓ quando o comando termina, e no fim aparece o quadro <b>O que mudou</b> com antes → depois lidos do processador.',
+    'Perfis salvos redesenhados (cartões arredondados, avatar, chips com os valores) e cantos mais arredondados nos blocos, cartões e predefinições do Overclock.' ] },
   { v:'1.1.74', date:'25/11/2026', items:[
     'Abas CPU e GPU: seletor de fabricante redesenhado com selos limpos de Intel, AMD e NVIDIA no lugar do ícone de chip genérico, tudo dentro de um cartão só junto com a dica. A aba CPU ganhou títulos separando "Monitor e overclock" de "Ajustes do Windows".' ] },
   { v:'1.1.73', date:'24/11/2026', items:[
