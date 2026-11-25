@@ -528,11 +528,55 @@
   .oc-prof-chips i{font-style:normal;font-family:var(--mono);font-size:10.5px;padding:2px 9px;border-radius:99px;background:color-mix(in srgb,var(--muted) 14%,transparent);color:var(--muted);}
   .oc-empty{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:10px;padding:22px 16px;text-align:center;border:1.5px dashed var(--border-soft);border-radius:16px;color:var(--muted2);font-size:12px;}
   .oc-empty svg{width:26px;height:26px;stroke:var(--muted2);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
-  #ocFlow{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:rgba(6,8,12,.72);backdrop-filter:blur(6px);padding:24px;}
+  #ocFlow{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,color-mix(in srgb,var(--accent) 14%,rgba(6,8,12,.86)),rgba(6,8,12,.9) 70%);backdrop-filter:blur(8px);padding:20px;}
   #ocFlow.show{display:flex;}
-  .ocf-card{width:min(780px,100%);max-height:90vh;overflow:auto;background:transparent;border:0;padding:0;animation:cardIn .25s ease both;}
-  .ocf-card .at-pipe{box-shadow:0 30px 80px rgba(0,0,0,.55);}
+  .ocf-card{width:min(560px,100%);max-height:94vh;overflow:auto;background:var(--panel);border:1px solid var(--border);border-radius:26px;padding:24px 24px 18px;box-shadow:0 40px 100px rgba(0,0,0,.6),0 0 0 1px color-mix(in srgb,var(--accent) 12%,transparent);animation:cardIn .3s ease both;}
   .ocf-actions{display:flex;justify-content:flex-end;margin-top:14px;}
+  .fx-hud{--c:var(--accent);--c2:var(--accent2);text-align:center;}
+  .fx-hud.done{--c:#22c55e;--c2:#4ade80;} .fx-hud.err{--c:#ef4444;--c2:#f87171;animation:fxShake .45s ease;}
+  .fx-stage{position:relative;width:240px;height:240px;margin:0 auto 6px;}
+  .fx-svg{position:absolute;inset:0;width:240px;height:240px;overflow:visible;}
+  .fx-ticks line{stroke:color-mix(in srgb,var(--muted) 40%,transparent);stroke-width:1.4;stroke-linecap:round;}
+  .fx-ticks{transform-origin:120px 120px;animation:fxRot 28s linear infinite;}
+  .fx-track{fill:none;stroke:color-mix(in srgb,var(--muted) 18%,transparent);stroke-width:7;}
+  .fx-prog{fill:none;stroke:var(--c);stroke-width:7;stroke-linecap:round;stroke-dasharray:578;stroke-dashoffset:578;transition:stroke-dashoffset .7s cubic-bezier(.3,.9,.2,1),stroke .4s;filter:drop-shadow(0 0 7px var(--c));}
+  .fx-orb{transform-origin:120px 120px;} .fx-orb circle{fill:var(--c2);filter:drop-shadow(0 0 5px var(--c2));transition:fill .4s;}
+  .fx-orb.o1{animation:fxRot 2.4s linear infinite;} .fx-orb.o2{animation:fxRot 3.9s linear infinite reverse;} .fx-orb.o3{animation:fxRot 5.6s linear infinite;}
+  .fx-sweep{position:absolute;inset:6px;border-radius:50%;background:conic-gradient(from 0deg,transparent 0 62%,color-mix(in srgb,var(--c) 38%,transparent) 100%);-webkit-mask:radial-gradient(circle,transparent 52%,#000 54%,#000 96%,transparent 100%);mask:radial-gradient(circle,transparent 52%,#000 54%,#000 96%,transparent 100%);animation:fxRot 2s linear infinite;}
+  .fx-chip{position:absolute;left:50%;top:50%;width:78px;height:78px;margin:-54px 0 0 -39px;display:grid;place-items:center;border-radius:22px;background:linear-gradient(145deg,color-mix(in srgb,var(--c) 22%,var(--panel)),var(--panel));border:1px solid color-mix(in srgb,var(--c) 50%,transparent);box-shadow:0 0 28px color-mix(in srgb,var(--c) 35%,transparent);transition:.4s;}
+  .fx-chip svg{width:38px;height:38px;fill:none;stroke:var(--c);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;animation:fxBeat 1.4s ease-in-out infinite;}
+  .fx-chip i{position:absolute;inset:0;border-radius:22px;border:1.5px solid var(--c);opacity:0;animation:fxWave 2.2s ease-out infinite;} .fx-chip i+i{animation-delay:1.1s;}
+  .fx-pct{position:absolute;left:0;right:0;top:50%;margin-top:36px;font-family:var(--mono);font-size:16px;font-weight:800;color:var(--text);}
+  .fx-big{position:absolute;left:50%;top:50%;width:78px;height:78px;margin:-39px 0 0 -39px;fill:none;stroke:#22c55e;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:30;stroke-dashoffset:30;opacity:0;filter:drop-shadow(0 0 10px #22c55e);}
+  .fx-hud.done .fx-big{opacity:1;animation:fxDraw .6s .15s ease forwards;} .fx-hud.done .fx-chip{opacity:0;transform:scale(.6);} .fx-hud.done .fx-pct{opacity:0;}
+  .fx-hud.done .fx-ticks,.fx-hud.done .fx-orb,.fx-hud.done .fx-sweep,.fx-hud.err .fx-orb,.fx-hud.err .fx-sweep{animation-play-state:paused;opacity:.25;}
+  .fx-hud.done .fx-chip svg,.fx-hud.done .fx-chip i,.fx-hud.err .fx-chip i,.fx-hud.err .fx-chip svg{animation:none;}
+  .fx-spark{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:var(--c2);box-shadow:0 0 8px var(--c2);animation:fxSpark .9s ease-out forwards;}
+  .fx-title{font-size:18px;font-weight:800;margin-top:2px;} .fx-sub{font-size:12px;color:var(--muted);margin:3px 0 14px;min-height:16px;}
+  .fx-steps{display:flex;flex-direction:column;gap:7px;text-align:left;}
+  .fx-step{display:flex;align-items:center;gap:12px;padding:9px 12px;border:1px solid var(--border-soft);border-radius:14px;background:color-mix(in srgb,var(--card) 70%,transparent);opacity:.5;transition:.3s;}
+  .fx-step.run,.fx-step.done,.fx-step.err{opacity:1;} .fx-step.run{border-color:color-mix(in srgb,var(--c) 55%,transparent);box-shadow:0 0 18px color-mix(in srgb,var(--c) 14%,transparent);}
+  .fx-ico{position:relative;width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex-shrink:0;background:color-mix(in srgb,var(--muted) 14%,transparent);}
+  .fx-ico svg{width:18px;height:18px;fill:none;stroke:var(--muted);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:.3s;}
+  .fx-step.run .fx-ico svg{stroke:var(--c);} .fx-step.run .fx-ico::after{content:"";position:absolute;inset:-3px;border-radius:14px;border:2.5px solid transparent;border-top-color:var(--c);border-right-color:color-mix(in srgb,var(--c) 40%,transparent);animation:fxRot .8s linear infinite;}
+  .fx-step.done .fx-ico{background:color-mix(in srgb,#22c55e 18%,transparent);animation:fxPop .4s ease;} .fx-step.done .fx-ico svg{stroke:#22c55e;}
+  .fx-step.err .fx-ico{background:color-mix(in srgb,#ef4444 18%,transparent);} .fx-step.err .fx-ico svg{stroke:#ef4444;}
+  .fx-st{flex:1;min-width:0;} .fx-st b{display:block;font-size:12.5px;color:var(--text);} .fx-st small{display:block;font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .fx-step em{font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--muted2);flex-shrink:0;} .fx-step.run em{color:var(--c);} .fx-step.done em{color:#22c55e;} .fx-step.err em{color:#ef4444;}
+  .fx-log{margin-top:12px;padding:10px 12px;border-radius:14px;background:rgba(0,0,0,.28);border:1px solid var(--border-soft);font-family:var(--mono);font-size:10.8px;line-height:1.7;text-align:left;max-height:104px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;}
+  .fx-log div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);animation:fxLine .25s ease both;} .fx-log div b{color:var(--muted2);font-weight:500;margin-right:8px;} .fx-log .ok{color:#22c55e;} .fx-log .er{color:#ef4444;}
+  .fx-chg{margin-top:12px;display:flex;flex-direction:column;gap:6px;text-align:left;}
+  .fx-chg h5{margin:0 0 2px;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);}
+  .fx-chg div{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:12px;background:color-mix(in srgb,var(--card) 80%,transparent);border:1px solid var(--border-soft);font-size:12px;opacity:0;animation:fxLine .4s ease forwards;}
+  .fx-chg span{flex:1;color:var(--muted);} .fx-chg s{color:var(--muted2);font-family:var(--mono);} .fx-chg i{font-style:normal;color:var(--muted2);} .fx-chg b{font-family:var(--mono);color:var(--text);} .fx-chg b.up{color:#22c55e;}
+  @keyframes fxRot{to{transform:rotate(360deg);}}
+  @keyframes fxBeat{0%,100%{transform:scale(1);}50%{transform:scale(1.12);}}
+  @keyframes fxWave{0%{transform:scale(.8);opacity:.7;}100%{transform:scale(1.9);opacity:0;}}
+  @keyframes fxPop{0%{transform:scale(.7);}60%{transform:scale(1.18);}100%{transform:scale(1);}}
+  @keyframes fxDraw{to{stroke-dashoffset:0;}}
+  @keyframes fxLine{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
+  @keyframes fxShake{0%,100%{transform:translateX(0);}25%{transform:translateX(-7px);}75%{transform:translateX(7px);}}
+  @keyframes fxSpark{from{transform:rotate(var(--a)) translateY(0);opacity:1;}to{transform:rotate(var(--a)) translateY(-118px) scale(.4);opacity:0;}}
   .smu-row{margin-bottom:10px;} .smu-top{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);} .smu-top b{font-family:var(--mono);color:var(--text);} .smu-top em{font-style:normal;font-family:var(--mono);color:var(--accent);min-width:40px;text-align:right;}
   .smu-bar{height:6px;border-radius:99px;background:color-mix(in srgb,var(--muted) 20%,transparent);margin-top:5px;overflow:hidden;} .smu-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .6s;} .smu-bar i.hot{background:#f59e0b;}
   .oc-block select{background:var(--panel);color:var(--text);border:1px solid var(--border-soft);border-radius:9px;padding:7px 10px;font-family:inherit;font-size:12px;}
@@ -7079,39 +7123,54 @@ function cphOcOrganize(){
   if(tiles)body.insertBefore(nav,tiles);else body.insertBefore(nav,body.firstChild);
   show(CPH_OCSEC);
 }
-const OCP = fxPipe('ocPipeRoot');
 let OC_FLOW_BUSY=false;
 function ocFlowEl(){
   let el=document.getElementById('ocFlow');
-  if(!el){el=document.createElement('div');el.id='ocFlow';
-    el.innerHTML='<div class="ocf-card"><div id="ocPipeRoot"></div><div id="ocChanges"></div><div class="ocf-actions"><button class="oc-btn" id="ocFlowClose" disabled>Fechar</button></div></div>';
-    document.body.appendChild(el);
-    document.getElementById('ocFlowClose').onclick=()=>el.classList.remove('show');
-  }
+  if(!el){el=document.createElement('div');el.id='ocFlow';el.innerHTML='<div class="ocf-card"></div>';document.body.appendChild(el);}
   return el;
 }
-// Cada etapa roda de verdade; o ✓ só aparece quando o comando termina. Falhou = para e mostra o motivo.
+function fxHudHtml(title,sub,steps){
+  const ticks=Array.from({length:60},(_,i)=>{const big=i%5===0;return`<line x1="120" y1="${big?8:11}" x2="120" y2="${big?18:15}" transform="rotate(${i*6} 120 120)"/>`;}).join('');
+  return`<div class="fx-hud" id="fxHud"><div class="fx-stage"><div class="fx-sweep"></div>
+    <svg class="fx-svg" viewBox="0 0 240 240"><g class="fx-ticks">${ticks}</g><circle class="fx-track" cx="120" cy="120" r="92"/><circle class="fx-prog" id="fxProg" cx="120" cy="120" r="92" transform="rotate(-90 120 120)"/>
+      <g class="fx-orb o1"><circle cx="120" cy="22" r="3.6"/></g><g class="fx-orb o2"><circle cx="120" cy="40" r="2.6"/></g><g class="fx-orb o3"><circle cx="120" cy="204" r="2.2"/></g></svg>
+    <div class="fx-chip"><i></i><i></i><svg viewBox="0 0 24 24">${GM_PIPE_ICON.cpu}</svg></div><div class="fx-pct" id="fxPct">0%</div>
+    <svg class="fx-big" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+    <div class="fx-title" id="fxTitle">${gmEsc(title)}</div><div class="fx-sub" id="fxSub">${gmEsc(sub)}</div>
+    <div class="fx-steps">${steps.map((st,i)=>`<div class="fx-step" data-i="${i}"><span class="fx-ico"><svg viewBox="0 0 24 24">${GM_PIPE_ICON[st.icon]||GM_PIPE_ICON.sliders}</svg></span><div class="fx-st"><b>${gmEsc(st.label)}</b><small>${gmEsc(st.msg)}</small></div><em>aguardando</em></div>`).join('')}</div>
+    <div class="fx-log" id="fxLog"></div></div>`;
+}
+// Cada etapa roda de verdade: o ✓ só aparece quando o comando termina, com o tempo real que levou.
+// Falhou = para e mostra o motivo. O % é de etapas concluídas; o resto do movimento é só visual.
 async function ocRunFlow(title,sub,steps,finalMsg){
   if(OC_FLOW_BUSY)return false;
   OC_FLOW_BUSY=true;
-  const ov=ocFlowEl(),btn=document.getElementById('ocFlowClose');
-  btn.disabled=true;document.getElementById('ocChanges').innerHTML='';
+  const ov=ocFlowEl(),card=ov.querySelector('.ocf-card');
+  card.innerHTML=fxHudHtml(title,sub,steps)+'<div id="ocChanges"></div><div class="ocf-actions"><button class="oc-btn" id="ocFlowClose" disabled>Fechar</button></div>';
+  const btn=document.getElementById('ocFlowClose');btn.onclick=()=>ov.classList.remove('show');
   ov.classList.add('show');
-  OCP.mount(title,sub,steps,'');OCP.msg('Começando...',true);
-  await OCP.start();
+  const hud=document.getElementById('fxHud'),prog=document.getElementById('fxProg'),pct=document.getElementById('fxPct'),log=document.getElementById('fxLog'),subEl=document.getElementById('fxSub');
+  const T0=Date.now(),say=(t,c)=>{const d=document.createElement('div');if(c)d.className=c;d.innerHTML=`<b>${((Date.now()-T0)/1000).toFixed(1)}s</b>${t}`;log.appendChild(d);while(log.children.length>5)log.removeChild(log.firstChild);};
+  const setP=n=>{prog.style.strokeDashoffset=578*(1-n/steps.length);pct.textContent=Math.round(n/steps.length*100)+'%';};
+  say('Iniciando: '+gmEsc(title));await gmSleep(550);
   const all=[];let ok=true;
   for(let i=0;i<steps.length;i++){
-    const st=steps[i];
-    await OCP.enter(i+1);OCP.msg(st.msg,true);
-    const t0=Date.now();let r;
+    const st=steps[i],el=card.querySelector(`.fx-step[data-i="${i}"]`),em=el.querySelector('em'),sm=el.querySelector('small');
+    el.classList.add('run');em.textContent='em andamento';subEl.textContent=st.label+'...';say('→ '+gmEsc(st.msg));
+    const s0=Date.now();let r;
     try{r=await st.call();}
-    catch(err){OCP.fail(i+1,'falhou');OCP.msg(gmEsc(String(err)));ok=false;break;}
-    const wait=850-(Date.now()-t0);if(wait>0)await gmSleep(wait);
-    if(r){if(r.changes)all.push(...r.changes);OCP.count(i+1,'✓');OCP.msg(gmEsc(r.message));}
-    OCP.finish(i+1);await gmSleep(300);
+    catch(err){el.classList.replace('run','err');em.textContent='falhou';sm.textContent=String(err);hud.classList.add('err');subEl.textContent='Falhou nesta etapa';say('✗ '+gmEsc(String(err)),'er');ok=false;break;}
+    const ms=Date.now()-s0;const wait=800-ms;if(wait>0)await gmSleep(wait);
+    el.classList.replace('run','done');em.textContent=ms+' ms';
+    if(r){sm.textContent=r.message;say('✓ '+gmEsc(r.message),'ok');if(r.changes)all.push(...r.changes);}
+    setP(i+1);await gmSleep(220);
   }
-  if(ok){await OCP.end();OCP.msg(finalMsg);}
-  mkRenderChanges(all,'ocChanges');
+  if(ok){
+    hud.classList.add('done');subEl.textContent=finalMsg;pct.textContent='100%';say('✓ '+gmEsc(finalMsg),'ok');
+    const stage=card.querySelector('.fx-stage');for(let k=0;k<18;k++){const sp=document.createElement('i');sp.className='fx-spark';sp.style.setProperty('--a',(k*20)+'deg');sp.style.animationDelay=(k%3)*40+'ms';stage.appendChild(sp);}
+  }
+  const ch=document.getElementById('ocChanges');
+  if(all.length)ch.innerHTML='<div class="fx-chg"><h5>O que mudou</h5>'+all.map((c,i)=>`<div style="animation-delay:${i*110}ms"><span>${gmEsc(c.label)}</span><s>${gmEsc(c.before)}</s><i>→</i><b class="${c.before!==c.after?'up':''}">${gmEsc(c.after)}</b></div>`).join('')+'</div>';
   btn.disabled=false;OC_FLOW_BUSY=false;
   return ok;
 }
@@ -11451,6 +11510,8 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.76', date:'25/11/2026', items:[
+    '<b>Animação de aplicar totalmente nova</b>: anel de progresso brilhante com marcadores girando, chip pulsando com ondas, varredura em volta, lista de etapas com roda em cada uma, terminal ao vivo com o tempo real de cada comando e explosão de faíscas com o check no final. Se algo falhar, o anel fica vermelho e mostra a etapa e o motivo.' ] },
   { v:'1.1.75', date:'25/11/2026', items:[
     '<b>Animação de aplicar de volta</b>: ao aplicar overclock (AMD e Intel), limites de potência (PBO) ou voltar ao original, abre o fluxo animado com a roda e as etapas (Seu PC, Aplicando, Verificando). Cada etapa roda de verdade e só ganha o ✓ quando o comando termina, e no fim aparece o quadro <b>O que mudou</b> com antes → depois lidos do processador.',
     'Perfis salvos redesenhados (cartões arredondados, avatar, chips com os valores) e cantos mais arredondados nos blocos, cartões e predefinições do Overclock.' ] },
