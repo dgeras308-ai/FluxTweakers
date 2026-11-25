@@ -1446,19 +1446,24 @@
   .info-card::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3.5px;border-radius:0 3px 3px 0;background:var(--accent);}
   .info-card b{color:var(--item-text);}
 
-  .vendor-row{display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
-  .vendor-row button{
-    display:inline-flex;align-items:center;justify-content:center;gap:8px;
-    background:var(--card);border:1px solid var(--border);color:var(--muted);
-    padding:5px 14px 5px 7px;border-radius:999px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--sans);transition:.15s;
-  }
-  .vendor-row button:hover{color:var(--text);border-color:var(--muted2);}
-  .vendor-row button.active{border-color:transparent;color:var(--text);background:var(--card-hover);box-shadow:inset 0 0 0 1.5px var(--accent);}
+  .vendor-card{background:var(--item-bg);border:1px solid var(--item-border);border-radius:14px;padding:12px 14px;margin-bottom:18px;box-shadow:var(--item-shadow);}
+  .vendor-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0;}
+  .vendor-row button{display:inline-flex;align-items:center;justify-content:center;background:transparent;border:1.5px solid transparent;padding:4px;border-radius:11px;cursor:pointer;font-family:var(--sans);transition:.15s;}
+  .vendor-row button:hover{border-color:var(--border);}
+  .vendor-row button.active{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent);}
+  .vendor-row button:not(.active) .vbadge{filter:grayscale(.9) opacity(.55);}
+  .vbadge{display:inline-flex;align-items:center;justify-content:center;height:28px;min-width:74px;padding:0 14px;border-radius:8px;color:#fff;font-weight:800;font-size:13px;letter-spacing:.05em;line-height:1;}
+  .vb-intel{background:#0071c5;font-size:16px;letter-spacing:-.03em;text-transform:lowercase;}
+  .vb-amd{background:#ed1c24;letter-spacing:.1em;}
+  .vb-nvidia{background:#76b900;color:#0b0d12;}
   .vendor-det{margin-left:auto;display:inline-flex;align-items:center;gap:7px;font-size:11.5px;color:var(--muted);max-width:100%;}
   .vendor-det::before{content:"";width:7px;height:7px;border-radius:50%;background:#22c55e;flex-shrink:0;}
   .vendor-det.warn{color:#f59e0b;} .vendor-det.warn::before{background:#f59e0b;}
   .vendor-det b{color:var(--text);font-weight:700;}
-  .info-card{margin-bottom:12px;}
+  .vendor-card .info-card{margin:10px 0 0;padding:10px 0 0;background:none;border:0;border-top:1px solid var(--item-border);border-radius:0;box-shadow:none;font-size:11.5px;}
+  .vendor-card .info-card::before{display:none;}
+  .sec-title{display:flex;align-items:center;gap:10px;margin:20px 0 10px;font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);}
+  .sec-title::after{content:"";flex:1;height:1px;background:var(--item-border);}
   .vendor-icon{width:22px;height:22px;flex-shrink:0;display:flex;}
   .vendor-icon svg{width:100%;height:100%;}
 
@@ -10005,11 +10010,12 @@ function renderPanel(catId){
   if(VENDOR_OPTIONS[cat.special]){
     const opts = VENDOR_OPTIONS[cat.special];
     const cur = selectedVendor[cat.special];
-    html += `<div class="vendor-row">
-      ${opts.map(o=>`<button data-v="${o.key}" class="${cur===o.key?'active':''}"><span class="vendor-icon">${tileIcon('gV'+catId+o.key, o.light, o.dark, o.glyph(o.dark))}</span>${o.label}</button>`).join('')}
+    const brand = (cat.special==='cpu'||cat.special==='gpu');
+    html += `<div class="vendor-card"><div class="vendor-row">
+      ${opts.map(o=>`<button data-v="${o.key}" title="${o.label}" class="${cur===o.key?'active':''}">${brand ? `<span class="vbadge vb-${o.key}">${o.label}</span>` : `<span class="vendor-icon">${tileIcon('gV'+catId+o.key, o.light, o.dark, o.glyph(o.dark))}</span>${o.label}`}</button>`).join('')}
       ${vendorDetHtml(cat.special,cur)}
     </div>
-    <div class="info-card">${VENDOR_INFO[cat.special][cur]}</div>`;
+    <div class="info-card">${VENDOR_INFO[cat.special][cur]}</div></div>`;
   }
 
   if(catId === 'network'){
@@ -10130,7 +10136,7 @@ function renderPanel(catId){
     </div>`;
   }
 
-  if(catId === 'cpu'){ html += '<div class="cph" id="cpuHub"></div>'; }
+  if(catId === 'cpu'){ html += '<div class="sec-title">Monitor e overclock</div><div class="cph" id="cpuHub"></div><div class="sec-title">Ajustes do Windows</div>'; }
 
   if(catId === 'monitor'){
     html += `<div class="mk-wrap" style="margin-bottom:16px">
@@ -11367,6 +11373,8 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.74', date:'25/11/2026', items:[
+    'Abas CPU e GPU: seletor de fabricante redesenhado com selos limpos de Intel, AMD e NVIDIA no lugar do ícone de chip genérico, tudo dentro de um cartão só junto com a dica. A aba CPU ganhou títulos separando "Monitor e overclock" de "Ajustes do Windows".' ] },
   { v:'1.1.73', date:'24/11/2026', items:[
     '<b>Abas CPU e GPU abrem direto no seu fabricante</b>: o app detecta se o processador é Intel ou AMD (e a placa de vídeo) e já mostra os ajustes certos. O seletor ficou compacto, com a indicação do que foi detectado, e os ajustes que só valem pra um fabricante ganharam um grupo próprio.' ] },
   { v:'1.1.72', date:'24/11/2026', items:[
