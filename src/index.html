@@ -539,7 +539,7 @@
   .fx-ticks line{stroke:color-mix(in srgb,var(--muted) 40%,transparent);stroke-width:1.4;stroke-linecap:round;}
   .fx-ticks{transform-origin:120px 120px;animation:fxRot 28s linear infinite;}
   .fx-track{fill:none;stroke:color-mix(in srgb,var(--muted) 18%,transparent);stroke-width:7;}
-  .fx-prog{fill:none;stroke:var(--c);stroke-width:7;stroke-linecap:round;stroke-dasharray:578;stroke-dashoffset:578;transition:stroke-dashoffset .7s cubic-bezier(.3,.9,.2,1),stroke .4s;filter:drop-shadow(0 0 7px var(--c));}
+  .fx-prog{fill:none;stroke:var(--c);stroke-width:7;stroke-linecap:round;stroke-dasharray:578;stroke-dashoffset:578;transform:rotate(-90deg);transform-origin:120px 120px;transition:stroke-dashoffset .7s cubic-bezier(.3,.9,.2,1),stroke .4s;filter:drop-shadow(0 0 7px var(--c));}
   .fx-orb{transform-origin:120px 120px;} .fx-orb circle{fill:var(--c2);filter:drop-shadow(0 0 5px var(--c2));transition:fill .4s;}
   .fx-orb.o1{animation:fxRot 2.4s linear infinite;} .fx-orb.o2{animation:fxRot 3.9s linear infinite reverse;} .fx-orb.o3{animation:fxRot 5.6s linear infinite;}
   .fx-sweep{position:absolute;inset:6px;border-radius:50%;background:conic-gradient(from 0deg,transparent 0 62%,color-mix(in srgb,var(--c) 38%,transparent) 100%);-webkit-mask:radial-gradient(circle,transparent 52%,#000 54%,#000 96%,transparent 100%);mask:radial-gradient(circle,transparent 52%,#000 54%,#000 96%,transparent 100%);animation:fxRot 2s linear infinite;}
@@ -569,6 +569,13 @@
   .fx-chg h5{margin:0 0 2px;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);}
   .fx-chg div{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:12px;background:color-mix(in srgb,var(--card) 80%,transparent);border:1px solid var(--border-soft);font-size:12px;opacity:0;animation:fxLine .4s ease forwards;}
   .fx-chg span{flex:1;color:var(--muted);} .fx-chg s{color:var(--muted2);font-family:var(--mono);} .fx-chg i{font-style:normal;color:var(--muted2);} .fx-chg b{font-family:var(--mono);color:var(--text);} .fx-chg b.up{color:#22c55e;}
+  .fx-steps.fx-queue{flex-direction:row;flex-wrap:wrap;gap:6px;max-height:132px;overflow:auto;padding:2px;}
+  .fx-q{padding:5px 12px;border-radius:99px;font-size:11px;border:1px solid var(--border-soft);color:var(--muted);background:color-mix(in srgb,var(--card) 70%,transparent);animation:fxShim 1.8s ease-in-out infinite;}
+  .fx-q.ok{color:#22c55e;border-color:color-mix(in srgb,#22c55e 45%,transparent);background:color-mix(in srgb,#22c55e 10%,transparent);animation:fxPop .4s ease;} .fx-q.ok::before{content:"✓ ";font-weight:800;}
+  .fx-hud.ind .fx-prog{stroke-dasharray:150 428;stroke-dashoffset:0;animation:fxRotP 1.3s linear infinite;}
+  @keyframes fxRotP{from{transform:rotate(-90deg);}to{transform:rotate(270deg);}}
+  .fx-hud.ind .fx-orb.o1{animation-duration:1.4s;} .fx-hud.ind .fx-orb.o2{animation-duration:2.2s;} .fx-hud.ind .fx-sweep{animation-duration:1.1s;}
+  @keyframes fxShim{0%,100%{opacity:.55;}50%{opacity:1;}}
   @keyframes fxRot{to{transform:rotate(360deg);}}
   @keyframes fxBeat{0%,100%{transform:scale(1);}50%{transform:scale(1.12);}}
   @keyframes fxWave{0%{transform:scale(.8);opacity:.7;}100%{transform:scale(1.9);opacity:0;}}
@@ -7129,10 +7136,42 @@ function ocFlowEl(){
   if(!el){el=document.createElement('div');el.id='ocFlow';el.innerHTML='<div class="ocf-card"></div>';document.body.appendChild(el);}
   return el;
 }
+// Animação da bola para o "Aplicar" principal: fica girando enquanto o Windows executa o script de verdade
+// e só fecha em verde quando o script termina. Não dá pra saber qual ajuste está rodando agora (o script é um
+// só), então os ajustes ficam na fila e acendem juntos quando o Windows termina; o relógio no centro é real.
+async function runApplyOrb(titles,o){
+  if(OC_FLOW_BUSY)return false;
+  OC_FLOW_BUSY=true;
+  const ov=ocFlowEl(),card=ov.querySelector('.ocf-card'),n=titles.length;
+  card.innerHTML=fxHudHtml(o.title,`${n} ajuste${n>1?'s':''} na fila`,[])+'<div class="ocf-actions"><button class="oc-btn" id="ocFlowClose" disabled>Fechar</button></div>';
+  const q=card.querySelector('.fx-steps');q.classList.add('fx-queue');q.innerHTML=titles.map(t=>`<span class="fx-q">${gmEsc(t)}</span>`).join('');
+  const btn=document.getElementById('ocFlowClose');btn.onclick=()=>ov.classList.remove('show');
+  ov.classList.add('show');
+  const hud=document.getElementById('fxHud'),prog=document.getElementById('fxProg'),pct=document.getElementById('fxPct'),log=document.getElementById('fxLog'),subEl=document.getElementById('fxSub');
+  const T0=Date.now(),mmss=()=>{const s=Math.floor((Date.now()-T0)/1000);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');};
+  const say=(t,c)=>{const d=document.createElement('div');if(c)d.className=c;d.innerHTML=`<b>${mmss()}</b>${t}`;log.appendChild(d);while(log.children.length>5)log.removeChild(log.firstChild);};
+  pct.textContent='00:00';hud.classList.add('ind');
+  say('Preparando o script de '+n+' ajuste'+(n>1?'s':''));
+  const tick=setInterval(()=>{pct.textContent=mmss();},250);
+  await gmSleep(500);subEl.textContent='Windows executando...';say('→ Executando no Windows (aceite a permissão de administrador se ele pedir)');
+  let ok=true,err=null;
+  try{await o.run();}catch(e){ok=false;err=String(e);}
+  clearInterval(tick);hud.classList.remove('ind');
+  if(ok){
+    prog.style.strokeDashoffset=0;hud.classList.add('done');subEl.textContent=o.doneSub||'Concluído';say('✓ Script terminou sem erros em '+mmss(),'ok');
+    q.querySelectorAll('.fx-q').forEach((c,i)=>setTimeout(()=>c.classList.add('ok'),i*45));
+    const stage=card.querySelector('.fx-stage');for(let k=0;k<18;k++){const sp=document.createElement('i');sp.className='fx-spark';sp.style.setProperty('--a',(k*20)+'deg');sp.style.animationDelay=(k%3)*40+'ms';stage.appendChild(sp);}
+  }else{
+    hud.classList.add('err');subEl.textContent='Não foi aplicado';say('✗ '+gmEsc(err),'er');
+  }
+  btn.disabled=false;OC_FLOW_BUSY=false;
+  if(ok&&typeof o.onDone==='function')o.onDone();
+  return ok;
+}
 function fxHudHtml(title,sub,steps){
   const ticks=Array.from({length:60},(_,i)=>{const big=i%5===0;return`<line x1="120" y1="${big?8:11}" x2="120" y2="${big?18:15}" transform="rotate(${i*6} 120 120)"/>`;}).join('');
   return`<div class="fx-hud" id="fxHud"><div class="fx-stage"><div class="fx-sweep"></div>
-    <svg class="fx-svg" viewBox="0 0 240 240"><g class="fx-ticks">${ticks}</g><circle class="fx-track" cx="120" cy="120" r="92"/><circle class="fx-prog" id="fxProg" cx="120" cy="120" r="92" transform="rotate(-90 120 120)"/>
+    <svg class="fx-svg" viewBox="0 0 240 240"><g class="fx-ticks">${ticks}</g><circle class="fx-track" cx="120" cy="120" r="92"/><circle class="fx-prog" id="fxProg" cx="120" cy="120" r="92"/>
       <g class="fx-orb o1"><circle cx="120" cy="22" r="3.6"/></g><g class="fx-orb o2"><circle cx="120" cy="40" r="2.6"/></g><g class="fx-orb o3"><circle cx="120" cy="204" r="2.2"/></g></svg>
     <div class="fx-chip"><i></i><i></i><svg viewBox="0 0 24 24">${GM_PIPE_ICON.cpu}</svg></div><div class="fx-pct" id="fxPct">0%</div>
     <svg class="fx-big" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
@@ -11510,6 +11549,8 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.77', date:'25/11/2026', items:[
+    '<b>Aplicar ajustes com a bola animada</b>: ao clicar em Aplicar, abre uma bola com anel girando, órbitas e chip pulsando, relógio real no centro e os ajustes na fila. Agora o app <b>espera o Windows terminar o script de verdade</b> antes de fechar em verde. Se você negar o pedido de administrador ou o script falhar, a bola fica vermelha e mostra o motivo, em vez de dizer que deu certo.' ] },
   { v:'1.1.76', date:'25/11/2026', items:[
     '<b>Animação de aplicar totalmente nova</b>: anel de progresso brilhante com marcadores girando, chip pulsando com ondas, varredura em volta, lista de etapas com roda em cada uma, terminal ao vivo com o tempo real de cada comando e explosão de faíscas com o check no final. Se algo falhar, o anel fica vermelho e mostra a etapa e o motivo.' ] },
   { v:'1.1.75', date:'25/11/2026', items:[
@@ -12054,16 +12095,20 @@ document.getElementById('genBtn').onclick = ()=>{
     return;
   }
 
-  runApplyOverlay(selectedTitles, {
-    title: 'Aplicando otimizações...',
-    doneTitle: 'Otimização aplicada!',
-    doneSub: `${selectedTitles.length} ajuste(s) prontos`,
-    onFinish: ()=>{
+  runApplyOrb(selectedTitles, {
+    title: 'Aplicando otimizações',
+    doneSub: `${selectedTitles.length} ajuste(s) aplicados · reinicie o PC para valer tudo`,
+    run: async ()=>{
       const script = buildScript();
-      saveOrRunScript(script, 'otimizacao-dgeras.bat');
-
       document.getElementById('preview').textContent = script;
       document.getElementById('previewSection').hidden = false;
+      if (window.__TAURI__ && window.dgerasRunScriptWait){
+        await window.dgerasRunScriptWait(script);
+      } else {
+        await saveOrRunScript(script, 'otimizacao-dgeras.bat');
+      }
+    },
+    onDone: ()=>{
       pushDgerasHistory({ type:'optimize', label:`${selectedTitles.length} ajuste(s) aplicados` });
       renderRestoreWidget();
     }

@@ -1730,6 +1730,54 @@ fn run_bat_script(script_text: String) -> Result<String, String> {
     }
 }
 
+/// Igual ao run_bat_script, mas ESPERA o script terminar e devolve o resultado real:
+/// concluído, UAC cancelado ou erro. Remove os "pause" (rodando escondido, eles travariam esperando tecla).
+#[tauri::command]
+async fn run_bat_script_wait(script_text: String) -> Result<String, String> {
+    #[cfg(target_os = "windows")]
+    {
+        let bat_path = std::env::temp_dir().join(format!("dgeras-run-{}.bat", uuid_like()));
+        let limpo: String = script_text
+            .lines()
+            .filter(|l| !l.trim().eq_ignore_ascii_case("pause"))
+            .collect::<Vec<_>>()
+            .join("\r\n");
+        fs::write(&bat_path, limpo).map_err(|e| format!("Falha ao gravar script: {e}"))?;
+        let ps_launcher = format!(
+            "$p = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c \"{path}\"' -Verb RunAs -WindowStyle Hidden -Wait -PassThru; exit $p.ExitCode",
+            path = bat_path.to_string_lossy().replace('\'', "''")
+        );
+        let out = tokio::task::spawn_blocking(move || {
+            Command::new("powershell")
+                .args(["-NoProfile", "-WindowStyle", "Hidden", "-Command", &ps_launcher])
+                .creation_flags(CREATE_NO_WINDOW)
+                .output()
+        })
+        .await
+        .map_err(|e| format!("Falha interna ao rodar o script: {e}"))?;
+        let _ = fs::remove_file(&bat_path);
+        match out {
+            Ok(o) => {
+                let code = o.status.code();
+                let stderr = String::from_utf8_lossy(&o.stderr).to_string();
+                if o.status.success() {
+                    Ok("Script concluído pelo Windows".to_string())
+                } else if code == Some(1223) || stderr.contains("1223") || stderr.to_lowercase().contains("cancel") {
+                    Err("A janela de permissão de administrador (UAC) foi cancelada ou fechada, então nada foi aplicado.".to_string())
+                } else {
+                    Err(format!("O Windows terminou o script com erro (código {}). {}", code.map(|c| c.to_string()).unwrap_or_else(|| "?".to_string()), stderr.trim()))
+                }
+            }
+            Err(e) => Err(format!("Falha ao executar o script: {e}")),
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = script_text;
+        Err("Disponível só no Windows".to_string())
+    }
+}
+
 fn uuid_like() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
     let nanos = SystemTime::now()
@@ -7172,7 +7220,7 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
         .manage(PdhState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_bat_script, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes, debloat_list, debloat_remove, profile_scan, game_session_start, game_session_stop, game_session_sample, audit_registry, audit_powercfg, power_status, cpu_live_start, cpu_live_stop, cpu_live_sample, cpu_stress_start, cpu_stress_stop, open_url, oc_status, oc_telemetry, oc_set_power, oc_set_undervolt, oc_restore, oc_close, amd_set_pstate, amd_restore, amd_set_boost, oc_set_voltage_planes, amd_smu_status, amd_smu_set_limits])
+        .invoke_handler(tauri::generate_handler![run_bat_script, run_bat_script_wait, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes, debloat_list, debloat_remove, profile_scan, game_session_start, game_session_stop, game_session_sample, audit_registry, audit_powercfg, power_status, cpu_live_start, cpu_live_stop, cpu_live_sample, cpu_stress_start, cpu_stress_stop, open_url, oc_status, oc_telemetry, oc_set_power, oc_set_undervolt, oc_restore, oc_close, amd_set_pstate, amd_restore, amd_set_boost, oc_set_voltage_planes, amd_smu_status, amd_smu_set_limits])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));

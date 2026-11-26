@@ -9,6 +9,12 @@ window.dgerasRunScript = async function (scriptText) {
   return await invoke('run_bat_script', { scriptText });
 };
 
+// Versão que ESPERA o script terminar e devolve o resultado real (ou erro: UAC cancelado, falha).
+window.dgerasRunScriptWait = async function (scriptText) {
+  const { invoke } = window.__TAURI__.core;
+  return await invoke('run_bat_script_wait', { scriptText });
+};
+
 // ===== Checagem automática de atualização (estilo Discord) =====
 // Roda toda vez que o app abre. Se tiver versão nova, baixa sozinho em segundo
 // plano (sem perguntar nada) e reinicia automaticamente quando terminar.
