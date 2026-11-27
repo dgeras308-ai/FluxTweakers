@@ -629,6 +629,23 @@
   .sc-cat{display:grid;grid-template-columns:130px 1fr 54px;align-items:center;gap:12px;padding:5px 0;font-size:12px;} .sc-cat span{color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;} .sc-cat em{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--muted);text-align:right;}
   .sc-bar{height:7px;border-radius:99px;background:color-mix(in srgb,var(--muted) 18%,transparent);overflow:hidden;} .sc-bar i{display:block;height:100%;width:0;border-radius:99px;background:var(--bc);transition:width 1s cubic-bezier(.3,.9,.2,1);}
   .sc-note{margin:10px 0 0;font-size:10.5px;color:var(--muted2);}
+  /* ===== Perfil: análise de desempenho 0-100 ===== */
+  .sc-num b i{font-style:normal;} .px-area-top b i{font-style:normal;} .rd-f b span{display:inline;margin:0;}
+  .px-sec{display:flex;align-items:baseline;gap:10px;margin:22px 0 10px;font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);} .px-sec small{font-weight:500;text-transform:none;letter-spacing:0;color:var(--muted);font-size:11.5px;}
+  .px-areas{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-top:14px;}
+  .px-area{padding:14px 16px;border-radius:18px;background:var(--card);border:1px solid var(--border-soft);}
+  .px-area-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;} .px-area-top span{font-size:12px;font-weight:700;color:var(--text);}
+  .px-area-top b{font-family:var(--mono);font-size:26px;font-weight:800;line-height:1;color:var(--ac);} .px-area-top b em{font-style:normal;font-size:11px;color:var(--muted2);margin-left:2px;}
+  .px-bar{height:6px;border-radius:99px;background:color-mix(in srgb,var(--muted) 18%,transparent);margin:10px 0 8px;overflow:hidden;} .px-bar i{display:block;height:100%;width:0;border-radius:99px;background:var(--ac);transition:width 1s cubic-bezier(.3,.9,.2,1);}
+  .px-area p{margin:0;font-size:11px;line-height:1.5;color:var(--muted);min-height:33px;}
+  .px-procs{border-radius:18px;background:var(--card);border:1px solid var(--border-soft);overflow:hidden;}
+  .px-row{display:grid;grid-template-columns:minmax(150px,1.5fr) 118px 62px 78px minmax(150px,2fr) 84px;gap:10px;align-items:center;padding:10px 16px;border-top:1px solid var(--border-soft);font-size:12px;} .px-row:first-child{border-top:0;}
+  .px-head{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted2);background:color-mix(in srgb,var(--muted) 6%,transparent);}
+  .px-name{min-width:0;} .px-name b{display:block;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;} .px-name small{color:var(--muted2);font-size:10.5px;}
+  .px-kind{display:inline-block;font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:99px;border:1px solid var(--border-soft);color:var(--muted);white-space:nowrap;} .px-kind.w{color:#f59e0b;border-color:color-mix(in srgb,#f59e0b 45%,transparent);background:color-mix(in srgb,#f59e0b 10%,transparent);} .px-kind.d{color:#ef4444;border-color:color-mix(in srgb,#ef4444 45%,transparent);background:color-mix(in srgb,#ef4444 10%,transparent);}
+  .px-num{font-family:var(--mono);color:var(--text);text-align:right;} .px-note{color:var(--muted);font-size:11px;line-height:1.45;}
+  .px-row .oc-btn{padding:5px 12px;font-size:11px;} .px-startup{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 0;} .px-startup i{font-style:normal;font-size:11px;padding:4px 11px;border-radius:99px;border:1px solid var(--border-soft);color:var(--muted);}
+  @media(max-width:860px){.px-row{grid-template-columns:1fr 70px 70px;} .px-row>:nth-child(2),.px-row>:nth-child(5){display:none;}}
   .smu-row{margin-bottom:10px;} .smu-top{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);} .smu-top b{font-family:var(--mono);color:var(--text);} .smu-top em{font-style:normal;font-family:var(--mono);color:var(--accent);min-width:40px;text-align:right;}
   .smu-bar{height:6px;border-radius:99px;background:color-mix(in srgb,var(--muted) 20%,transparent);margin-top:5px;overflow:hidden;} .smu-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .6s;} .smu-bar i.hot{background:#f59e0b;}
   .oc-block select{background:var(--panel);color:var(--text);border:1px solid var(--border-soft);border-radius:9px;padding:7px 10px;font-family:inherit;font-size:12px;}
@@ -6280,7 +6297,6 @@ function audRowHtml(r, mode){
   return `<label class="au-row" data-au="${ppEsc(r.it.id)}"><input type="checkbox" ${AUD.sel.has(r.it.id) ? 'checked' : ''}><div><p class="au-t">${ppEsc(r.it.title)}</p><p class="au-d">${ppEsc(r.it.desc || '')}</p><p class="au-now" title="valor atual → valor do ajuste">hoje: ${ppEsc(now)}</p></div></label>`;
 }
 function audRender(){
-  ppScoreRender();
   const box = document.getElementById('audBox'); if (!box) return;
   if (!window.__TAURI__){ box.innerHTML = '<div class="pp-loading">A auditoria só funciona no app instalado.</div>'; return; }
   if (AUD.running){ box.innerHTML = '<div class="pp-loading">Verificando o registro e o plano de energia, ajuste por ajuste...</div>'; return; }
@@ -6340,68 +6356,147 @@ function ppRender(){
   if (PP.loading){ root.innerHTML = '<div class="pp-loading">Lendo o seu hardware e o estado do Windows...<br>Leva alguns segundos.</div>'; return; }
   if (PP.err){ root.innerHTML = `<div class="pp-loading">Não consegui ler o seu PC: ${ppEsc(PP.err)}<br><br><button class="pp-apply" id="ppRetry" style="align-self:center">Tentar de novo</button></div>`; document.getElementById('ppRetry').onclick = () => ppLoad(true, true); return; }
   if (!PP.data){ root.innerHTML = ppHeroHtml(); const sb = document.getElementById('ppStart'); if (sb) sb.onclick = () => ppLoad(true, true); return; }
-  const a = PP.analysis = ppAnalyze(PP.data);
-  const warns = a.checks.filter(c => c.s === 'warn').length;
-  const ico = { ok:'✓', warn:'!', info:'i' };
+  PP.analysis = ppAnalyze(PP.data);
   root.innerHTML = `
     <div id="ppScore"></div>
-    <p class="pp-sec-title">Seu PC <small>lido agora, direto do Windows</small></p>
-    <div class="pp-cards">${a.cards.map(c => `<div class="pp-card"><div class="pp-card-top"><span class="pp-card-label">${c.label}</span>${c.chip ? `<span class="pp-chip">${ppEsc(c.chip)}</span>` : ''}</div><p class="pp-card-val">${ppEsc(c.val)}</p><p class="pp-card-sub">${ppEsc(c.sub || '')}</p></div>`).join('')}</div>
-    <p class="pp-sec-title" id="ppChecksSec">Verificações <small>${warns ? warns + ' ponto' + (warns > 1 ? 's' : '') + ' de atenção' : 'nenhum problema grave'}</small></p>
-    <div class="pp-checks">${a.checks.map(c => `<div class="pp-check ${c.s}"><span class="pp-ico">${ico[c.s]}</span><div><p class="pp-check-t">${ppEsc(c.t)}</p><p class="pp-check-d">${c.d}</p></div></div>`).join('') || '<div class="pp-check info"><span class="pp-ico">i</span><div><p class="pp-check-t">Nada a reportar</p></div></div>'}</div>
-    <p class="pp-sec-title" id="ppAudSec">Otimizações recomendadas pro seu PC <small>comparadas com o registro e o plano de energia de agora</small></p>
+    <p class="px-sec" id="ppAudSec">Ajustes do Windows recomendados <small>comparados com o registro e o plano de energia de agora</small></p>
     <div class="au-box" id="audBox"></div>`;
   ppScoreRender();
   audRender();
 }
 
-// Nota real: % dos ajustes recomendados (não arriscados e que servem pro seu hardware) que a auditoria
-// encontrou JÁ aplicados no registro / plano de energia. Nada é estimado: é aplicados ÷ (aplicados + pendentes).
-function ppScoreCalc(){
-  const a=PP.analysis;if(!a||!AUD.res)return null;
-  const rows=AUD.res.rows.filter(r=>r.vendorOk&&!r.risky&&(r.status==='pending'||r.status==='done'));
-  const done=rows.filter(r=>r.status==='done').length,pend=rows.length-done;
-  const cats=new Map();rows.forEach(r=>{const c=cats.get(r.catId)||{d:0,n:0};c.n++;if(r.status==='done')c.d++;cats.set(r.catId,c);});
-  const hwOk=a.checks.filter(c=>c.s==='ok').length,hwWarn=a.checks.filter(c=>c.s==='warn').length;
-  return{win:rows.length?Math.round(done/rows.length*100):null,done,pend,total:rows.length,
-    cats:[...cats.entries()].map(([id,c])=>({id,label:DATA[id]?DATA[id].label:id,d:c.d,n:c.n,pct:Math.round(c.d/c.n*100)})).sort((x,y)=>x.pct-y.pct||y.n-x.n),
-    hw:(hwOk+hwWarn)?Math.round(hwOk/(hwOk+hwWarn)*100):null,hwOk,hwWarn};
+// ===================== DESEMPENHO REAL (0 a 100) =====================
+// Cada área vira uma nota de 0 a 100 a partir de medições do seu PC agora (perf_scan + profile_scan).
+// Critérios (pesquisa em várias fontes): RAM acima de ~80% já limita; SSD com menos de 10-20% livre perde
+// desempenho; reiniciar de verdade a cada 1-2 semanas; programas de nuvem, RGB, Adobe, Teams, Widgets etc.
+// rodando em segundo plano gastam RAM e CPU sem necessidade.
+const PERF={data:null};
+const PERF_DB=[["onedrive","cloud","OneDrive","Sincroniza arquivos o tempo todo e pesa em disco e RAM",1],["dropbox","cloud","Dropbox","Cliente de nuvem sempre sincronizando",1],["googledrivefs","cloud","Google Drive","Cliente de nuvem sempre sincronizando",1],["teams","comms","Microsoft Teams","Abre vários processos no login e gasta RAM mesmo sem chamada",1],["ms-teams","comms","Microsoft Teams","Abre vários processos no login e gasta RAM mesmo sem chamada",1],["slack","comms","Slack","App web pesado rodando em segundo plano",1],["zoom","comms","Zoom","Fica residente mesmo fora de reunião",1],["skype","comms","Skype","Fica residente em segundo plano",1],["whatsapp","comms","WhatsApp","App web rodando em segundo plano",1],["telegram","comms","Telegram","Fica residente em segundo plano",1],["discord","chat","Discord","O que mais pesa é o overlay e a aceleração por hardware",1],["spotify","media","Spotify","Mais pesado do que parece; o player web ou o celular dispensam o app",1],["epicgameslauncher","launcher","Epic Games Launcher","Fica ativo em segundo plano mesmo sem jogar",1],["epicwebhelper","launcher","Epic Games (web)","Parte do Epic Games Launcher",1],["steamwebhelper","launcher","Steam (interface)","Parte da interface do Steam; fecha junto com ele",0],["steam","launcher","Steam","Lançador de jogos",0],["battle.net","launcher","Battle.net","Lançador de jogos",0],["galaxyclient","launcher","GOG Galaxy","Lançador de jogos",0],["eadesktop","launcher","EA app","Lançador de jogos",0],["riotclientservices","launcher","Riot Client","Lançador de jogos",0],["icue","rgb","Corsair iCUE","Software de RGB que lê o hardware o tempo todo. Configure e feche: as luzes ficam",1],["lghub","rgb","Logitech G Hub","Software de periféricos; configure e feche",1],["lghub_agent","rgb","Logitech G Hub","Software de periféricos; configure e feche",1],["lghub_updater","rgb","Logitech G Hub","Atualizador do software de periféricos",1],["nzxt cam","rgb","NZXT CAM","Software de RGB e monitoramento",1],["razer synapse 3","rgb","Razer Synapse","Software de RGB; configure e feche",1],["razercentral","rgb","Razer Central","Software de RGB; configure e feche",1],["armourycrate.usersessionhelper","rgb","Armoury Crate","Utilitário da ASUS que costuma gerar picos de CPU",1],["steelseriesgg","rgb","SteelSeries GG","Software de periféricos",0],["wallpaper32","rgb","Wallpaper Engine","Papel de parede animado usa CPU e GPU o tempo todo",1],["wallpaper64","rgb","Wallpaper Engine","Papel de parede animado usa CPU e GPU o tempo todo",1],["ccxprocess","adobe","Adobe Creative Cloud","Serviços da Adobe ficam rodando o tempo todo",1],["creative cloud","adobe","Adobe Creative Cloud","Serviços da Adobe ficam rodando o tempo todo",1],["adobedesktopservice","adobe","Adobe Desktop Service","Serviço da Adobe em segundo plano",1],["adobeipcbroker","adobe","Adobe IPC Broker","Serviço da Adobe em segundo plano",1],["coresync","adobe","Adobe CoreSync","Sincronização da Adobe em segundo plano",1],["acrotray","adobe","Adobe Acrobat (bandeja)","Fica residente sem necessidade",1],["adobecollabsync","adobe","Adobe Collab Sync","Sincronização da Adobe em segundo plano",1],["googleupdate","updater","Google Update","Procura atualizações em segundo plano",1],["microsoftedgeupdate","updater","Edge Update","Procura atualizações em segundo plano",1],["jusched","updater","Java Update","Procura atualizações em segundo plano",1],["widgets","bloat","Widgets do Windows","Puxa notícias e clima pelo WebView2 e consome RAM",1],["widgetservice","bloat","Widgets do Windows","Puxa notícias e clima e consome RAM",1],["yourphone","bloat","Phone Link","Integração com celular que quase ninguém usa",1],["phoneexperiencehost","bloat","Phone Link","Integração com celular que quase ninguém usa",1],["gamebarpresencewriter","bloat","Xbox Game Bar","Fica ativo mesmo para quem não usa a barra de jogos",1],["msedgewebview2","shared","WebView2 (Edge)","Motor web compartilhado: o consumo vem do app que o usa (Teams, Widgets, Copilot...)",0],["rtss","overlay","RivaTuner (RTSS)","Overlay de FPS",0],["msiafterburner","overlay","MSI Afterburner","Monitoramento e overclock de vídeo",0],["nvidia share","overlay","NVIDIA Share","Overlay e gravação da GeForce Experience",0],["nvsphelper64","overlay","NVIDIA Overlay","Overlay da GeForce Experience",0],["msmpeng","security","Windows Defender","Antivírus em tempo real: necessário, mas pesa durante varreduras",0],["chrome","browser","Google Chrome","O peso vem das abas e das extensões abertas",0],["msedge","browser","Microsoft Edge","O peso vem das abas e do modo de segundo plano do Edge",0],["firefox","browser","Firefox","O peso vem das abas e das extensões abertas",0],["brave","browser","Brave","O peso vem das abas e das extensões abertas",0],["opera","browser","Opera","O peso vem das abas e das extensões abertas",0],["vivaldi","browser","Vivaldi","O peso vem das abas e das extensões abertas",0]];
+const PERF_CORE=new Set(["system","registry","smss","csrss","wininit","winlogon","services","lsass","svchost","dwm","explorer","fontdrvhost","memory compression","memcompression","audiodg","ctfmon","taskhostw","runtimebroker","sihost","searchindexer","spoolsv","conhost","idle","system idle process","startmenuexperiencehost","shellexperiencehost","textinputhost","searchhost","lockapp","dllhost","wmiprvse","securityhealthsystray","securityhealthservice","nissrv","powershell","fluxtweakers","msedgewebview2host","sppsvc","taskmgr","wudfhost","dashost"]);
+const PERF_KIND={cloud:['Nuvem',1],comms:['Comunicação',.5],chat:['Chat',.5],media:['Música',.5],launcher:['Lançador de jogos',.5],rgb:['RGB / fabricante',1],adobe:['Adobe',1],updater:['Atualizador',1],bloat:['Windows extra',1],overlay:['Overlay',.5],shared:['Compartilhado',0],security:['Segurança',0],browser:['Navegador',0],core:['Sistema',0],other:['Sem classificação',0]};
+const PERF_MAP=new Map(PERF_DB.map(r=>[r[0],{kind:r[1],label:r[2],note:r[3],kill:!!r[4]}]));
+const PERF_PAT=[[/^adobe/,'adobe','Adobe'],[/^armourycrate/,'rgb','Armoury Crate'],[/^nahimic/,'rgb','Nahimic (áudio da fabricante)'],[/^razer/,'rgb','Razer'],[/^lghub/,'rgb','Logitech G Hub'],[/^(corsair|icue)/,'rgb','Corsair'],[/^steelseries/,'rgb','SteelSeries'],[/^nzxt/,'rgb','NZXT'],[/^(msi|dragoncenter)/,'rgb','MSI'],[/^onedrive/,'cloud','OneDrive'],[/^(ms-)?teams/,'comms','Microsoft Teams'],[/^widget/,'bloat','Widgets do Windows'],[/^(yourphone|phoneexperience|gamebar)/,'bloat','Windows extra'],[/^google(update|crashhandler)/,'updater','Google Update'],[/^microsoftedge/,'updater','Edge'],[/^(avg|avast|kaspersky|mbam|norton|eset|bitdefender|nissrv|securityhealth)/,'security','Antivírus']];
+function perfClassify(raw){
+  const n=String(raw||'').toLowerCase().replace(/\.exe$/,'').trim();
+  if(PERF_MAP.has(n))return{...PERF_MAP.get(n),name:n};
+  if(PERF_CORE.has(n))return{kind:'core',label:raw,note:'',kill:false,name:n};
+  for(const [re,k,l] of PERF_PAT)if(re.test(n))return{kind:k,label:l,note:'',kill:false,name:n};
+  return{kind:'other',label:raw,note:'',kill:false,name:n};
 }
+const perfMB=mb=>mb>=1024?(mb/1024).toFixed(1).replace('.',',')+' GB':Math.round(mb)+' MB';
+const perfExe=cmd=>{const m=String(cmd||'').match(/([^\\\/"]+)\.exe/i);return m?m[1]:'';};
 function ppVerdict(p){
   return p>=90?{t:'Ótimo',c:'#22c55e'}:p>=70?{t:'Bom',c:'#3b82f6'}:p>=40?{t:'Regular',c:'#f59e0b'}:{t:'Ruim',c:'#ef4444'};
 }
+function perfAreas(){
+  const P=PERF.data;if(!P||!P.ramTotalMB)return null;
+  const H=PP.data||{},list=[],clamp=x=>Math.max(0,Math.min(100,Math.round(x)));
+  const procs=ppArr(P.procs).map(x=>({...x,c:perfClassify(x.name)})).filter(x=>!/^(idle|system idle process)$/i.test(x.name));
+  const tot=P.ramTotalMB,usedMB=tot-P.ramFreeMB,usedPct=usedMB/tot*100;
+  const wOf=x=>PERF_KIND[x.c.kind][1];
+  // 1. Processos em segundo plano
+  const disp=procs.filter(x=>wOf(x)>0);
+  const dRam=disp.reduce((a,x)=>a+x.ramMB*wOf(x),0),dCpu=disp.reduce((a,x)=>a+x.cpu*wOf(x),0);
+  const rawRam=disp.reduce((a,x)=>a+x.ramMB,0),rawCpu=disp.reduce((a,x)=>a+x.cpu,0);
+  list.push({id:'proc',label:'Programas em segundo plano',w:25,score:clamp(100-Math.min(100,dRam/tot*100*4+dCpu*5)),
+    why:disp.length?`${disp.length} programa${disp.length>1?'s':''} dispensáve${disp.length>1?'is':'l'} usa${disp.length>1?'m':''} ${perfMB(rawRam)} de RAM e ${rawCpu.toFixed(1).replace('.',',')}% da CPU`:'Nada dispensável pesando'});
+  // 2. Processador
+  if(P.cpuAvg!=null)list.push({id:'cpu',label:'Processador',w:15,score:clamp(100-Math.max(0,P.cpuAvg-8)*1.25),why:`Carga média de ${String(P.cpuAvg).replace('.',',')}% durante a medição`});
+  // 3. Memória
+  let mem=usedPct<=50?100:usedPct<=80?100-(usedPct-50)*(40/30):60-(usedPct-80)*3;
+  const mods=ppArr(H.ram&&H.ram.modules),slots=Number(H.ram&&H.ram.slots)||0;
+  const lap=ppArr(H.chassis).some(c=>[8,9,10,14,30,31,32].includes(Number(c)))||H.battery===true;
+  const mn=[`${Math.round(usedPct)}% em uso (${perfMB(usedMB)} de ${perfMB(tot)})`];
+  const rated=Math.max(0,...mods.map(x=>Number(x.Speed)||0)),conf=Math.max(0,...mods.map(x=>Number(x.ConfiguredClockSpeed)||0));
+  if(rated&&conf&&conf<rated*0.9){mem-=10;mn.push(`pentes a ${conf} MT/s, abaixo dos ${rated} nominais`);}
+  if(mods.length===1&&slots>=2&&!lap){mem-=10;mn.push('um pente só (single channel)');}
+  if(P.commitTotalMB&&P.commitFreeMB/P.commitTotalMB<0.15){mem-=10;mn.push('memória virtual quase cheia');}
+  list.push({id:'mem',label:'Memória',w:20,score:clamp(mem),why:mn.join(' · ')});
+  // 4. Armazenamento
+  const cd=H.cDrive||{},disks=ppArr(H.disks),sys=disks.find(x=>x.IsSystem===true)||disks[0];
+  if((cd.SizeGB&&cd.FreeGB!==undefined)||sys){
+    let st=100;const sn=[];
+    if(cd.SizeGB&&cd.FreeGB!==undefined){const f=cd.FreeGB/cd.SizeGB*100;st=f>=25?100:f>=10?50+(f-10)*(50/15):f*5;sn.push(`${Math.round(f)}% livre no C:`);}
+    if(sys&&/hdd/i.test(String(sys.MediaType))){st-=25;sn.push('Windows instalado em HDD');}
+    if(sys&&sys.HealthStatus&&!/healthy/i.test(sys.HealthStatus)){st-=30;sn.push('o disco reporta problema de saúde');}
+    if(P.diskBusy!=null&&P.diskBusy>60){st-=15;sn.push(`disco ocupado ${Math.round(P.diskBusy)}% do tempo`);}
+    list.push({id:'disk',label:'Armazenamento',w:15,score:clamp(st),why:sn.join(' · ')||'Espaço e saúde em dia'});
+  }
+  // 5. Inicialização e tempo ligado
+  const su=ppArr(P.startup).map(x=>({...x,c:perfClassify(perfExe(x.Command)||x.Name)}));
+  const sDisp=su.filter(x=>PERF_KIND[x.c.kind][1]>0);
+  const days=P.uptimeHours!=null?P.uptimeHours/24:0;
+  let sa=100-Math.max(0,su.length-6)*4-Math.min(24,sDisp.length*6);
+  const sw=[`${su.length} programa${su.length===1?'':'s'} abrem com o Windows`];
+  if(sDisp.length)sw.push(`${sDisp.length} dispensáve${sDisp.length>1?'is':'l'}`);
+  if(days>14){sa-=20;sw.push(`ligado há ${Math.floor(days)} dias sem reiniciar`);}else if(days>7){sa-=10;sw.push(`ligado há ${Math.floor(days)} dias`);}
+  if(P.pendingReboot){sa-=10;sw.push('reinício pendente');}
+  list.push({id:'start',label:'Inicialização e uso contínuo',w:10,score:clamp(sa),why:sw.join(' · ')});
+  // 6. Vídeo
+  const gp=ppArr(H.gpus).filter(g=>g&&g.Name&&!/basic|remote|virtual|meta|parsec|indirect|displaylink|mirage/i.test(g.Name));
+  if(gp.length){
+    const g=gp.find(x=>!/intel|uhd|iris/i.test(x.Name))||gp[0];let gs=100;const gn=[];
+    const mo=g.DriverDate?ppMonths(g.DriverDate):null;
+    if(mo!=null){if(mo>36)gs-=45;else if(mo>24)gs-=30;else if(mo>12)gs-=15;gn.push(`driver com ${Math.floor(mo)} meses`);}
+    if(P.gpu&&P.gpu.vramTotalMB&&P.gpu.vramUsedMB/P.gpu.vramTotalMB>0.92){gs-=20;gn.push('VRAM quase cheia');}
+    list.push({id:'gpu',label:'Vídeo',w:5,score:clamp(gs),why:gn.join(' · ')||'Driver em dia'});
+  }
+  // 7. Energia e Windows
+  const guid=String(H.powerGuid||'').toLowerCase();
+  if(guid){
+    let en=/8c5e7fda|e9a42b02/.test(guid)?100:/381b4222/.test(guid)?(lap?90:75):/a1841308/.test(guid)?25:70;
+    const en_n=[/8c5e7fda/.test(guid)?'plano Alto desempenho':/e9a42b02/.test(guid)?'plano Desempenho máximo':/381b4222/.test(guid)?'plano Equilibrado':/a1841308/.test(guid)?'plano Economia de energia':'plano personalizado'];
+    if(H.gameMode===0){en-=15;en_n.push('Modo de Jogo desligado');}
+    list.push({id:'power',label:'Energia e Windows',w:10,score:clamp(en),why:en_n.join(' · ')});
+  }
+  const sumW=list.reduce((a,x)=>a+x.w,0),overall=Math.round(list.reduce((a,x)=>a+x.score*x.w,0)/sumW);
+  return{list,overall,sumW,procs,disp,rawRam,rawCpu,usedMB,tot,usedPct,startup:su,startupDisp:sDisp,days};
+}
+function perfAnimate(el){
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    el.querySelectorAll('[data-w]').forEach(b=>{b.style.width=b.dataset.w+'%';});
+    const ring=el.querySelector('#scP');if(ring)ring.style.strokeDashoffset=408*(1-(+ring.dataset.v)/100);
+  }));
+  el.querySelectorAll('[data-count]').forEach(n=>{const to=+n.dataset.count,t0=performance.now();(function step(t){const k=Math.min(1,(t-t0)/1100),e=1-Math.pow(1-k,3);n.firstChild.nodeValue=String(Math.round(to*e));if(k<1)requestAnimationFrame(step);})(t0);});
+}
 function ppScoreRender(){
   const el=document.getElementById('ppScore');if(!el)return;
-  const ring=(cls,sc)=>`<div class="sc-ring ${cls}" style="--sc:${sc}"><svg viewBox="0 0 156 156"><circle class="t" cx="78" cy="78" r="65"/><circle class="p" id="scP" cx="78" cy="78" r="65"/></svg><div class="sc-num"><b id="scN">${cls==='wait'?'…':'0'}<em>${cls==='wait'?'':'%'}</em></b><span>otimizado</span></div></div>`;
-  const p=ppScoreCalc();
-  if(!p||p.win==null){
-    const msg=AUD.err?'Não consegui calcular a nota: '+ppEsc(AUD.err):(AUD.res?'Nenhum ajuste verificável serve pro seu PC.':'Auditando o registro e o plano de energia do seu PC...');
-    el.innerHTML=`<div class="sc-hero">${ring('wait','var(--accent)')}<div class="sc-info"><div class="sc-verdict">${AUD.err?'Sem nota':AUD.res?'Sem dados':'Calculando...'}</div><p class="sc-line">${msg}</p></div></div>`;
-    return;
+  const ringHtml=(cls,sc,v)=>`<div class="sc-ring ${cls}" style="--sc:${sc}"><svg viewBox="0 0 156 156"><circle class="t" cx="78" cy="78" r="65"/><circle class="p" id="scP" data-v="${v||0}" cx="78" cy="78" r="65"/></svg><div class="sc-num"><b>${cls==='wait'?'…':`<i data-count="${v}">0</i><em>/100</em>`}</b><span>desempenho</span></div></div>`;
+  const A=perfAreas();
+  if(!A){
+    el.innerHTML=`<div class="sc-hero">${ringHtml('wait','var(--accent)',0)}<div class="sc-info"><div class="sc-verdict">Sem medição ainda</div><p class="sc-line">Clique em <b>Analisar meu PC</b> pra medir o desempenho de verdade: carga, memória, disco, programas em segundo plano e inicialização.</p><div class="sc-cta"><button class="pp-apply" id="scAgain">Analisar meu PC</button></div></div></div>`;
+    document.getElementById('scAgain').onclick=()=>ppLoad(true,true);return;
   }
-  const v=ppVerdict(p.win),falta=p.pend;
-  const frase=p.win>=90?`Seu Windows já está muito bem ajustado: <b>${p.done} de ${p.total}</b> ajustes recomendados estão ativos.`
-    :p.win>=70?`Está bom. <b>${p.done} de ${p.total}</b> ajustes recomendados já estão ativos${falta?`, faltam só <b>${falta}</b> pra completar`:''}.`
-    :p.win>=40?`Dá pra melhorar bastante: só <b>${p.done} de ${p.total}</b> ajustes recomendados estão ativos. Faltam <b>${falta}</b>.`
-    :`Seu Windows está longe do ideal: apenas <b>${p.done} de ${p.total}</b> ajustes recomendados estão ativos. Faltam <b>${falta}</b>.`;
-  const hwTxt=p.hw==null?'':`<i>Hardware <b>${p.hw}%</b> · ${p.hwOk} ok${p.hwWarn?` · ${p.hwWarn} ponto${p.hwWarn>1?'s':''} de atenção`:''}</i>`;
-  const bc=x=>x<40?'#ef4444':x<70?'#f59e0b':'#22c55e';
-  el.innerHTML=`<div class="sc-hero" style="--sc:${v.c}">${ring('',v.c)}<div class="sc-info"><div class="sc-verdict">${v.t}</div><p class="sc-line">${frase}</p>
-    <div class="sc-chips"><i><b>${p.done}</b> ativos</i><i><b>${falta}</b> faltando</i>${hwTxt}</div>
-    <div class="sc-cta">${falta?`<button class="pp-apply" id="scMark">Marcar as ${falta} recomendadas</button><button class="ag-btn" id="scSee">Ver o que falta</button>`:''}<button class="ag-btn" id="scAgain">Analisar de novo</button></div></div></div>
-    ${p.cats.length?`<div class="sc-cats"><h5>Por área, da que mais precisa de ajuda pra que menos</h5>${p.cats.map(c=>`<div class="sc-cat"><span>${ppEsc(c.label)}</span><div class="sc-bar"><i data-w="${c.pct}" style="--bc:${bc(c.pct)}"></i></div><em>${c.d}/${c.n}</em></div>`).join('')}<p class="sc-note">Nota = ajustes recomendados já aplicados ÷ total que serve pro seu PC. Ajustes arriscados e os que não dá pra verificar ficam fora da conta.</p></div>`:''}`;
+  const v=ppVerdict(A.overall),loss=A.list.map(x=>({...x,loss:(100-x.score)*x.w})).sort((a,b)=>b.loss-a.loss).filter(x=>x.score<85);
+  const pot=Math.min(100,Math.round(A.overall+loss.slice(0,2).reduce((a,x)=>a+x.loss,0)/A.sumW));
+  const frase=loss.length?`O que mais está custando pontos: <b>${ppEsc(loss[0].label)}</b> (${loss[0].score}/100)${loss[1]?` e <b>${ppEsc(loss[1].label)}</b> (${loss[1].score}/100)`:''}. Resolvendo ${loss[1]?'esses dois':'isso'}, a nota pode subir até <b>${pot}</b>.`:'Nenhuma área está te custando pontos relevantes. O PC está bem equilibrado.';
+  const kill=A.disp.filter(x=>wOfK(x)===1&&x.c.kill),killRam=kill.reduce((a,x)=>a+x.ramMB,0);
+  const ac=x=>ppVerdict(x).c;
+  const grp=new Map();A.disp.forEach(x=>{const k=x.c.label||x.name,g=grp.get(k);if(g){g.ramMB+=x.ramMB;g.cpu=+(g.cpu+x.cpu).toFixed(1);g.count+=x.count;g.names.push(x.name);}else grp.set(k,{...x,names:[x.name]});});
+  const rows=[...grp.values()].sort((a,b)=>b.ramMB-a.ramMB);
+  const others=A.procs.filter(x=>wOfK(x)===0&&!['core','shared'].includes(x.c.kind)&&x.ramMB>=150).sort((a,b)=>b.ramMB-a.ramMB).slice(0,5);
+  const shown=[...rows.slice(0,10),...others].slice(0,14);
+  const rowHtml=x=>{const k=PERF_KIND[x.c.kind],w=wOfK(x);return`<div class="px-row"><div class="px-name"><b>${ppEsc(x.c.label||x.name)}</b><small>${x.count} processo${x.count>1?'s':''}</small></div><div><span class="px-kind ${w===1?'d':w>0?'w':''}">${k[0]}</span></div><div class="px-num">${String(x.cpu).replace('.',',')}%</div><div class="px-num">${perfMB(x.ramMB)}</div><div class="px-note">${ppEsc(x.c.note||'Sem classificação: confira se você usa esse programa.')}</div><div>${x.c.kill?`<button class="oc-btn ghost" data-kill="${ppEsc(x.names?x.names.join('|'):x.name)}">Encerrar</button>`:''}</div></div>`;};
+  el.innerHTML=`<div class="sc-hero" style="--sc:${v.c}">${ringHtml('',v.c,A.overall)}<div class="sc-info"><div class="sc-verdict">${v.t}</div><p class="sc-line">${frase}</p>
+    <div class="sc-cta">${kill.length?`<button class="pp-apply" id="pxKillAll">Encerrar ${kill.length} dispensáve${kill.length>1?'is':'l'} (libera ~${perfMB(killRam)})</button>`:''}<button class="ag-btn" id="scAgain">Medir de novo</button></div></div></div>
+    <div class="px-areas">${A.list.map(x=>`<div class="px-area" style="--ac:${ac(x.score)}"><div class="px-area-top"><span>${ppEsc(x.label)}</span><b><i data-count="${x.score}">0</i><em>/100</em></b></div><div class="px-bar"><i data-w="${x.score}"></i></div><p>${x.score>=85?'Sem problemas aqui.':ppEsc(x.why)}</p></div>`).join('')}</div>
+    <p class="px-sec">Programas que mais pesam <small>medido agora no seu PC</small></p>
+    <div class="px-procs"><div class="px-row px-head"><div>Programa</div><div>Tipo</div><div style="text-align:right">CPU</div><div style="text-align:right">RAM</div><div>O que é</div><div></div></div>${shown.length?shown.map(rowHtml).join(''):'<div class="px-row"><div class="px-note" style="grid-column:1/-1">Nenhum programa dispensável pesando.</div></div>'}</div>
+    ${A.startupDisp.length?`<p class="px-sec">Abrem junto com o Windows <small>dispensáveis na inicialização</small></p><div class="px-startup">${[...new Set(A.startupDisp.map(x=>x.c.label||x.Name))].map(n=>`<i>${ppEsc(n)}</i>`).join('')}</div>`:''}`;
   const g=id=>document.getElementById(id);
-  if(g('scMark'))g('scMark').onclick=()=>audMark();
-  if(g('scSee'))g('scSee').onclick=()=>{const t=g('ppAudSec');if(t)t.scrollIntoView({behavior:'smooth',block:'start'});};
   if(g('scAgain'))g('scAgain').onclick=()=>ppLoad(true,true);
-  const prog=g('scP'),num=g('scN'),from=(PP.scoreShown===p.win)?p.win:0;
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    prog.style.strokeDashoffset=408*(1-p.win/100);
-    el.querySelectorAll('.sc-bar i').forEach(b=>{b.style.width=b.dataset.w+'%';});
-  }));
-  if(from===p.win){num.innerHTML=`${p.win}<em>%</em>`;}
-  else{const t0=performance.now();(function step(t){const k=Math.min(1,(t-t0)/1100),e=1-Math.pow(1-k,3);num.innerHTML=`${Math.round(p.win*e)}<em>%</em>`;if(k<1)requestAnimationFrame(step);})(t0);}
-  PP.scoreShown=p.win;
+  if(g('pxKillAll'))g('pxKillAll').onclick=()=>perfKill(kill.map(x=>x.name));
+  el.querySelectorAll('[data-kill]').forEach(b=>b.onclick=()=>perfKill(b.dataset.kill.split('|')));
+  perfAnimate(el);
+}
+const wOfK=x=>PERF_KIND[x.c.kind][1];
+async function perfKill(names){
+  const inv=window.__TAURI__.core.invoke,A0=perfAreas();let res=null,A1=null;
+  await ocRunFlow('Encerrando programas',`${names.length} programa${names.length>1?'s':''} dispensáve${names.length>1?'is':'l'}`,[
+    {icon:'bolt',label:'Encerrando',msg:'Fechando os programas escolhidos...',call:async()=>{res=await inv('end_processes',{names});return{message:`${res.ended} encerrado${res.ended===1?'':'s'}${res.failed?` · ${res.failed} não deu pra fechar (pode precisar de administrador)`:''}`};}},
+    {icon:'verify',label:'Medindo de novo',msg:'Lendo a carga do PC outra vez...',call:async()=>{await gmSleep(1200);PERF.data=await inv('perf_scan');A1=perfAreas();return{message:`Nota de desempenho agora: ${A1.overall}`,changes:[{label:'Nota de desempenho',before:String(A0.overall),after:String(A1.overall)},{label:'RAM em uso',before:perfMB(A0.usedMB),after:perfMB(A1.usedMB)},{label:'Programas dispensáveis',before:String(A0.disp.length),after:String(A1.disp.length)}]};}}
+  ],'Programas encerrados e PC medido de novo');
+  ppScoreRender();
 }
 const RD_BLIPS=[[52,-70],[-78,-30],[30,82],[-40,60],[85,20],[-20,-88],[66,-44],[-88,40]];
 function rdRadarInner(){
@@ -6419,9 +6514,9 @@ async function ppScanFlow(){
   if(!ov){ov=document.createElement('div');ov.id='rdOv';ov.className='rd-ov';ov.innerHTML='<div class="rd-card"></div>';document.body.appendChild(ov);}
   const card=ov.querySelector('.rd-card');
   const steps=[
-    {icon:'cpu',label:'Hardware e Windows',msg:'Lendo processador, vídeo, memória, disco, tela e BIOS...',call:async()=>{PP.data=await inv('profile_scan');PP.analysis=ppAnalyze(PP.data);return{message:`${PP.analysis.cards.length} componentes encontrados`};}},
-    {icon:'bolt',label:'Plano de energia',msg:'Lendo o plano de energia ativo...',call:async()=>{try{PP.power=await inv('power_status');}catch(e){PP.power=null;}return{message:PP.power?'Plano de energia lido':'Não consegui ler o plano (seguindo sem ele)'};}},
-    {icon:'verify',label:'Auditoria do Windows',msg:'Comparando o registro e o plano de energia com as otimizações...',call:async()=>{await audRun(true);if(AUD.err)throw new Error(AUD.err);const pend=AUD.res.rows.filter(r=>r.status==='pending'&&r.vendorOk&&!r.risky).length;return{message:`${AUD.res.rows.length} ajustes verificados · ${pend} pendente${pend===1?'':'s'}`};}}
+    {icon:'cpu',label:'Hardware e Windows',msg:'Lendo o seu hardware e o Windows...',call:async()=>{PP.data=await inv('profile_scan');PP.analysis=ppAnalyze(PP.data);return{message:'Hardware e sistema lidos'};}},
+    {icon:'bolt',label:'Processos e carga',msg:'Medindo CPU, disco, memória e cada programa (cerca de 4 s)...',call:async()=>{PERF.data=await inv('perf_scan');return{message:`${PERF.data.procTotal} processos medidos`};}},
+    {icon:'verify',label:'Ajustes do Windows',msg:'Conferindo o registro e o plano de energia...',call:async()=>{try{PP.power=await inv('power_status');}catch(e){PP.power=null;}await audRun(true);if(AUD.err)throw new Error(AUD.err);return{message:'Ajustes verificados'};}}
   ];
   card.innerHTML=`<div class="fx-hud rd" id="rdHud"><div class="rd-stage">${rdRadarInner()}<div class="rd-time" id="rdTime">00:00</div></div><div class="fx-title">Analisando o seu PC</div><div class="fx-sub" id="rdSub">Preparando...</div><div class="fx-steps">${steps.map((st,i)=>`<div class="fx-step" data-i="${i}"><span class="fx-ico"><svg viewBox="0 0 24 24">${GM_PIPE_ICON[st.icon]}</svg></span><div class="fx-st"><b>${st.label}</b><small>${st.msg}</small></div><em>aguardando</em></div>`).join('')}</div><div class="rd-found" id="rdFound"></div><div id="rdSumBox"></div><div class="fx-log" id="rdLog"></div></div><div class="ocf-actions"><button class="oc-btn" id="rdClose" disabled>Ver meu perfil</button></div>`;
   ov.classList.add('show');
@@ -6442,19 +6537,18 @@ async function ppScanFlow(){
   }
   clearInterval(tick);
   if(ok||!fatal){
-    const cards=(PP.analysis&&PP.analysis.cards)||[],box=document.getElementById('rdFound');
     if(ok){hud.classList.add('done');subEl.textContent='Análise concluída';}
-    for(let i=0;i<cards.length;i++){
-      const c=cards[i],d=document.createElement('div');d.className='rd-f';d.style.animationDelay='0ms';
-      d.innerHTML=`<small>${gmEsc(c.label)}</small><b>${gmEsc(String(c.val||'').replace(/<[^>]*>/g,''))}</b><span>${gmEsc(String(c.sub||'').replace(/<[^>]*>/g,''))}</span>`;
-      box.appendChild(d);const bl=card.querySelector(`.rd-blip[data-b="${i%RD_BLIPS.length}"]`);if(bl)bl.classList.add('on');
-      await gmSleep(150);
-    }
-    if(ok&&PP.analysis){
-      const warns=PP.analysis.checks.filter(c=>c.s==='warn').length,pend=AUD.res?AUD.res.rows.filter(r=>r.status==='pending'&&r.vendorOk&&!r.risky).length:0;
-      const sc=ppScoreCalc(),vd=sc&&sc.win!=null?ppVerdict(sc.win):null;
-      document.getElementById('rdSumBox').innerHTML=`<div class="rd-sum">${vd?`<i style="--c:${vd.c}">Nota ${sc.win}% · ${vd.t}</i>`:''}<i>${PP.analysis.checks.length} verificações</i><i class="${warns?'w':''}">${warns} ponto${warns===1?'':'s'} de atenção</i><i class="${pend?'w':''}">${pend} ${pend===1?'otimização recomendada':'otimizações recomendadas'}</i></div>`;
-      say('✓ Perfil montado em '+mmss(),'ok');
+    const A=perfAreas(),box=document.getElementById('rdFound');
+    if(A){
+      for(let i=0;i<A.list.length;i++){
+        const x=A.list[i],vv=ppVerdict(x.score),d=document.createElement('div');d.className='rd-f';
+        d.innerHTML=`<small>${gmEsc(x.label)}</small><b style="font-size:21px;color:${vv.c}">${x.score}<span style="font-size:11px;color:var(--muted2)"> /100</span></b><span>${vv.t}</span>`;
+        box.appendChild(d);const bl=card.querySelector(`.rd-blip[data-b="${i%RD_BLIPS.length}"]`);if(bl)bl.classList.add('on');
+        await gmSleep(170);
+      }
+      const vd=ppVerdict(A.overall);
+      document.getElementById('rdSumBox').innerHTML=`<div class="rd-sum"><i style="--c:${vd.c};font-size:14px">Desempenho geral ${A.overall}/100 · ${vd.t}</i></div>`;
+      say('✓ Análise pronta em '+mmss(),'ok');
     }
   }
   await new Promise(res=>{const b=document.getElementById('rdClose');b.disabled=false;if(!ok)b.textContent='Fechar';b.onclick=()=>{ov.classList.remove('show');res();};});
@@ -11704,6 +11798,9 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.81', date:'26/11/2026', items:[
+    '<b>Análise de desempenho de verdade, de 0 a 100</b>: o Perfil agora mede o seu PC em 7 áreas (programas em segundo plano, processador, memória, armazenamento, inicialização e tempo ligado, vídeo, energia) e dá uma nota de 0 a 100 pra cada uma e uma nota geral, com os critérios vindos de pesquisa em várias fontes. Ele para de listar o que foi lido e mostra só os números.',
+    '<b>Processos analisados</b>: mede a CPU e a RAM de cada programa rodando e classifica com uma base (nuvem, RGB/fabricante, Adobe, atualizadores, Teams, Widgets, overlays, navegadores, sistema...). Os dispensáveis aparecem com o que são e o botão <b>Encerrar</b> (só programas de uma lista segura), e depois o PC é medido de novo mostrando a nota antes e depois.' ] },
   { v:'1.1.80', date:'26/11/2026', items:[
     '<b>Perfil com nota de otimização</b>: depois de analisar, o topo mostra uma nota em % de quanto o seu Windows já está otimizado, com veredito simples (<b>Ruim, Regular, Bom ou Ótimo</b>), quantos ajustes recomendados já estão ativos e quantos faltam, a saúde do hardware e uma barra por área (CPU, GPU, rede...) da que mais precisa de ajuda pra que menos. A conta é real: ajustes aplicados ÷ total que serve pro seu PC, lido do registro e do plano de energia. Tem botão pra marcar de uma vez os recomendados que faltam.' ] },
   { v:'1.1.79', date:'26/11/2026', items:[

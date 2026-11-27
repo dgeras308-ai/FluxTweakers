@@ -5583,6 +5583,172 @@ async fn profile_scan() -> Result<serde_json::Value, String> {
 }
 
 
+
+// ===== Scanner de desempenho: carga real de CPU/disco, memória, processos, inicialização e GPU =====
+// Mede ~3 s (3 amostras). Usa classes de desempenho do WMI (nomes não traduzidos), então funciona em qualquer idioma.
+const PERF_SCAN_PS: &str = r#"
+$ErrorActionPreference = 'SilentlyContinue'
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+$cores = [int](Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors
+if (-not $cores) { $cores = [Environment]::ProcessorCount }
+$first = @{}
+Get-Process | ForEach-Object { $first[$_.Id] = [double]$_.CPU }
+$sw = [Diagnostics.Stopwatch]::StartNew()
+$cpuS = @(); $diskS = @()
+for ($i = 0; $i -lt 3; $i++) {
+  $u = $null
+  $pi = Get-CimInstance Win32_PerfFormattedData_Counters_ProcessorInformation -Filter "Name='_Total'"
+  if ($pi) { $u = [double]$pi.PercentProcessorUtility }
+  if ($u -eq $null) { $pp = Get-CimInstance Win32_PerfFormattedData_PerfOS_Processor -Filter "Name='_Total'"; if ($pp) { $u = [double]$pp.PercentProcessorTime } }
+  if ($u -ne $null) { $cpuS += [math]::Min(100, $u) }
+  $pd = Get-CimInstance Win32_PerfFormattedData_PerfDisk_PhysicalDisk -Filter "Name='_Total'"
+  if ($pd) { $diskS += [math]::Min(100, [double]$pd.PercentDiskTime) }
+  Start-Sleep -Milliseconds 800
+}
+$procs = @(Get-Process)
+$el = [math]::Max(0.5, $sw.Elapsed.TotalSeconds)
+$g = @{}
+foreach ($p in $procs) {
+  $n = $p.ProcessName
+  if (-not $g.ContainsKey($n)) { $g[$n] = @{ n = $n; c = 0; cpu = 0.0; ws = 0.0 } }
+  $g[$n].c++
+  $g[$n].ws += [double]$p.WorkingSet64
+  if ($first.ContainsKey($p.Id)) { $d = [double]$p.CPU - $first[$p.Id]; if ($d -gt 0) { $g[$n].cpu += $d } }
+}
+$all = @($g.Values | ForEach-Object { [pscustomobject]@{ name = $_.n; count = $_.c; ramMB = [math]::Round($_.ws / 1MB, 0); cpu = [math]::Round($_.cpu / $el / $cores * 100, 1) } })
+$top = @($all | Sort-Object ramMB -Descending | Select-Object -First 70) + @($all | Sort-Object cpu -Descending | Select-Object -First 25)
+$top = @($top | Group-Object name | ForEach-Object { $_.Group[0] })
+$os = Get-CimInstance Win32_OperatingSystem
+$upH = $null
+if ($os.LastBootUpTime) { $upH = [math]::Round(((Get-Date) - $os.LastBootUpTime).TotalHours, 1) }
+$pend = (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired') -or (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending')
+$startup = @(Get-CimInstance Win32_StartupCommand | Select-Object Name, Command, Location)
+$gpu = $null
+$smi = $null
+$cmd = Get-Command nvidia-smi -ErrorAction SilentlyContinue
+if ($cmd) { $smi = $cmd.Source }
+if (-not $smi) { $alt = Join-Path $env:ProgramFiles 'NVIDIA Corporation\NVSMI\nvidia-smi.exe'; if (Test-Path $alt) { $smi = $alt } }
+if ($smi) {
+  $o = & $smi --query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu --format=csv,noheader,nounits 2>$null | Select-Object -First 1
+  if ($o) { $x = ([string]$o) -split ',\s*'; if ($x.Count -ge 4) { $gpu = [pscustomobject]@{ util = [double]$x[0]; vramUsedMB = [double]$x[1]; vramTotalMB = [double]$x[2]; temp = [double]$x[3] } } }
+}
+$cpuAvg = $null; if ($cpuS.Count -gt 0) { $cpuAvg = [math]::Round(($cpuS | Measure-Object -Average).Average, 1) }
+$diskAvg = $null; if ($diskS.Count -gt 0) { $diskAvg = [math]::Round(($diskS | Measure-Object -Average).Average, 1) }
+[pscustomobject]@{
+  cores = $cores; cpuAvg = $cpuAvg; diskBusy = $diskAvg
+  ramTotalMB = [math]::Round([double]$os.TotalVisibleMemorySize / 1KB, 0); ramFreeMB = [math]::Round([double]$os.FreePhysicalMemory / 1KB, 0)
+  commitTotalMB = [math]::Round([double]$os.TotalVirtualMemorySize / 1KB, 0); commitFreeMB = [math]::Round([double]$os.FreeVirtualMemorySize / 1KB, 0)
+  uptimeHours = $upH; pendingReboot = [bool]$pend; procTotal = $procs.Count; procs = $top; startup = $startup; gpu = $gpu
+} | ConvertTo-Json -Depth 4 -Compress
+"#;
+
+#[tauri::command]
+async fn perf_scan() -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(|| -> Result<serde_json::Value, String> {
+        #[cfg(target_os = "windows")]
+        {
+            let path = std::env::temp_dir().join("fluxtweakers-perf.ps1");
+            fs::write(&path, PERF_SCAN_PS).map_err(|e| format!("Não consegui preparar a medição de desempenho: {e}"))?;
+            let output = Command::new("powershell")
+                .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File"])
+                .arg(&path)
+                .creation_flags(CREATE_NO_WINDOW)
+                .output()
+                .map_err(|e| format!("Não consegui medir o desempenho: {e}"));
+            let _ = fs::remove_file(&path);
+            let output = output?;
+            let text = String::from_utf8_lossy(&output.stdout).to_string();
+            let line = text
+                .lines()
+                .rev()
+                .find(|l| l.trim_start().starts_with('{'))
+                .ok_or_else(|| "O Windows não devolveu a medição de desempenho".to_string())?;
+            serde_json::from_str::<serde_json::Value>(line.trim()).map_err(|e| format!("Resposta inválida da medição de desempenho: {e}"))
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
+/// Encerra processos, mas SÓ os de uma lista fixa de programas dispensáveis (nuvem, RGB, Adobe, atualizadores...).
+/// Qualquer outro nome é recusado, para o app nunca derrubar processo do sistema.
+#[tauri::command]
+async fn end_processes(names: Vec<String>) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<serde_json::Value, String> {
+        #[cfg(target_os = "windows")]
+        {
+            const PERMITIDOS: &[&str] = &[
+        "acrotray",
+        "adobecollabsync",
+        "adobedesktopservice",
+        "adobeipcbroker",
+        "armourycrate.usersessionhelper",
+        "ccxprocess",
+        "coresync",
+        "creative cloud",
+        "discord",
+        "dropbox",
+        "epicgameslauncher",
+        "epicwebhelper",
+        "gamebarpresencewriter",
+        "googledrivefs",
+        "googleupdate",
+        "icue",
+        "jusched",
+        "lghub",
+        "lghub_agent",
+        "lghub_updater",
+        "microsoftedgeupdate",
+        "ms-teams",
+        "nzxt cam",
+        "onedrive",
+        "phoneexperiencehost",
+        "razer synapse 3",
+        "razercentral",
+        "skype",
+        "slack",
+        "spotify",
+        "teams",
+        "telegram",
+        "wallpaper32",
+        "wallpaper64",
+        "whatsapp",
+        "widgets",
+        "widgetservice",
+        "yourphone",
+        "zoom"
+            ];
+            let mut ended = 0u32;
+            let mut failed = 0u32;
+            let mut skipped: Vec<String> = Vec::new();
+            for n in names.iter().take(60) {
+                let key = n.trim().trim_end_matches(".exe").trim_end_matches(".EXE").to_lowercase();
+                if !PERMITIDOS.contains(&key.as_str()) {
+                    skipped.push(n.clone());
+                    continue;
+                }
+                let out = Command::new("taskkill").args(["/F", "/T", "/IM", &format!("{key}.exe")]).creation_flags(CREATE_NO_WINDOW).output();
+                match out {
+                    Ok(o) if o.status.success() => ended += 1,
+                    _ => failed += 1,
+                }
+            }
+            Ok(serde_json::json!({ "ended": ended, "failed": failed, "skipped": skipped }))
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = names;
+            Err("Disponível apenas no Windows".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Falha interna: {e}"))?
+}
+
 // ===== Análise em jogo: CPU, GPU, VRAM e RAM medidos ENQUANTO você joga =====
 // Abre uma consulta PDH própria (contadores do Windows por processo) e um
 // sysinfo próprio, e devolve uma amostra por chamada. A análise (gargalo,
@@ -7220,7 +7386,7 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .manage(SysState(Mutex::new(System::new_all())))
         .manage(PdhState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_bat_script, run_bat_script_wait, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes, debloat_list, debloat_remove, profile_scan, game_session_start, game_session_stop, game_session_sample, audit_registry, audit_powercfg, power_status, cpu_live_start, cpu_live_stop, cpu_live_sample, cpu_stress_start, cpu_stress_stop, open_url, oc_status, oc_telemetry, oc_set_power, oc_set_undervolt, oc_restore, oc_close, amd_set_pstate, amd_restore, amd_set_boost, oc_set_voltage_planes, amd_smu_status, amd_smu_set_limits])
+        .invoke_handler(tauri::generate_handler![run_bat_script, run_bat_script_wait, perf_scan, end_processes, get_system_stats, setup_ram_cleaner, run_ram_clean, get_hardware_info, get_ram_details, run_diagnostics, scan_installed_games, analyze_game, apply_game_graphics_preset, run_deep_scan, get_close_behavior, set_close_behavior, get_autostart_enabled, set_autostart_enabled, list_power_plans, extract_fluxtweakers_plan_file, kill_processes_by_name, set_power_plan, apptuner_overview, apptuner_action, apptuner_set_priority, apptuner_open, apptuner_icons, apptuner_pick_exe, apptuner_optimize_step, apptuner_startup_list, apptuner_startup_toggle, apptuner_set_affinity, dns_overview, dns_benchmark, dns_probe_provider, dns_apply, dns_restore, get_machine_id, game_pc_profile, game_analyze, gamecfg_list, gamecfg_step, gamecfg_preview, game_windows_tweak, gamecfg_open, gamecfg_restore, game_icons, input_read, input_step, display_step, overlay_step, overlay_close, overlay_status, rawaccel_status, rawaccel_step, rawaccel_restore, rawaccel_open, rawaccel_open_download, perf_bench_step, perf_top_processes, debloat_list, debloat_remove, profile_scan, game_session_start, game_session_stop, game_session_sample, audit_registry, audit_powercfg, power_status, cpu_live_start, cpu_live_stop, cpu_live_sample, cpu_stress_start, cpu_stress_stop, open_url, oc_status, oc_telemetry, oc_set_power, oc_set_undervolt, oc_restore, oc_close, amd_set_pstate, amd_restore, amd_set_boost, oc_set_voltage_planes, amd_smu_status, amd_smu_set_limits])
         .setup(|app| {
             let close_to_tray = load_close_behavior(&app.handle());
             app.manage(CloseBehaviorState(Mutex::new(close_to_tray)));
