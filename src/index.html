@@ -584,6 +584,35 @@
   @keyframes fxLine{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
   @keyframes fxShake{0%,100%{transform:translateX(0);}25%{transform:translateX(-7px);}75%{transform:translateX(7px);}}
   @keyframes fxSpark{from{transform:rotate(var(--a)) translateY(0);opacity:1;}to{transform:rotate(var(--a)) translateY(-118px) scale(.4);opacity:0;}}
+  /* ===== Perfil: scanner de radar ===== */
+  .rd-ov{position:fixed;inset:0;z-index:310;display:none;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--accent) 12%,rgba(5,7,10,.88)),rgba(5,7,10,.94) 70%);backdrop-filter:blur(8px);padding:20px;}
+  .rd-ov.show{display:flex;}
+  .rd-card{width:min(660px,100%);max-height:95vh;overflow:auto;background:var(--panel);border:1px solid var(--border);border-radius:26px;padding:22px 22px 16px;box-shadow:0 40px 100px rgba(0,0,0,.6);animation:cardIn .3s ease both;}
+  .rd-stage{position:relative;width:260px;height:260px;margin:0 auto 6px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--c) 11%,transparent),transparent 68%);}
+  .rd-svg{position:absolute;inset:0;width:260px;height:260px;}
+  .rd-ticks line{stroke:color-mix(in srgb,var(--c) 45%,transparent);stroke-width:1.2;stroke-linecap:round;} .rd-ticks{transform-origin:130px 130px;animation:fxRot 40s linear infinite reverse;}
+  .rd-ring{fill:none;stroke:color-mix(in srgb,var(--c) 32%,transparent);stroke-width:1;} .rd-ring.r4{stroke-width:2;stroke:color-mix(in srgb,var(--c) 70%,transparent);}
+  .rd-cross{stroke:color-mix(in srgb,var(--c) 20%,transparent);stroke-width:1;}
+  .rd-beam{position:absolute;inset:6px;border-radius:50%;background:conic-gradient(from 0deg,transparent 0 74%,color-mix(in srgb,var(--c) 58%,transparent) 100%);animation:fxRot 2.4s linear infinite;}
+  .rd-beam::after{content:"";position:absolute;left:50%;top:0;width:2px;height:50%;margin-left:-1px;background:linear-gradient(var(--c),transparent);box-shadow:0 0 12px var(--c);}
+  .rd-ping{position:absolute;inset:34%;border-radius:50%;border:1.5px solid var(--c);opacity:0;animation:rdPing 2.8s ease-out infinite;} .rd-ping.p2{animation-delay:1.4s;}
+  .rd-blip{position:absolute;width:10px;height:10px;margin:-5px;border-radius:50%;background:var(--c2);box-shadow:0 0 12px var(--c2);opacity:0;transform:scale(.2);}
+  .rd-blip.on{animation:rdBlip .55s ease forwards,rdBlink 1.9s .6s ease-in-out infinite;}
+  .rd-core{position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:20px;display:grid;place-items:center;background:var(--panel);border:1px solid color-mix(in srgb,var(--c) 55%,transparent);box-shadow:0 0 28px color-mix(in srgb,var(--c) 40%,transparent);transition:.4s;}
+  .rd-core svg{width:32px;height:32px;fill:none;stroke:var(--c);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;animation:fxBeat 1.4s ease-in-out infinite;}
+  .rd-time{position:absolute;left:0;right:0;top:50%;margin-top:42px;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text);}
+  .fx-hud.done .rd-beam,.fx-hud.err .rd-beam,.fx-hud.done .rd-ticks,.fx-hud.err .rd-ticks{animation-play-state:paused;opacity:.25;} .fx-hud.done .rd-ping,.fx-hud.err .rd-ping,.fx-hud.done .rd-core svg,.fx-hud.err .rd-core svg{animation:none;}
+  .rd-found{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px;text-align:left;} @media(max-width:560px){.rd-found{grid-template-columns:1fr;}}
+  .rd-f{padding:9px 12px;border-radius:14px;background:color-mix(in srgb,var(--card) 80%,transparent);border:1px solid var(--border-soft);opacity:0;animation:rdPop .5s ease forwards;min-width:0;}
+  .rd-f small{display:block;font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted2);}
+  .rd-f b{display:block;margin-top:2px;font-size:12.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rd-f span{display:block;margin-top:1px;font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rd-sum{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px;} .rd-sum i{font-style:normal;font-size:11.5px;font-weight:700;padding:6px 13px;border-radius:99px;background:color-mix(in srgb,var(--c) 12%,transparent);color:var(--c);border:1px solid color-mix(in srgb,var(--c) 35%,transparent);animation:rdPop .5s ease both;} .rd-sum i.w{--c:#f59e0b;}
+  .pp-hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:20px 10px 26px;} .pp-hero .fx-hud{margin-bottom:6px;}
+  .pp-hero h3{margin:10px 0 0;font-size:19px;font-weight:800;} .pp-hero p{max-width:470px;margin:8px 0 16px;color:var(--muted);font-size:12.5px;line-height:1.65;}
+  @keyframes rdPing{0%{transform:scale(.3);opacity:.75;}100%{transform:scale(2.2);opacity:0;}}
+  @keyframes rdBlip{to{opacity:1;transform:scale(1);}} @keyframes rdBlink{50%{opacity:.4;}}
+  @keyframes rdPop{from{opacity:0;transform:translateY(10px) scale(.96);}to{opacity:1;transform:none;}}
   .smu-row{margin-bottom:10px;} .smu-top{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);} .smu-top b{font-family:var(--mono);color:var(--text);} .smu-top em{font-style:normal;font-family:var(--mono);color:var(--accent);min-width:40px;text-align:right;}
   .smu-bar{height:6px;border-radius:99px;background:color-mix(in srgb,var(--muted) 20%,transparent);margin-top:5px;overflow:hidden;} .smu-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .6s;} .smu-bar i.hot{background:#f59e0b;}
   .oc-block select{background:var(--panel);color:var(--text);border:1px solid var(--border-soft);border-radius:9px;padding:7px 10px;font-family:inherit;font-size:12px;}
@@ -6292,8 +6321,8 @@ function audMark(){
 function ppRender(){
   const root = document.getElementById('ppRoot'); if (!root) return;
   if (PP.loading){ root.innerHTML = '<div class="pp-loading">Lendo o seu hardware e o estado do Windows...<br>Leva alguns segundos.</div>'; return; }
-  if (PP.err){ root.innerHTML = `<div class="pp-loading">Não consegui ler o seu PC: ${ppEsc(PP.err)}<br><br><button class="pp-apply" id="ppRetry" style="align-self:center">Tentar de novo</button></div>`; document.getElementById('ppRetry').onclick = () => ppLoad(true); return; }
-  if (!PP.data){ root.innerHTML = '<div class="pp-loading">Abra esta aba pra analisar o seu PC.</div>'; return; }
+  if (PP.err){ root.innerHTML = `<div class="pp-loading">Não consegui ler o seu PC: ${ppEsc(PP.err)}<br><br><button class="pp-apply" id="ppRetry" style="align-self:center">Tentar de novo</button></div>`; document.getElementById('ppRetry').onclick = () => ppLoad(true, true); return; }
+  if (!PP.data){ root.innerHTML = ppHeroHtml(); const sb = document.getElementById('ppStart'); if (sb) sb.onclick = () => ppLoad(true, true); return; }
   const a = PP.analysis = ppAnalyze(PP.data);
   const warns = a.checks.filter(c => c.s === 'warn').length;
   const ico = { ok:'✓', warn:'!', info:'i' };
@@ -6307,10 +6336,68 @@ function ppRender(){
   audRender();
 }
 
-async function ppLoad(force){
+const RD_BLIPS=[[52,-70],[-78,-30],[30,82],[-40,60],[85,20],[-20,-88],[66,-44],[-88,40]];
+function rdRadarInner(){
+  const ticks=Array.from({length:72},(_,i)=>`<line x1="130" y1="${i%6===0?5:8}" x2="130" y2="${i%6===0?15:12}" transform="rotate(${i*5} 130 130)"/>`).join('');
+  return`<svg class="rd-svg" viewBox="0 0 260 260"><g class="rd-ticks">${ticks}</g><circle class="rd-ring" cx="130" cy="130" r="112"/><circle class="rd-ring r4" cx="130" cy="130" r="112" style="stroke-dasharray:2 7"/><circle class="rd-ring" cx="130" cy="130" r="80"/><circle class="rd-ring" cx="130" cy="130" r="48"/><line class="rd-cross" x1="130" y1="14" x2="130" y2="246"/><line class="rd-cross" x1="14" y1="130" x2="246" y2="130"/></svg><div class="rd-ping"></div><div class="rd-ping p2"></div><div class="rd-beam"></div>${RD_BLIPS.map(([x,y],i)=>`<i class="rd-blip" data-b="${i}" style="left:${130+x}px;top:${130+y}px"></i>`).join('')}<div class="rd-core"><svg viewBox="0 0 24 24">${GM_PIPE_ICON.cpu}</svg></div>`;
+}
+function ppHeroHtml(){
+  return`<div class="pp-hero"><div class="fx-hud rd"><div class="rd-stage">${rdRadarInner()}</div></div><h3>Descubra o que está segurando o seu PC</h3><p>O app lê o seu hardware e o seu Windows de verdade, compara com as otimizações e monta o perfil certo pra sua máquina. Leva alguns segundos.</p><button class="pp-apply" id="ppStart">Analisar meu PC</button></div>`;
+}
+// Scanner: cada etapa é uma chamada real ao Windows (o ✓ só vem quando ela termina, com o tempo que levou).
+// O radar acende um ponto por componente que o app REALMENTE encontrou, com os valores lidos.
+async function ppScanFlow(){
+  const inv=window.__TAURI__.core.invoke;
+  let ov=document.getElementById('rdOv');
+  if(!ov){ov=document.createElement('div');ov.id='rdOv';ov.className='rd-ov';ov.innerHTML='<div class="rd-card"></div>';document.body.appendChild(ov);}
+  const card=ov.querySelector('.rd-card');
+  const steps=[
+    {icon:'cpu',label:'Hardware e Windows',msg:'Lendo processador, vídeo, memória, disco, tela e BIOS...',call:async()=>{PP.data=await inv('profile_scan');PP.analysis=ppAnalyze(PP.data);return{message:`${PP.analysis.cards.length} componentes encontrados`};}},
+    {icon:'bolt',label:'Plano de energia',msg:'Lendo o plano de energia ativo...',call:async()=>{try{PP.power=await inv('power_status');}catch(e){PP.power=null;}return{message:PP.power?'Plano de energia lido':'Não consegui ler o plano (seguindo sem ele)'};}},
+    {icon:'verify',label:'Auditoria do Windows',msg:'Comparando o registro e o plano de energia com as otimizações...',call:async()=>{await audRun(true);if(AUD.err)throw new Error(AUD.err);const pend=AUD.res.rows.filter(r=>r.status==='pending'&&r.vendorOk&&!r.risky).length;return{message:`${AUD.res.rows.length} ajustes verificados · ${pend} pendente${pend===1?'':'s'}`};}}
+  ];
+  card.innerHTML=`<div class="fx-hud rd" id="rdHud"><div class="rd-stage">${rdRadarInner()}<div class="rd-time" id="rdTime">00:00</div></div><div class="fx-title">Analisando o seu PC</div><div class="fx-sub" id="rdSub">Preparando...</div><div class="fx-steps">${steps.map((st,i)=>`<div class="fx-step" data-i="${i}"><span class="fx-ico"><svg viewBox="0 0 24 24">${GM_PIPE_ICON[st.icon]}</svg></span><div class="fx-st"><b>${st.label}</b><small>${st.msg}</small></div><em>aguardando</em></div>`).join('')}</div><div class="rd-found" id="rdFound"></div><div id="rdSumBox"></div><div class="fx-log" id="rdLog"></div></div><div class="ocf-actions"><button class="oc-btn" id="rdClose" disabled>Ver meu perfil</button></div>`;
+  ov.classList.add('show');
+  const hud=document.getElementById('rdHud'),log=document.getElementById('rdLog'),subEl=document.getElementById('rdSub'),timeEl=document.getElementById('rdTime');
+  const T0=Date.now(),mmss=()=>{const x=Math.floor((Date.now()-T0)/1000);return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0');};
+  const say=(t,c)=>{const d=document.createElement('div');if(c)d.className=c;d.innerHTML=`<b>${mmss()}</b>${t}`;log.appendChild(d);while(log.children.length>5)log.removeChild(log.firstChild);};
+  const tick=setInterval(()=>{timeEl.textContent=mmss();},250);
+  say('Iniciando a análise');await gmSleep(500);
+  let ok=true,fatal=false;
+  for(let i=0;i<steps.length;i++){
+    const st=steps[i],el=card.querySelector(`.fx-step[data-i="${i}"]`),em=el.querySelector('em'),sm=el.querySelector('small');
+    el.classList.add('run');em.textContent='em andamento';subEl.textContent=st.label+'...';say('→ '+gmEsc(st.msg));
+    const s0=Date.now();let r;
+    try{r=await st.call();}
+    catch(err){el.classList.replace('run','err');em.textContent='falhou';sm.textContent=String(err);hud.classList.add('err');subEl.textContent='Falhou nesta etapa';say('✗ '+gmEsc(String(err)),'er');ok=false;if(i===0){fatal=true;PP.err=String(err);PP.data=null;}break;}
+    const ms=Date.now()-s0;if(ms<700)await gmSleep(700-ms);
+    el.classList.replace('run','done');em.textContent=ms+' ms';sm.textContent=r.message;say('✓ '+gmEsc(r.message),'ok');await gmSleep(200);
+  }
+  clearInterval(tick);
+  if(ok||!fatal){
+    const cards=(PP.analysis&&PP.analysis.cards)||[],box=document.getElementById('rdFound');
+    if(ok){hud.classList.add('done');subEl.textContent='Análise concluída';}
+    for(let i=0;i<cards.length;i++){
+      const c=cards[i],d=document.createElement('div');d.className='rd-f';d.style.animationDelay='0ms';
+      d.innerHTML=`<small>${gmEsc(c.label)}</small><b>${gmEsc(String(c.val||'').replace(/<[^>]*>/g,''))}</b><span>${gmEsc(String(c.sub||'').replace(/<[^>]*>/g,''))}</span>`;
+      box.appendChild(d);const bl=card.querySelector(`.rd-blip[data-b="${i%RD_BLIPS.length}"]`);if(bl)bl.classList.add('on');
+      await gmSleep(150);
+    }
+    if(ok&&PP.analysis){
+      const warns=PP.analysis.checks.filter(c=>c.s==='warn').length,pend=AUD.res?AUD.res.rows.filter(r=>r.status==='pending'&&r.vendorOk&&!r.risky).length:0;
+      document.getElementById('rdSumBox').innerHTML=`<div class="rd-sum"><i>${PP.analysis.checks.length} verificações</i><i class="${warns?'w':''}">${warns} ponto${warns===1?'':'s'} de atenção</i><i class="${pend?'w':''}">${pend} otimização${pend===1?'':'ões'} recomendada${pend===1?'':'s'}</i></div>`;
+      say('✓ Perfil montado em '+mmss(),'ok');
+    }
+  }
+  await new Promise(res=>{const b=document.getElementById('rdClose');b.disabled=false;if(!ok)b.textContent='Fechar';b.onclick=()=>{ov.classList.remove('show');res();};});
+  return ok;
+}
+async function ppLoad(force, animate){
   if (!window.__TAURI__){ PP.err = 'a leitura do hardware só funciona no app instalado.'; ppRender(); return; }
   if (PP.loading || (PP.data && !force)) return;
-  PP.loading = true; PP.err = null; ppRender();
+  PP.loading = true; PP.err = null;
+  if (animate){ await ppScanFlow(); PP.loading = false; ppRender(); return; }
+  ppRender();
   try{
     PP.data = await window.__TAURI__.core.invoke('profile_scan');
     try{ PP.power = await window.__TAURI__.core.invoke('power_status'); }catch(e){ PP.power = null; }
@@ -6319,7 +6406,7 @@ async function ppLoad(force){
   PP.loading = false; ppRender();
   if (PP.data) audRun(force);
 }
-document.getElementById('ppReload').addEventListener('click', () => ppLoad(true));
+document.getElementById('ppReload').addEventListener('click', () => ppLoad(true, true));
 
 // ===== Análise em jogo: mede CPU, GPU, VRAM e RAM enquanto você joga =====
 const AG_KEY = 'flux_game_sessions_v1';
@@ -11311,7 +11398,7 @@ async function appTunerClick(e){
     _switch.apply(this, arguments);
     if (id === 'apptuner') refreshAppTuner();
     if (id === 'debloat') dbLoad();
-    if (id === 'profile') ppLoad();
+    if (id === 'profile' && !PP.data && !PP.loading) ppRender();
   };
 })();
 
@@ -11549,6 +11636,8 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.78', date:'26/11/2026', items:[
+    '<b>Aba Perfil com scanner de radar</b>: a aba agora abre com o botão <b>Analisar meu PC</b>. Ao clicar, um radar com feixe varrendo, ondas e pontos acesos faz a análise de verdade em 3 etapas (hardware e Windows, plano de energia, auditoria do registro), cada uma com ✓ e o tempo real que levou. No fim, cada componente encontrado aparece com o valor lido e um resumo com verificações, pontos de atenção e otimizações recomendadas.' ] },
   { v:'1.1.77', date:'25/11/2026', items:[
     '<b>Aplicar ajustes com a bola animada</b>: ao clicar em Aplicar, abre uma bola com anel girando, órbitas e chip pulsando, relógio real no centro e os ajustes na fila. Agora o app <b>espera o Windows terminar o script de verdade</b> antes de fechar em verde. Se você negar o pedido de administrador ou o script falhar, a bola fica vermelha e mostra o motivo, em vez de dizer que deu certo.' ] },
   { v:'1.1.76', date:'25/11/2026', items:[
