@@ -558,7 +558,7 @@
   .fx-step.run,.fx-step.done,.fx-step.err{opacity:1;} .fx-step.run{border-color:color-mix(in srgb,var(--c) 55%,transparent);box-shadow:0 0 18px color-mix(in srgb,var(--c) 14%,transparent);}
   .fx-ico{position:relative;width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex-shrink:0;background:color-mix(in srgb,var(--muted) 14%,transparent);}
   .fx-ico svg{width:18px;height:18px;fill:none;stroke:var(--muted);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:.3s;}
-  .fx-step.run .fx-ico svg{stroke:var(--c);} .fx-step.run .fx-ico::after{content:"";position:absolute;inset:-3px;border-radius:14px;border:2.5px solid transparent;border-top-color:var(--c);border-right-color:color-mix(in srgb,var(--c) 40%,transparent);animation:fxRot .8s linear infinite;}
+  .fx-step.run .fx-ico svg{stroke:var(--c);} .fx-step.run .fx-ico::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2.5px solid transparent;border-top-color:var(--c);border-right-color:color-mix(in srgb,var(--c) 40%,transparent);animation:fxRot .8s linear infinite;}
   .fx-step.done .fx-ico{background:color-mix(in srgb,#22c55e 18%,transparent);animation:fxPop .4s ease;} .fx-step.done .fx-ico svg{stroke:#22c55e;}
   .fx-step.err .fx-ico{background:color-mix(in srgb,#ef4444 18%,transparent);} .fx-step.err .fx-ico svg{stroke:#ef4444;}
   .fx-st{flex:1;min-width:0;} .fx-st b{display:block;font-size:12.5px;color:var(--text);} .fx-st small{display:block;font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -608,7 +608,7 @@
   .rd-f b{display:block;margin-top:2px;font-size:12.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .rd-f span{display:block;margin-top:1px;font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .rd-sum{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px;} .rd-sum i{font-style:normal;font-size:11.5px;font-weight:700;padding:6px 13px;border-radius:99px;background:color-mix(in srgb,var(--c) 12%,transparent);color:var(--c);border:1px solid color-mix(in srgb,var(--c) 35%,transparent);animation:rdPop .5s ease both;} .rd-sum i.w{--c:#f59e0b;}
-  .pp-hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:20px 10px 26px;} .pp-hero .fx-hud{margin-bottom:6px;}
+  .pp-hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:20px 10px 26px;} .pp-hero .fx-hud{margin-bottom:6px;} .pp-hero .pp-apply{align-self:center;margin:0;}
   .pp-hero h3{margin:10px 0 0;font-size:19px;font-weight:800;} .pp-hero p{max-width:470px;margin:8px 0 16px;color:var(--muted);font-size:12.5px;line-height:1.65;}
   @keyframes rdPing{0%{transform:scale(.3);opacity:.75;}100%{transform:scale(2.2);opacity:0;}}
   @keyframes rdBlip{to{opacity:1;transform:scale(1);}} @keyframes rdBlink{50%{opacity:.4;}}
@@ -6385,7 +6385,7 @@ async function ppScanFlow(){
     }
     if(ok&&PP.analysis){
       const warns=PP.analysis.checks.filter(c=>c.s==='warn').length,pend=AUD.res?AUD.res.rows.filter(r=>r.status==='pending'&&r.vendorOk&&!r.risky).length:0;
-      document.getElementById('rdSumBox').innerHTML=`<div class="rd-sum"><i>${PP.analysis.checks.length} verificações</i><i class="${warns?'w':''}">${warns} ponto${warns===1?'':'s'} de atenção</i><i class="${pend?'w':''}">${pend} otimização${pend===1?'':'ões'} recomendada${pend===1?'':'s'}</i></div>`;
+      document.getElementById('rdSumBox').innerHTML=`<div class="rd-sum"><i>${PP.analysis.checks.length} verificações</i><i class="${warns?'w':''}">${warns} ponto${warns===1?'':'s'} de atenção</i><i class="${pend?'w':''}">${pend} ${pend===1?'otimização recomendada':'otimizações recomendadas'}</i></div>`;
       say('✓ Perfil montado em '+mmss(),'ok');
     }
   }
@@ -11636,6 +11636,8 @@ document.addEventListener('mousemove', (e)=>{
 // ---------- Novidades da versão: aparece 1x depois que o app atualiza ----------
 // Toda versão nova precisa de uma entrada aqui (a mais nova primeiro).
 const APP_CHANGELOG = [
+  { v:'1.1.79', date:'26/11/2026', items:[
+    'Perfil: corrigido o texto do resumo da análise ("otimizações recomendadas"), o botão Analisar meu PC agora fica centralizado e o círculo de espera de cada etapa gira certinho.' ] },
   { v:'1.1.78', date:'26/11/2026', items:[
     '<b>Aba Perfil com scanner de radar</b>: a aba agora abre com o botão <b>Analisar meu PC</b>. Ao clicar, um radar com feixe varrendo, ondas e pontos acesos faz a análise de verdade em 3 etapas (hardware e Windows, plano de energia, auditoria do registro), cada uma com ✓ e o tempo real que levou. No fim, cada componente encontrado aparece com o valor lido e um resumo com verificações, pontos de atenção e otimizações recomendadas.' ] },
   { v:'1.1.77', date:'25/11/2026', items:[
